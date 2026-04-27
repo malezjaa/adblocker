@@ -1,0 +1,30 @@
+[package]
+name = "dns-adblock"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "^1", features = [
+    "rt",
+    "rt-multi-thread",
+    "net",
+    "macros",
+] }
+hickory-proto = "0.26.0"
+adblock = "0.12.2"
+async-trait = "0.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0.102"
+reqwest = "0.13.3"
+toml = "1.1.2+spec-1.1.0"
+serde = { version = "1.0.228", features = ["derive"] }
+dirs = "6.0.0"
+fs-err = "3.3.0"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
