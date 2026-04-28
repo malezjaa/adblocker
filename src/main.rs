@@ -22,7 +22,7 @@ use tracing::{debug, error, info};
 
 fn setup_logger() {
   tracing_subscriber::fmt()
-    .with_env_filter("dns_adblock=info")
+    .with_env_filter("dns_adblock=debug")
     .init();
 }
 
