@@ -4,6 +4,7 @@ mod config;
 mod blocklists;
 mod middlewares;
 mod pipeline;
+mod cache;
 
 use crate::blocklists::load_blocklists;
 use crate::config::Config;
@@ -11,6 +12,7 @@ use crate::context::Context;
 use crate::middleware::MiddlewareResult;
 use crate::pipeline::Pipeline;
 use anyhow::Result;
+use fs_err::create_dir_all;
 use hickory_proto::op::Message;
 use hickory_proto::serialize::binary::BinEncodable;
 use middlewares::blocker::Blocker;
@@ -22,7 +24,7 @@ use tracing::{debug, error, info};
 
 fn setup_logger() {
   tracing_subscriber::fmt()
-    .with_env_filter("dns_adblock=debug")
+    .with_env_filter("dns_adblock=info")
     .init();
 }
 
@@ -41,18 +43,21 @@ async fn main() -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-  let config_path = dirs::home_dir()
+  let home_path = dirs::home_dir()
     .unwrap()
-    .join("adb")
-    .join("config.toml");
+    .join("adb");
+  let config = Config::from_file(home_path.join("config.toml"))?;
+  let cache_dir = home_path.join("cache");
 
-  let config = Config::from_file(config_path)?;
+  if !cache_dir.exists() {
+    create_dir_all(&cache_dir)?;
+  }
 
   let socket = UdpSocket::bind(config.socket).await?;
   let upstream = UdpSocket::bind("0.0.0.0:0").await?;
 
   let start = Instant::now();
-  let rules = load_blocklists(config.blocklists).await?;
+  let rules = load_blocklists(config.blocklists, &cache_dir).await?;
   info!("loaded lists in {:.2?}", start.elapsed());
 
   let pipeline = Pipeline::new()
