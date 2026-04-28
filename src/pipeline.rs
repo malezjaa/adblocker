@@ -6,7 +6,7 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-  pub async fn run<'ctx>(&self, ctx: &mut Context<'ctx>) -> MiddlewareResult {
+  pub async fn run(&self, ctx: &mut Context) -> MiddlewareResult {
     for middleware in &self.middlewares {
       match middleware.process(ctx).await {
         MiddlewareResult::Next => continue,

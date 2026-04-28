@@ -13,12 +13,13 @@ use crate::middleware::MiddlewareResult;
 use crate::pipeline::Pipeline;
 use anyhow::Result;
 use fs_err::create_dir_all;
-use hickory_proto::op::Message;
-use hickory_proto::serialize::binary::BinEncodable;
+use hickory_proto::op::{Message, UpdateMessage};
+use hickory_proto::serialize::binary::{BinDecodable, BinEncodable};
 use middlewares::blocker::Blocker;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
-use std::time::Instant;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tokio::net::UdpSocket;
 use tracing::{debug, error, info};
 
@@ -53,7 +54,7 @@ async fn run() -> Result<()> {
     create_dir_all(&cache_dir)?;
   }
 
-  let socket = UdpSocket::bind(config.socket).await?;
+  let socket = Arc::new(UdpSocket::bind(config.socket).await?);
   let upstream = UdpSocket::bind("0.0.0.0:0").await?;
 
   let start = Instant::now();
@@ -64,7 +65,6 @@ async fn run() -> Result<()> {
     .add(Blocker::new(rules));
 
   let mut buf = vec![0u8; 512];
-
   loop {
     let (len, src) = match socket.recv_from(&mut buf).await {
       Ok(v) => v,
@@ -76,9 +76,8 @@ async fn run() -> Result<()> {
       Err(e) => return Err(e.into()),
     };
 
-    let raw: Vec<u8> = buf[..len].to_vec();
-    let mut ctx = Context::new(&raw)?;
-
+    let raw = buf[..len].to_vec();
+    let mut ctx = Context::new(raw)?;
     debug!(request = ?ctx, from = %src);
 
     match pipeline.run(&mut ctx).await {
@@ -91,22 +90,28 @@ async fn run() -> Result<()> {
       }
 
       MiddlewareResult::Next => {
-        let forward_bytes = ctx.msg().to_bytes().unwrap_or(raw);
-        upstream
-          .send_to(&forward_bytes, config.upstream_address)
-          .await?;
+        let forward_bytes = ctx.msg().to_bytes()?;
+        let socket = socket.clone();
 
-        let (resp_len, _) = match upstream.recv_from(&mut buf).await {
-          Ok(v) => v,
-          Err(e) if e.kind() == ErrorKind::ConnectionReset => {
-            continue;
-          }
-          Err(e) => return Err(e.into()),
-        };
+        tokio::spawn(async move {
+          let upstream = UdpSocket::bind("0.0.0.0:0").await?;
+          upstream.send_to(&forward_bytes, config.upstream_address).await?;
 
-        socket
-          .send_to(&buf[..resp_len], src)
-          .await?;
+          let mut buf = vec![0u8; 512];
+          let resp_len = match tokio::time::timeout(
+            Duration::from_secs(5),
+            upstream.recv_from(&mut buf),
+          ).await {
+            Ok(Ok((len, _))) => len,
+            Ok(Err(e)) => return Err(e.into()),
+            Err(_) => return Ok(()),
+          };
+
+          let response = buf[..resp_len].to_vec();
+
+          socket.send_to(&response, src).await?;
+          Ok::<_, anyhow::Error>(())
+        });
       }
     }
   }

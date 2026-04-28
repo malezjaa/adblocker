@@ -1,6 +1,6 @@
 use anyhow::Result;
-use hickory_proto::op::UpdateMessage;
 use hickory_proto::op::Message;
+use hickory_proto::op::UpdateMessage;
 use hickory_proto::rr::rdata::A;
 use hickory_proto::rr::{RData, Record, RecordType};
 use hickory_proto::serialize::binary::BinDecodable;
@@ -8,14 +8,13 @@ use std::net::{Ipv4Addr, SocketAddr};
 use tokio::net::UdpSocket;
 
 #[derive(Debug)]
-pub struct Context<'ctx> {
-  _raw: &'ctx [u8],
+pub struct Context {
   msg: Message,
 }
 
-impl<'ctx> Context<'ctx> {
-  pub fn new(raw: &'ctx [u8]) -> Result<Self> {
-    Ok(Self { _raw: raw, msg: Message::from_bytes(raw)? })
+impl Context {
+  pub fn new(raw: Vec<u8>) -> Result<Self> {
+    Ok(Self { msg: Message::from_bytes(&raw)? })
   }
 
   pub fn msg(&self) -> &Message {
@@ -45,5 +44,12 @@ impl<'ctx> Context<'ctx> {
     let bytes = response.to_vec()?;
     socket.send_to(&bytes, src).await?;
     Ok(true)
+  }
+
+  pub fn cache_key(&self) -> Option<(String, RecordType)> {
+    self.msg().queries.first().map(|q| (
+      q.name().to_string(),
+      q.query_type(),
+    ))
   }
 }
