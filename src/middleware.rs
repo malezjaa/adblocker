@@ -1,6 +1,6 @@
-use hickory_proto::op::Message;
-use async_trait::async_trait;
 use crate::context::Context;
+use async_trait::async_trait;
+use hickory_proto::op::Message;
 
 #[allow(dead_code)]
 pub enum MiddlewareResult {

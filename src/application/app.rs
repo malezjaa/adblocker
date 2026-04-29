@@ -1,4 +1,4 @@
-use crate::app::pipeline::Pipeline;
+use crate::application::pipeline::Pipeline;
 use crate::blocklists::load_blocklists;
 use crate::config::Config;
 use crate::context::Context;
@@ -41,7 +41,12 @@ impl App {
 
     let pipeline = Pipeline::new().add(Blocker::new(rules));
 
-    Ok(Self { socket, pipeline, response_cache, upstream_address: config.upstream_address })
+    Ok(Self {
+      socket,
+      pipeline,
+      response_cache,
+      upstream_address: config.upstream_address,
+    })
   }
 
   pub async fn run(&self) -> anyhow::Result<()> {
@@ -71,11 +76,11 @@ impl App {
   async fn forward(&self, ctx: &mut Context, src: SocketAddr) -> anyhow::Result<()> {
     let cache_key = ctx.cache_key();
 
-    if let Some(ref key) = cache_key {
-      if let Some(cached) = self.response_cache.get_with_id(key, ctx.msg().id()) {
-        self.socket.send_to(&cached, src).await?;
-        return Ok(());
-      }
+    if let Some(ref key) = cache_key
+      && let Some(cached) = self.response_cache.get_with_id(key, ctx.msg().id())
+    {
+      self.socket.send_to(&cached, src).await?;
+      return Ok(());
     }
 
     let forward_bytes = ctx.msg().to_bytes()?;
@@ -88,22 +93,23 @@ impl App {
       upstream.send_to(&forward_bytes, upstream_addr).await?;
 
       let mut buf = vec![0u8; 512];
-      let resp_len = match tokio::time::timeout(Duration::from_secs(5), upstream.recv_from(&mut buf)).await {
-        Ok(Ok((len, _))) => len,
-        Ok(Err(e)) => return Err(e.into()),
-        Err(_) => return Ok(()),
-      };
+      let resp_len =
+        match tokio::time::timeout(Duration::from_secs(5), upstream.recv_from(&mut buf))
+          .await
+        {
+          Ok(Ok((len, _))) => len,
+          Ok(Err(e)) => return Err(e.into()),
+          Err(_) => return Ok(()),
+        };
 
       let response = buf[..resp_len].to_vec();
 
-      if let Some(key) = cache_key {
-        if let Ok(msg) = Message::from_bytes(&response) {
-          if msg.metadata.response_code == ResponseCode::NoError {
-            if let Some(ttl) = min_ttl(&msg) {
-              response_cache.insert(key, response.clone(), Duration::from_secs(ttl as u64));
-            }
-          }
-        }
+      if let Some(key) = cache_key
+        && let Ok(msg) = Message::from_bytes(&response)
+        && msg.metadata.response_code == ResponseCode::NoError
+        && let Some(ttl) = min_ttl(&msg)
+      {
+        response_cache.insert(key, response.clone(), Duration::from_secs(ttl as u64));
       }
 
       socket.send_to(&response, src).await?;
@@ -118,7 +124,11 @@ fn min_ttl(msg: &Message) -> Option<u32> {
   msg.answers.iter().map(|r| r.ttl).min().filter(|ttl| *ttl > 0)
 }
 
-pub async fn send_response(socket: &UdpSocket, src: SocketAddr, msg: Message) -> anyhow::Result<()> {
+pub async fn send_response(
+  socket: &UdpSocket,
+  src: SocketAddr,
+  msg: Message,
+) -> anyhow::Result<()> {
   socket.send_to(&msg.to_bytes()?, src).await?;
   Ok(())
 }

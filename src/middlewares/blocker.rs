@@ -14,9 +14,7 @@ pub struct Blocker {
 
 impl Blocker {
   pub fn new(filters: FilterSet) -> Self {
-    Self {
-      engine: Arc::new(Mutex::new(Engine::from_filter_set(filters, true))),
-    }
+    Self { engine: Arc::new(Mutex::new(Engine::from_filter_set(filters, true))) }
   }
 }
 

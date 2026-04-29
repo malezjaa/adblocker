@@ -16,9 +16,7 @@ pub struct ResponseCache {
 
 impl ResponseCache {
   pub fn new(max_entries: u64) -> Self {
-    Self {
-      cache: Cache::builder().max_capacity(max_entries).build(),
-    }
+    Self { cache: Cache::builder().max_capacity(max_entries).build() }
   }
 
   pub fn get_with_id(&self, key: &CacheKey, id: u16) -> Option<Vec<u8>> {
@@ -45,12 +43,6 @@ impl ResponseCache {
     }
 
     let expires_at = Instant::now() + ttl;
-    self.cache.insert(
-      key,
-      CachedResponse {
-        expires_at,
-        bytes,
-      },
-    );
+    self.cache.insert(key, CachedResponse { expires_at, bytes });
   }
 }

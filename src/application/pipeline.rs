@@ -17,9 +17,7 @@ impl Pipeline {
   }
 
   pub fn new() -> Self {
-    Self {
-      middlewares: vec![],
-    }
+    Self { middlewares: vec![] }
   }
 
   pub fn add(mut self, middleware: impl Middleware + 'static) -> Self {
