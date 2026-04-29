@@ -3,8 +3,8 @@ use crate::middleware::{Middleware, MiddlewareResult};
 use adblock::request::Request;
 use adblock::{Engine, FilterSet};
 use async_trait::async_trait;
-use std::sync::Arc;
 use hickory_proto::rr::RecordType;
+use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::info;
 
@@ -31,7 +31,7 @@ impl Middleware for Blocker {
       let url = format!("http://{}/", host);
 
       let request_type = match query.query_type() {
-        RecordType::A => "script",
+        RecordType::A | RecordType::AAAA => "script",
         _ => "other",
       };
 

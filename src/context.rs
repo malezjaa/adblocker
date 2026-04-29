@@ -1,10 +1,10 @@
 use anyhow::Result;
 use hickory_proto::op::Message;
 use hickory_proto::op::UpdateMessage;
-use hickory_proto::rr::rdata::A;
+use hickory_proto::rr::rdata::{A, AAAA};
 use hickory_proto::rr::{RData, Record, RecordType};
 use hickory_proto::serialize::binary::BinDecodable;
-use std::net::{Ipv4Addr, SocketAddr};
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use tokio::net::UdpSocket;
 
 #[derive(Debug)]
@@ -31,11 +31,17 @@ impl Context {
     response.add_queries(self.msg.queries.clone());
 
     for query in &self.msg.queries {
-      if query.query_type() == RecordType::A {
+      let rdata = match query.query_type() {
+        RecordType::A => Some(RData::A(A(Ipv4Addr::new(0, 0, 0, 0)))),
+        RecordType::AAAA => Some(RData::AAAA(AAAA(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0)))),
+        _ => None
+      };
+
+      if let Some(rdata) = rdata {
         let record = Record::from_rdata(
           query.name().clone(),
           5,
-          RData::A(A(Ipv4Addr::new(0, 0, 0, 0))),
+          rdata,
         );
         response.add_answer(record);
       }
