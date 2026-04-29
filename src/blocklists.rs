@@ -4,7 +4,6 @@ use adblock::FilterSet;
 use anyhow::Result;
 use fs_err::{create_dir, create_dir_all, read, write};
 use futures::future::join_all;
-use moka::sync::Cache;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -58,7 +57,8 @@ pub async fn load_blocklists(blocklists: Vec<String>, cache_dir: &Path) -> Resul
       }
 
       let resp = req.send().await?;
-      let new_etag = resp.headers()
+      let new_etag = resp
+        .headers()
         .get("etag")
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
