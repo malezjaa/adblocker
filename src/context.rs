@@ -25,7 +25,7 @@ impl Context {
     &self,
     socket: &UdpSocket,
     src: SocketAddr,
-  ) -> Result<bool> {
+  ) -> Result<()> {
     let mut response = Message::response(self.msg.id(), self.msg.op_code);
 
     response.add_queries(self.msg.queries.clone());
@@ -49,7 +49,7 @@ impl Context {
 
     let bytes = response.to_vec()?;
     socket.send_to(&bytes, src).await?;
-    Ok(true)
+    Ok(())
   }
 
   pub fn cache_key(&self) -> Option<(String, RecordType)> {
