@@ -6,6 +6,8 @@ mod context;
 mod middleware;
 mod middlewares;
 mod response_cache;
+mod firewall;
+mod windows;
 
 use crate::application::app::App;
 use anyhow::Result;

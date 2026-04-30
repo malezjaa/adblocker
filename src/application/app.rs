@@ -2,6 +2,7 @@ use crate::application::pipeline::Pipeline;
 use crate::blocklists::load_blocklists;
 use crate::config::Config;
 use crate::context::Context;
+use crate::firewall::external_dns::block_external_dns;
 use crate::middleware::MiddlewareResult;
 use crate::middlewares::blocker::Blocker;
 use crate::response_cache::ResponseCache;
@@ -34,6 +35,8 @@ impl App {
 
     let socket = Arc::new(UdpSocket::bind(config.socket).await?);
     let response_cache = Arc::new(ResponseCache::new(2048));
+
+    block_external_dns(config.socket)?;
 
     let start = Instant::now();
     let rules = load_blocklists(config.blocklists, &cache_dir).await?;
@@ -115,7 +118,7 @@ impl App {
       socket.send_to(&response, src).await?;
       Ok::<_, anyhow::Error>(())
     });
-
+  
     Ok(())
   }
 }
