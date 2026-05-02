@@ -8,7 +8,6 @@ use tracing::info;
 #[derive(Serialize, Deserialize)]
 pub struct Config {
   pub blocklists: Vec<String>,
-  pub upstream_address: SocketAddr,
   pub socket: SocketAddr,
 }
 
@@ -16,7 +15,6 @@ impl Config {
   pub fn default_values() -> Result<Self> {
     Ok(Self {
       blocklists: vec!["https://big.oisd.nl".into()],
-      upstream_address: "8.8.8.8:53".parse()?,
       socket: "127.0.0.2:53".parse()?,
     })
   }

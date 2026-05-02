@@ -1,6 +1,6 @@
 use anyhow::Result;
-use hickory_proto::op::Message;
 use hickory_proto::op::UpdateMessage;
+use hickory_proto::op::{Message, Query, ResponseCode};
 use hickory_proto::rr::rdata::{A, AAAA};
 use hickory_proto::rr::{RData, Record, RecordType};
 use hickory_proto::serialize::binary::BinDecodable;
@@ -36,9 +36,13 @@ impl Context {
       };
 
       if let Some(rdata) = rdata {
-        let record = Record::from_rdata(query.name().clone(), 5, rdata);
+        let record = Record::from_rdata(query.name().clone(), 0, rdata);
         response.add_answer(record);
       }
+    }
+
+    if response.answers.is_empty() {
+      response.metadata.response_code = ResponseCode::NXDomain;
     }
 
     let bytes = response.to_vec()?;
@@ -46,7 +50,7 @@ impl Context {
     Ok(())
   }
 
-  pub fn cache_key(&self) -> Option<(String, RecordType)> {
-    self.msg().queries.first().map(|q| (q.name().to_string(), q.query_type()))
+  pub fn query(&self) -> Option<&Query> {
+    self.msg().queries.first()
   }
 }

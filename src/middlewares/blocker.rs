@@ -26,14 +26,9 @@ impl Middleware for Blocker {
     for query in &ctx.msg().queries {
       let host = query.name().to_string();
       let host = host.trim_end_matches('.');
-      let url = format!("http://{}/", host);
+      let url = format!("https://{}/", host);
 
-      let request_type = match query.query_type() {
-        RecordType::A | RecordType::AAAA => "script",
-        _ => "other",
-      };
-
-      if let Ok(req) = Request::new(&url, "http://example.com", request_type) {
+      if let Ok(req) = Request::new(&url, "", "document") {
         let res = engine.check_network_request(&req);
         if res.matched && res.exception.is_none() {
           info!(?url, "blocked");

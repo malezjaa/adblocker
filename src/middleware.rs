@@ -4,11 +4,8 @@ use hickory_proto::op::Message;
 
 #[allow(dead_code)]
 pub enum MiddlewareResult {
-  /// Pass to next middleware
   Next,
-  /// Return NXDOMAIN, stop chain
   Block,
-  /// Return custom response, stop chain
   Respond(Message),
 }
 

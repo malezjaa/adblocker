@@ -5,10 +5,12 @@ use crate::context::Context;
 use crate::firewall::external_dns::block_external_dns;
 use crate::middleware::MiddlewareResult;
 use crate::middlewares::blocker::Blocker;
-use crate::response_cache::ResponseCache;
+use anyhow::bail;
 use fs_err::create_dir_all;
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::serialize::binary::{BinDecodable, BinEncodable};
+use hickory_resolver::net::{DnsError, NetError};
+use hickory_resolver::{config::*, *};
 use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -19,8 +21,7 @@ use tracing::{debug, info};
 pub struct App {
   socket: Arc<UdpSocket>,
   pipeline: Pipeline,
-  response_cache: Arc<ResponseCache>,
-  upstream_address: SocketAddr,
+  resolver: TokioResolver,
 }
 
 impl App {
@@ -34,9 +35,8 @@ impl App {
     }
 
     let socket = Arc::new(UdpSocket::bind(config.socket).await?);
-    let response_cache = Arc::new(ResponseCache::new(2048));
 
-    block_external_dns(config.socket)?;
+    // block_external_dns(config.socket)?;
 
     let start = Instant::now();
     let rules = load_blocklists(config.blocklists, &cache_dir).await?;
@@ -44,14 +44,37 @@ impl App {
 
     let pipeline = Pipeline::new().add(Blocker::new(rules));
 
+    let resolver = {
+      // To make this independent, if targeting macOS, BSD, Linux, or Windows, we can use the system's configuration:
+      #[cfg(any(unix, windows))]
+      {
+        use hickory_resolver::{net::runtime::TokioRuntimeProvider, TokioResolver};
+
+        // use the system resolver configuration
+        TokioResolver::builder(TokioRuntimeProvider::default())?
+          .build()?
+      }
+
+      // For other operating systems, we can use one of the preconfigured definitions
+      #[cfg(not(any(unix, windows)))]
+      {
+        // Directly reference the config types
+        use hickory_resolver::{
+          config::{ResolverConfig, ResolverOpts, GOOGLE},
+          Resolver,
+        };
+
+        // Get a new resolver with the google nameservers as the upstream recursive resolvers
+        Resolver::tokio(ResolverConfig::udp_and_tcp(), ResolverOpts::default())
+      }
+    };
+
     Ok(Self {
       socket,
       pipeline,
-      response_cache,
-      upstream_address: config.upstream_address,
+      resolver,
     })
   }
-
   pub async fn run(&self) -> anyhow::Result<()> {
     let mut buf = vec![0u8; 512];
     loop {
@@ -71,60 +94,37 @@ impl App {
     match self.pipeline.run(ctx).await {
       MiddlewareResult::Block => ctx.send_blocked(&self.socket, src).await?,
       MiddlewareResult::Respond(msg) => send_response(&self.socket, src, msg).await?,
-      MiddlewareResult::Next => self.forward(ctx, src).await?,
+      MiddlewareResult::Next => self.resolve(ctx, src).await?,
     }
     Ok(())
   }
 
-  async fn forward(&self, ctx: &mut Context, src: SocketAddr) -> anyhow::Result<()> {
-    let cache_key = ctx.cache_key();
+  async fn resolve(&self, ctx: &mut Context, src: SocketAddr) -> anyhow::Result<()> {
+    let Some(query) = ctx.query() else {
+      bail!("No name or record")
+    };
 
-    if let Some(ref key) = cache_key
-      && let Some(cached) = self.response_cache.get_with_id(key, ctx.msg().id())
-    {
-      self.socket.send_to(&cached, src).await?;
-      return Ok(());
-    }
+    let mut response = ctx.msg().clone().into_response();
 
-    let forward_bytes = ctx.msg().to_bytes()?;
-    let socket = self.socket.clone();
-    let response_cache = self.response_cache.clone();
-    let upstream_addr = self.upstream_address;
-
-    tokio::spawn(async move {
-      let upstream = UdpSocket::bind("0.0.0.0:0").await?;
-      upstream.send_to(&forward_bytes, upstream_addr).await?;
-
-      let mut buf = vec![0u8; 512];
-      let resp_len =
-        match tokio::time::timeout(Duration::from_secs(5), upstream.recv_from(&mut buf))
-          .await
-        {
-          Ok(Ok((len, _))) => len,
-          Ok(Err(e)) => return Err(e.into()),
-          Err(_) => return Ok(()),
-        };
-
-      let response = buf[..resp_len].to_vec();
-
-      if let Some(key) = cache_key
-        && let Ok(msg) = Message::from_bytes(&response)
-        && msg.metadata.response_code == ResponseCode::NoError
-        && let Some(ttl) = min_ttl(&msg)
-      {
-        response_cache.insert(key, response.clone(), Duration::from_secs(ttl as u64));
+    match self.resolver.lookup(query.name.to_owned(), query.query_type).await {
+      Ok(lookup) => {
+        for record in lookup.answers() {
+          response.add_answer(record.clone());
+        }
       }
+      Err(e) => {
+        match e {
+          NetError::Dns(DnsError::NoRecordsFound(no)) => {
+            response.metadata.response_code = no.response_code;
+          }
+          _ => return Err(e.into()),
+        }
+      }
+    }
 
-      socket.send_to(&response, src).await?;
-      Ok::<_, anyhow::Error>(())
-    });
-  
+    send_response(&self.socket, src, response).await?;
     Ok(())
   }
-}
-
-fn min_ttl(msg: &Message) -> Option<u32> {
-  msg.answers.iter().map(|r| r.ttl).min().filter(|ttl| *ttl > 0)
 }
 
 pub async fn send_response(
