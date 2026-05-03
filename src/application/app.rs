@@ -1,48 +1,29 @@
-use crate::application::pipeline::Pipeline;
-use crate::blocklists::load_blocklists;
-use crate::config::Config;
-use crate::context::Context;
-use crate::firewall::external_dns::block_external_dns;
-use crate::middleware::MiddlewareResult;
-use crate::middlewares::blocker::Blocker;
-use anyhow::bail;
-use fs_err::create_dir_all;
+use crate::blocker::{BlockLookup, BlockResult};
+use anyhow::{bail, Result};
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
+use hickory_proto::rr::rdata::{A, AAAA};
+use hickory_proto::rr::{RData, Record, RecordType};
 use hickory_proto::serialize::binary::{BinDecodable, BinEncodable};
 use hickory_resolver::net::{DnsError, NetError};
-use hickory_resolver::{config::*, *};
+use hickory_resolver::*;
 use std::io::ErrorKind;
-use std::net::SocketAddr;
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
 use tokio::net::UdpSocket;
-use tracing::{debug, info};
+use tokio::sync::mpsc::Sender;
+use tokio::sync::oneshot;
 
 pub struct App {
   socket: Arc<UdpSocket>,
-  pipeline: Pipeline,
   resolver: TokioResolver,
+  tx: Sender<BlockLookup>,
 }
 
 impl App {
-  pub async fn init() -> anyhow::Result<Self> {
-    let home_path = dirs::home_dir().unwrap().join("adb");
-    let config = Config::from_file(home_path.join("config.toml"))?;
-    let cache_dir = home_path.join("cache");
-
-    if !cache_dir.exists() {
-      create_dir_all(&cache_dir)?;
-    }
-
-    let socket = Arc::new(UdpSocket::bind(config.socket).await?);
+  pub async fn init(socket: SocketAddr, tx: Sender<BlockLookup>) -> Result<Self> {
+    let socket = Arc::new(UdpSocket::bind(socket).await?);
 
     // block_external_dns(config.socket)?;
-
-    let start = Instant::now();
-    let rules = load_blocklists(config.blocklists, &cache_dir).await?;
-    info!("loaded lists in {:.2?}", start.elapsed());
-
-    let pipeline = Pipeline::new().add(Blocker::new(rules));
 
     let resolver = {
       // To make this independent, if targeting macOS, BSD, Linux, or Windows, we can use the system's configuration:
@@ -64,18 +45,18 @@ impl App {
           Resolver,
         };
 
-        // Get a new resolver with the google nameservers as the upstream recursive resolvers
+        // Get a new resolver with the Google nameservers as the upstream recursive resolvers
         Resolver::tokio(ResolverConfig::udp_and_tcp(), ResolverOpts::default())
       }
     };
 
     Ok(Self {
       socket,
-      pipeline,
       resolver,
+      tx,
     })
   }
-  pub async fn run(&self) -> anyhow::Result<()> {
+  pub async fn run(&self) -> Result<()> {
     let mut buf = vec![0u8; 512];
     loop {
       let (len, src) = match self.socket.recv_from(&mut buf).await {
@@ -84,27 +65,60 @@ impl App {
         Err(e) => return Err(e.into()),
       };
 
-      let mut ctx = Context::new(buf[..len].to_vec())?;
-      debug!(request = ?ctx, from = %src);
-      self.handle(&mut ctx, src).await?;
+      let raw = buf[..len].to_vec();
+      let msg = Message::from_bytes(&raw)?;
+
+      let (sender, rx) = oneshot::channel();
+
+      let lookup = BlockLookup::new(
+        msg.clone(),
+        sender,
+      );
+
+      self.tx.send(lookup).await?;
+
+      match rx.await? {
+        BlockResult::Ok => self.resolve(&msg, src).await?,
+        BlockResult::Block => self.block(&msg, &self.socket, src).await?,
+      }
     }
   }
 
-  async fn handle(&self, ctx: &mut Context, src: SocketAddr) -> anyhow::Result<()> {
-    match self.pipeline.run(ctx).await {
-      MiddlewareResult::Block => ctx.send_blocked(&self.socket, src).await?,
-      MiddlewareResult::Respond(msg) => send_response(&self.socket, src, msg).await?,
-      MiddlewareResult::Next => self.resolve(ctx, src).await?,
+  async fn block(&self, msg: &Message, socket: &UdpSocket, src: SocketAddr) -> Result<()> {
+    let mut response = Message::response(msg.id(), msg.op_code);
+
+    response.add_queries(msg.queries.clone());
+
+    for query in &msg.queries {
+      let rdata = match query.query_type() {
+        RecordType::A => Some(RData::A(A(Ipv4Addr::new(0, 0, 0, 0)))),
+        RecordType::AAAA => {
+          Some(RData::AAAA(AAAA(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0))))
+        }
+        _ => None,
+      };
+
+      if let Some(rdata) = rdata {
+        let record = Record::from_rdata(query.name().clone(), 0, rdata);
+        response.add_answer(record);
+      }
     }
+
+    if response.answers.is_empty() {
+      response.metadata.response_code = ResponseCode::NXDomain;
+    }
+
+    let bytes = response.to_vec()?;
+    socket.send_to(&bytes, src).await?;
     Ok(())
   }
 
-  async fn resolve(&self, ctx: &mut Context, src: SocketAddr) -> anyhow::Result<()> {
-    let Some(query) = ctx.query() else {
+  async fn resolve(&self, msg: &Message, src: SocketAddr) -> Result<()> {
+    let Some(query) = msg.queries.first() else {
       bail!("No name or record")
     };
 
-    let mut response = ctx.msg().clone().into_response();
+    let mut response = msg.clone().into_response();
 
     match self.resolver.lookup(query.name.to_owned(), query.query_type).await {
       Ok(lookup) => {
@@ -131,7 +145,7 @@ pub async fn send_response(
   socket: &UdpSocket,
   src: SocketAddr,
   msg: Message,
-) -> anyhow::Result<()> {
+) -> Result<()> {
   socket.send_to(&msg.to_bytes()?, src).await?;
   Ok(())
 }
