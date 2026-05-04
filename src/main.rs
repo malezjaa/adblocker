@@ -1,19 +1,23 @@
 mod application;
+mod blocker;
 mod blocklists;
 mod cache;
 mod config;
-mod blocker;
 mod firewall;
+mod server;
+mod state;
 mod windows;
 
 use crate::application::app::App;
 use crate::blocker::{lookup_block, BlockLookup};
 use crate::blocklists::load_blocklists;
-use crate::config::Config;
+use crate::server::setup_server;
+use crate::state::State;
 use adblock::Engine;
 use anyhow::Result;
 use axum::routing::get;
 use axum::Router;
+use chrono::Duration as ChronoDuration;
 use fs_err::create_dir_all;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, oneshot};
@@ -26,23 +30,22 @@ fn setup_logger() {
   tracing_subscriber::fmt().with_env_filter("dns_adblock=info").init();
 }
 
-async fn root() -> &'static str {
-  "Hello, World!"
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
   setup_logger();
   let home_path = dirs::home_dir().unwrap().join("adb");
-  let config = Config::from_file(home_path.join("config.toml"))?;
   let cache_dir = home_path.join("cache");
 
-  if !cache_dir.exists() {
-    create_dir_all(&cache_dir)?;
-  }
+  create_dir_all(&cache_dir)?;
 
+  let db_path = home_path.join("dns-adblock.sqlite");
+  let state = State::from_paths(home_path.join("config.toml"), db_path).await?;
+
+  let blocklists = state.blocklists().await;
+  let socket = state.socket().await;
   let start = Instant::now();
-  let rules = load_blocklists(config.blocklists, &cache_dir).await?;
+  let rules = load_blocklists(blocklists, &cache_dir).await?;
+
   info!("loaded lists in {:.2?}", start.elapsed());
   let engine = Engine::from_filter_set(rules, true);
 
@@ -58,28 +61,28 @@ async fn main() -> Result<()> {
   let local = LocalSet::new();
   local.spawn_local(run_engine(engine, rx));
 
-  local.run_until(async {
-    let dns = spawn(async move {
-      loop {
-        if let Err(err) = App::init(config.socket, tx.clone()).await?.run().await {
-          sleep(Duration::from_secs(3)).await;
-          error!(error = ?err, "dns adblocker failed. trying to restart in 3s");
+  local
+    .run_until(async {
+      let cleanup_state = state.clone();
+      let dns = spawn(async move {
+        loop {
+          if let Err(err) =
+            App::init(socket, tx.clone(), state.clone()).await?.run().await
+          {
+            sleep(Duration::from_secs(3)).await;
+            error!(error = ?err, "dns adblocker failed. trying to restart in 3s");
+          }
         }
-      }
 
-      Ok::<(), anyhow::Error>(())
-    });
+        Ok::<(), anyhow::Error>(())
+      });
 
-    let server = spawn(async move {
-      let app = Router::new()
-        .route("/", get(root));
+      let server = spawn(setup_server());
 
-      let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-      axum::serve(listener, app).await.unwrap();
-    });
-
-    let _ = join!(dns, server);
-  }).await;
+      let _cleanup = cleanup_state.spawn_cleanup_task(ChronoDuration::days(30));
+      let _ = join!(dns, server);
+    })
+    .await;
 
   Ok(())
 }

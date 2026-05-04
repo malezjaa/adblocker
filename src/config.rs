@@ -5,7 +5,7 @@ use std::net::SocketAddr;
 use std::path::Path;
 use tracing::info;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
   pub blocklists: Vec<String>,
   pub socket: SocketAddr,

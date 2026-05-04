@@ -1,4 +1,5 @@
 use crate::blocker::{BlockLookup, BlockResult};
+use crate::state::{QueryEvent, State};
 use anyhow::{bail, Result};
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::{A, AAAA};
@@ -12,15 +13,17 @@ use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot;
+use tracing::warn;
 
 pub struct App {
   socket: Arc<UdpSocket>,
   resolver: TokioResolver,
   tx: Sender<BlockLookup>,
+  state: State,
 }
 
 impl App {
-  pub async fn init(socket: SocketAddr, tx: Sender<BlockLookup>) -> Result<Self> {
+  pub async fn init(socket: SocketAddr, tx: Sender<BlockLookup>, state: State) -> Result<Self> {
     let socket = Arc::new(UdpSocket::bind(socket).await?);
 
     // block_external_dns(config.socket)?;
@@ -54,6 +57,7 @@ impl App {
       socket,
       resolver,
       tx,
+      state,
     })
   }
   pub async fn run(&self) -> Result<()> {
@@ -77,9 +81,26 @@ impl App {
 
       self.tx.send(lookup).await?;
 
-      match rx.await? {
-        BlockResult::Ok => self.resolve(&msg, src).await?,
-        BlockResult::Block => self.block(&msg, &self.socket, src).await?,
+      let blocked = match rx.await? {
+        BlockResult::Ok => {
+          self.resolve(&msg, src).await?;
+          false
+        }
+        BlockResult::Block => {
+          self.block(&msg, &self.socket, src).await?;
+          true
+        }
+      };
+
+      if let Some(domain) = query_domain(&msg) {
+        let event = QueryEvent::new(domain, src.ip().to_string(), blocked);
+        let state = self.state.clone();
+
+        tokio::spawn(async move {
+          if let Err(err) = state.record_query(&event).await {
+            warn!(error = ?err, "failed to insert query_log");
+          }
+        });
       }
     }
   }
@@ -139,6 +160,13 @@ impl App {
     send_response(&self.socket, src, response).await?;
     Ok(())
   }
+}
+
+fn query_domain(msg: &Message) -> Option<String> {
+  msg.queries
+    .first()
+    .map(|q| q.name().to_string())
+    .map(|d| d.trim_end_matches('.').to_string())
 }
 
 pub async fn send_response(

@@ -1,0 +1,9 @@
+use anyhow::Result;
+use axum::Router;
+
+pub async fn setup_server() -> Result<()> {
+  let app = Router::new();
+
+  let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+  Ok(axum::serve(listener, app).await?)
+}
