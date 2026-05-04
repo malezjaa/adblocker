@@ -1,6 +1,8 @@
 use crate::config::Config;
+use crate::domain::registered_domain;
 use anyhow::Result;
 use chrono::{Duration as ChronoDuration, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
@@ -21,9 +23,10 @@ pub struct StateImpl {
   total_queries: AtomicUsize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryEvent {
   pub domain: String,
+  pub registered_domain: String,
   pub client_ip: String,
   pub blocked: bool,
   pub timestamp: i64,
@@ -32,6 +35,7 @@ pub struct QueryEvent {
 impl QueryEvent {
   pub fn new(domain: String, client_ip: String, blocked: bool) -> Self {
     Self {
+      registered_domain: registered_domain(&domain),
       domain,
       client_ip,
       blocked,
@@ -40,21 +44,21 @@ impl QueryEvent {
   }
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
 pub struct BlockedEntry {
   pub domain: String,
   pub client_ip: String,
   pub timestamp: i64,
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
 pub struct TopDomain {
   pub domain: String,
   pub hits_blocked: i64,
   pub hits_total: i64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DaySummary {
   pub total_queries: usize,
   pub total_blocked: i64,
@@ -106,14 +110,15 @@ impl State {
     let hits_blocked = i64::from(event.blocked);
 
     sqlx::query(
-      "INSERT INTO domain_stats (domain, hits_total, hits_blocked, last_seen)
-             VALUES (?, 1, ?, ?)
+      "INSERT INTO domain_stats (domain, registered_domain, hits_total, hits_blocked, last_seen)
+             VALUES (?, ?, 1, ?, ?)
              ON CONFLICT(domain) DO UPDATE SET
-               hits_total   = hits_total + 1,
-               hits_blocked = hits_blocked + excluded.hits_blocked,
-               last_seen    = excluded.last_seen",
+               hits_total        = hits_total + 1,
+               hits_blocked      = hits_blocked + excluded.hits_blocked,
+               last_seen         = excluded.last_seen",
     )
       .bind(&event.domain)
+      .bind(&event.registered_domain)
       .bind(hits_blocked)
       .bind(event.timestamp)
       .execute(&mut *tx)
@@ -145,7 +150,7 @@ impl State {
   /// Domains with the most blocked hits, highest first.
   pub async fn top_blocked(&self, limit: i64) -> Result<Vec<TopDomain>> {
     let rows = sqlx::query_as::<_, TopDomain>(
-      "SELECT domain, hits_blocked, hits_total
+      "SELECT domain, registered_domain, hits_blocked, hits_total
              FROM domain_stats
              WHERE hits_blocked > 0
              ORDER BY hits_blocked DESC
@@ -252,11 +257,19 @@ impl State {
 
     sqlx::query(
       "CREATE TABLE IF NOT EXISTS domain_stats (
-               domain       TEXT    PRIMARY KEY,
-               hits_total   INTEGER NOT NULL,
-               hits_blocked INTEGER NOT NULL,
-               last_seen    INTEGER NOT NULL
-             )",
+              domain             TEXT    PRIMARY KEY,
+              registered_domain  TEXT    NOT NULL,
+              hits_total         INTEGER NOT NULL,
+              hits_blocked       INTEGER NOT NULL,
+              last_seen          INTEGER NOT NULL
+            );",
+    )
+      .execute(&self.0.db)
+      .await?;
+
+    sqlx::query(
+      "CREATE INDEX IF NOT EXISTS idx_domain_stats_registered
+                ON domain_stats(registered_domain);",
     )
       .execute(&self.0.db)
       .await?;

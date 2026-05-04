@@ -7,6 +7,7 @@ mod firewall;
 mod server;
 mod state;
 mod windows;
+mod domain;
 
 use crate::application::app::App;
 use crate::blocker::{lookup_block, BlockLookup};
@@ -61,9 +62,12 @@ async fn main() -> Result<()> {
   let local = LocalSet::new();
   local.spawn_local(run_engine(engine, rx));
 
+  let state = state.clone();
   local
     .run_until(async {
-      let cleanup_state = state.clone();
+      let _cleanup = state.clone().spawn_cleanup_task(ChronoDuration::days(30));
+      let server = spawn(setup_server(state.clone()));
+
       let dns = spawn(async move {
         loop {
           if let Err(err) =
@@ -73,13 +77,9 @@ async fn main() -> Result<()> {
             error!(error = ?err, "dns adblocker failed. trying to restart in 3s");
           }
         }
-
         Ok::<(), anyhow::Error>(())
       });
 
-      let server = spawn(setup_server());
-
-      let _cleanup = cleanup_state.spawn_cleanup_task(ChronoDuration::days(30));
       let _ = join!(dns, server);
     })
     .await;
