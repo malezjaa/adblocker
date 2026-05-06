@@ -8,10 +8,14 @@ mod server;
 mod state;
 mod windows;
 mod domain;
+mod cert;
+mod doh;
 
 use crate::application::app::App;
 use crate::blocker::{lookup_block, BlockLookup};
 use crate::blocklists::load_blocklists;
+use crate::cert::generate_cert;
+use crate::doh::setup_doh_server;
 use crate::server::setup_server;
 use crate::state::State;
 use adblock::Engine;
@@ -34,13 +38,15 @@ fn setup_logger() {
 #[tokio::main]
 async fn main() -> Result<()> {
   setup_logger();
+  // generate_cert()?;
   let home_path = dirs::home_dir().unwrap().join("adb");
   let cache_dir = home_path.join("cache");
 
   create_dir_all(&cache_dir)?;
 
   let db_path = home_path.join("dns-adblock.sqlite");
-  let state = State::from_paths(home_path.join("config.toml"), db_path).await?;
+  let (tx, rx) = mpsc::channel::<BlockLookup>(100);
+  let state = State::from_paths(home_path.join("config.toml"), db_path, tx).await?;
 
   let blocklists = state.blocklists().await;
   let socket = state.socket().await;
@@ -50,11 +56,9 @@ async fn main() -> Result<()> {
   info!("loaded lists in {:.2?}", start.elapsed());
   let engine = Engine::from_filter_set(rules, true);
 
-  let (tx, rx) = mpsc::channel::<BlockLookup>(100);
-
   async fn run_engine(engine: Engine, mut rx: mpsc::Receiver<BlockLookup>) -> Result<()> {
     while let Some(lookup) = rx.recv().await {
-      lookup.sender.send(lookup_block(&engine, &lookup.msg)).ok();
+      lookup.sender.send(lookup_block(&engine, &lookup.msg, lookup.doh)).ok();
     }
     Ok(())
   }
@@ -68,10 +72,11 @@ async fn main() -> Result<()> {
       let _cleanup = state.clone().spawn_cleanup_task(ChronoDuration::days(30));
       let server = spawn(setup_server(state.clone()));
 
+      let dns_state = state.clone();
       let dns = spawn(async move {
         loop {
           if let Err(err) =
-            App::init(socket, tx.clone(), state.clone()).await?.run().await
+            App::init(socket, dns_state.clone()).await?.run().await
           {
             sleep(Duration::from_secs(3)).await;
             error!(error = ?err, "dns adblocker failed. trying to restart in 3s");
@@ -80,7 +85,16 @@ async fn main() -> Result<()> {
         Ok::<(), anyhow::Error>(())
       });
 
-      let _ = join!(dns, server);
+      let doh = spawn(async move {
+        loop {
+          if let Err(err) = setup_doh_server(state.clone()).await {
+            sleep(Duration::from_secs(3)).await;
+            error!(error = ?err, "DoH server failed, restarting in 3s");
+          }
+        }
+      });
+
+      let _ = join!(dns, server, doh);
     })
     .await;
 

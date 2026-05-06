@@ -1,7 +1,10 @@
+use crate::blocker::BlockLookup;
 use crate::config::Config;
-use crate::domain::registered_domain;
+use crate::domain::{query_domain, registered_domain};
 use anyhow::Result;
 use chrono::{Duration as ChronoDuration, Utc};
+use hickory_proto::op::Message;
+use hickory_resolver::TokioResolver;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
@@ -9,6 +12,7 @@ use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tracing::warn;
@@ -18,9 +22,11 @@ pub struct State(Arc<StateImpl>);
 
 #[derive(Debug)]
 pub struct StateImpl {
+  tx: Sender<BlockLookup>,
   config: RwLock<Config>,
   db: SqlitePool,
   total_queries: AtomicUsize,
+  resolver: TokioResolver,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,23 +73,59 @@ pub struct DaySummary {
 }
 
 impl State {
-  pub fn new(config: Config, db: SqlitePool) -> Self {
-    Self(Arc::new(StateImpl {
+  pub fn new(config: Config, db: SqlitePool, tx: Sender<BlockLookup>) -> Result<Self> {
+    let resolver = {
+      // To make this independent, if targeting macOS, BSD, Linux, or Windows, we can use the system's configuration:
+      #[cfg(any(unix, windows))]
+      {
+        use hickory_resolver::{net::runtime::TokioRuntimeProvider, TokioResolver};
+
+        // use the system resolver configuration
+        TokioResolver::builder(TokioRuntimeProvider::default())?
+          .build()?
+      }
+
+      // For other operating systems, we can use one of the preconfigured definitions
+      #[cfg(not(any(unix, windows)))]
+      {
+        // Directly reference the config types
+        use hickory_resolver::{
+          config::{ResolverConfig, ResolverOpts, GOOGLE},
+          Resolver,
+        };
+
+        // Get a new resolver with the Google nameservers as the upstream recursive resolvers
+        Resolver::tokio(ResolverConfig::udp_and_tcp(), ResolverOpts::default())
+      }
+    };
+
+    Ok(Self(Arc::new(StateImpl {
+      tx,
       config: RwLock::new(config),
       db,
       total_queries: AtomicUsize::default(),
-    }))
+      resolver,
+    })))
   }
 
   pub async fn from_paths<P: AsRef<Path>, Q: AsRef<Path>>(
     config_path: P,
     db_path: Q,
+    tx: Sender<BlockLookup>,
   ) -> Result<Self> {
     let config = Config::from_file(config_path)?;
     let db = Self::init_db(db_path.as_ref()).await?;
-    let state = Self::new(config, db);
+    let state = Self::new(config, db, tx)?;
     state.init_schema().await?;
     Ok(state)
+  }
+
+  pub fn tx(&self) -> Sender<BlockLookup> {
+    self.0.tx.clone()
+  }
+
+  pub fn resolver(&self) -> &TokioResolver {
+    &self.0.resolver
   }
 
   pub async fn blocklists(&self) -> Vec<String> {
@@ -215,6 +257,23 @@ impl State {
         }
       }
     })
+  }
+
+  pub fn spawn_query_record(&self, response: &Message, src: SocketAddr, blocked: bool) {
+    if let Some(domain) = query_domain(&response) {
+      let event = QueryEvent::new(
+        domain,
+        src.ip().to_string(),
+        blocked,
+      );
+      
+      let state = self.clone();
+      tokio::spawn(async move {
+        if let Err(err) = state.record_query(&event).await {
+          warn!(error = ?err, "failed to insert query_log");
+        }
+      });
+    }
   }
 
   async fn init_db(path: &Path) -> Result<SqlitePool> {
