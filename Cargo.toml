@@ -17,7 +17,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 anyhow = "1.0.102"
 reqwest = "0.13.3"
-toml = "1.1.2+spec-1.1.0"
+toml = "1.1.2"
 serde = { version = "1.0.228", features = ["derive"] }
 dirs = "6.0.0"
 fs-err = "3.3.0"
@@ -40,7 +40,11 @@ windows = { version = "0.62", features = [
     "Win32_NetworkManagement_WindowsFilteringPlatform",
     "Win32_System_Rpc",
     "Win32_Security",
+    "Win32_Networking_WinSock",
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_NetworkManagement_Ndis"
 ] }
+widestring = "1.2.1"
 
 [profile.release]
 opt-level = 3

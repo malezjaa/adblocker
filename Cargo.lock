@@ -635,6 +635,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "widestring",
  "windows",
 ]
 

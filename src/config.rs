@@ -9,6 +9,7 @@ use tracing::info;
 pub struct Config {
   pub blocklists: Vec<String>,
   pub socket: SocketAddr,
+  pub secondary_name_server: Option<SocketAddr>,
 }
 
 impl Config {
@@ -16,6 +17,7 @@ impl Config {
     Ok(Self {
       blocklists: vec!["https://big.oisd.nl".into()],
       socket: "127.0.0.2:53".parse()?,
+      secondary_name_server: None,
     })
   }
 

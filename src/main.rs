@@ -78,8 +78,8 @@ async fn main() -> Result<()> {
           if let Err(err) =
             App::init(socket, dns_state.clone()).await?.run().await
           {
-            sleep(Duration::from_secs(3)).await;
             error!(error = ?err, "dns adblocker failed. trying to restart in 3s");
+            sleep(Duration::from_secs(3)).await;
           }
         }
         Ok::<(), anyhow::Error>(())

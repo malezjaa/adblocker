@@ -1,4 +1,5 @@
 use crate::blocker::check_block;
+use crate::firewall::override_dns::override_default_dns;
 use crate::state::State;
 use anyhow::{bail, Result};
 use hickory_proto::op::Message;
@@ -17,6 +18,7 @@ impl App {
   pub async fn init(socket: SocketAddr, state: State) -> Result<Self> {
     let socket = Arc::new(UdpSocket::bind(socket).await?);
 
+    override_default_dns(state.socket().await, state.secondary_name_server().await)?;
     // block_external_dns(config.socket)?;
 
     Ok(Self {

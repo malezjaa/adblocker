@@ -135,6 +135,10 @@ impl State {
   pub async fn socket(&self) -> SocketAddr {
     self.0.config.read().await.socket
   }
+  
+  pub async fn secondary_name_server(&self) -> Option<SocketAddr> {
+    self.0.config.read().await.secondary_name_server
+  }
 
   pub async fn record_query(&self, event: &QueryEvent) -> Result<()> {
     let mut tx = self.0.db.begin().await?;
