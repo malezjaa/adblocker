@@ -2,30 +2,27 @@ mod application;
 mod blocker;
 mod blocklists;
 mod cache;
+mod cert;
 mod config;
+mod doh;
+mod domain;
 mod firewall;
 mod server;
 mod state;
 mod windows;
-mod domain;
-mod cert;
-mod doh;
 
 use crate::application::app::App;
-use crate::blocker::{lookup_block, BlockLookup};
+use crate::blocker::{BlockLookup, lookup_block};
 use crate::blocklists::load_blocklists;
-use crate::cert::generate_cert;
 use crate::doh::setup_doh_server;
 use crate::server::setup_server;
 use crate::state::State;
 use adblock::Engine;
 use anyhow::Result;
-use axum::routing::get;
-use axum::Router;
 use chrono::Duration as ChronoDuration;
 use fs_err::create_dir_all;
 use std::time::{Duration, Instant};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 use tokio::task::LocalSet;
 use tokio::time::sleep;
 use tokio::{join, spawn};
@@ -75,9 +72,7 @@ async fn main() -> Result<()> {
       let dns_state = state.clone();
       let dns = spawn(async move {
         loop {
-          if let Err(err) =
-            App::init(socket, dns_state.clone()).await?.run().await
-          {
+          if let Err(err) = App::init(socket, dns_state.clone()).await?.run().await {
             error!(error = ?err, "dns adblocker failed. trying to restart in 3s");
             sleep(Duration::from_secs(3)).await;
           }

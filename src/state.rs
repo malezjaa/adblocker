@@ -6,14 +6,14 @@ use chrono::{Duration as ChronoDuration, Utc};
 use hickory_proto::op::Message;
 use hickory_resolver::TokioResolver;
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::net::SocketAddr;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use tokio::sync::mpsc::Sender;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::Sender;
 use tokio::task::JoinHandle;
 use tracing::warn;
 
@@ -78,11 +78,10 @@ impl State {
       // To make this independent, if targeting macOS, BSD, Linux, or Windows, we can use the system's configuration:
       #[cfg(any(unix, windows))]
       {
-        use hickory_resolver::{net::runtime::TokioRuntimeProvider, TokioResolver};
+        use hickory_resolver::{TokioResolver, net::runtime::TokioRuntimeProvider};
 
         // use the system resolver configuration
-        TokioResolver::builder(TokioRuntimeProvider::default())?
-          .build()?
+        TokioResolver::builder(TokioRuntimeProvider::default())?.build()?
       }
 
       // For other operating systems, we can use one of the preconfigured definitions
@@ -90,8 +89,8 @@ impl State {
       {
         // Directly reference the config types
         use hickory_resolver::{
-          config::{ResolverConfig, ResolverOpts, GOOGLE},
           Resolver,
+          config::{GOOGLE, ResolverConfig, ResolverOpts},
         };
 
         // Get a new resolver with the Google nameservers as the upstream recursive resolvers
@@ -135,7 +134,7 @@ impl State {
   pub async fn socket(&self) -> SocketAddr {
     self.0.config.read().await.socket
   }
-  
+
   pub async fn secondary_name_server(&self) -> Option<SocketAddr> {
     self.0.config.read().await.secondary_name_server
   }
@@ -146,12 +145,12 @@ impl State {
     sqlx::query(
       "INSERT INTO query_log (domain, client_ip, blocked, timestamp) VALUES (?, ?, ?, ?)",
     )
-      .bind(&event.domain)
-      .bind(&event.client_ip)
-      .bind(event.blocked)
-      .bind(event.timestamp)
-      .execute(&mut *tx)
-      .await?;
+    .bind(&event.domain)
+    .bind(&event.client_ip)
+    .bind(event.blocked)
+    .bind(event.timestamp)
+    .execute(&mut *tx)
+    .await?;
 
     let hits_blocked = i64::from(event.blocked);
 
@@ -186,9 +185,9 @@ impl State {
              ORDER BY timestamp DESC
              LIMIT ?",
     )
-      .bind(limit)
-      .fetch_all(&self.0.db)
-      .await?;
+    .bind(limit)
+    .fetch_all(&self.0.db)
+    .await?;
 
     Ok(rows)
   }
@@ -202,9 +201,9 @@ impl State {
              ORDER BY hits_blocked DESC
              LIMIT ?",
     )
-      .bind(limit)
-      .fetch_all(&self.0.db)
-      .await?;
+    .bind(limit)
+    .fetch_all(&self.0.db)
+    .await?;
 
     Ok(rows)
   }
@@ -215,23 +214,20 @@ impl State {
     let total_blocked: i64 = sqlx::query_scalar(
       "SELECT COUNT(*) FROM query_log WHERE blocked = 1 AND timestamp >= ?",
     )
-      .bind(since)
-      .fetch_one(&self.0.db)
-      .await?;
+    .bind(since)
+    .fetch_one(&self.0.db)
+    .await?;
 
     let total_allowed: i64 = sqlx::query_scalar(
       "SELECT COUNT(*) FROM query_log WHERE blocked = 0 AND timestamp >= ?",
     )
-      .bind(since)
-      .fetch_one(&self.0.db)
-      .await?;
+    .bind(since)
+    .fetch_one(&self.0.db)
+    .await?;
 
     let total = total_blocked + total_allowed;
-    let block_rate = if total > 0 {
-      total_blocked as f64 / total as f64 * 100.0
-    } else {
-      0.0
-    };
+    let block_rate =
+      if total > 0 { total_blocked as f64 / total as f64 * 100.0 } else { 0.0 };
 
     Ok(DaySummary {
       total_queries: self.0.total_queries.load(Ordering::Relaxed),
@@ -264,13 +260,9 @@ impl State {
   }
 
   pub fn spawn_query_record(&self, response: &Message, src: SocketAddr, blocked: bool) {
-    if let Some(domain) = query_domain(&response) {
-      let event = QueryEvent::new(
-        domain,
-        src.ip().to_string(),
-        blocked,
-      );
-      
+    if let Some(domain) = query_domain(response) {
+      let event = QueryEvent::new(domain, src.ip().to_string(), blocked);
+
       let state = self.clone();
       tokio::spawn(async move {
         if let Err(err) = state.record_query(&event).await {
@@ -281,14 +273,9 @@ impl State {
   }
 
   async fn init_db(path: &Path) -> Result<SqlitePool> {
-    let options = SqliteConnectOptions::new()
-      .filename(path)
-      .create_if_missing(true);
+    let options = SqliteConnectOptions::new().filename(path).create_if_missing(true);
 
-    Ok(SqlitePoolOptions::new()
-      .max_connections(5)
-      .connect_with(options)
-      .await?)
+    Ok(SqlitePoolOptions::new().max_connections(5).connect_with(options).await?)
   }
 
   async fn init_schema(&self) -> Result<()> {
@@ -301,22 +288,22 @@ impl State {
                timestamp INTEGER NOT NULL
              )",
     )
-      .execute(&self.0.db)
-      .await?;
+    .execute(&self.0.db)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_blocked_timestamp
              ON query_log(blocked, timestamp)",
     )
-      .execute(&self.0.db)
-      .await?;
+    .execute(&self.0.db)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_domain
              ON query_log(domain)",
     )
-      .execute(&self.0.db)
-      .await?;
+    .execute(&self.0.db)
+    .await?;
 
     sqlx::query(
       "CREATE TABLE IF NOT EXISTS domain_stats (
@@ -327,22 +314,22 @@ impl State {
               last_seen          INTEGER NOT NULL
             );",
     )
-      .execute(&self.0.db)
-      .await?;
+    .execute(&self.0.db)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_registered
                 ON domain_stats(registered_domain);",
     )
-      .execute(&self.0.db)
-      .await?;
+    .execute(&self.0.db)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_last_seen
              ON domain_stats(last_seen)",
     )
-      .execute(&self.0.db)
-      .await?;
+    .execute(&self.0.db)
+    .await?;
 
     Ok(())
   }

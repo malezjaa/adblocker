@@ -1,7 +1,7 @@
 use crate::blocker::check_block;
 use crate::firewall::override_dns::override_default_dns;
 use crate::state::State;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use hickory_proto::op::Message;
 use hickory_resolver::net::{DnsError, NetError};
 use std::io::ErrorKind;
@@ -21,10 +21,7 @@ impl App {
     override_default_dns(state.socket().await, state.secondary_name_server().await)?;
     // block_external_dns(config.socket)?;
 
-    Ok(Self {
-      socket,
-      state,
-    })
+    Ok(Self { socket, state })
   }
 
   pub async fn run(&self) -> Result<()> {
@@ -48,9 +45,7 @@ impl App {
 }
 
 pub async fn resolve_msg(msg: &Message, state: State) -> Result<Message> {
-  let Some(query) = msg.queries.first() else {
-    bail!("No name or record")
-  };
+  let Some(query) = msg.queries.first() else { bail!("No name or record") };
 
   let mut response = msg.clone().into_response();
 
@@ -60,14 +55,12 @@ pub async fn resolve_msg(msg: &Message, state: State) -> Result<Message> {
         response.add_answer(record.clone());
       }
     }
-    Err(e) => {
-      match e {
-        NetError::Dns(DnsError::NoRecordsFound(no)) => {
-          response.metadata.response_code = no.response_code;
-        }
-        _ => return Err(e.into()),
+    Err(e) => match e {
+      NetError::Dns(DnsError::NoRecordsFound(no)) => {
+        response.metadata.response_code = no.response_code;
       }
-    }
+      _ => return Err(e.into()),
+    },
   }
 
   Ok(response)

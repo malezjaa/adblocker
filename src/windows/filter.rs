@@ -1,9 +1,8 @@
-use super::*;
 use crate::windows::pwstr_buf::PwstrBuffer;
-use anyhow::{bail, Result};
-use windows::core::GUID;
+use anyhow::{Result, bail};
 use windows::Win32::Foundation::HANDLE;
 use windows::Win32::NetworkManagement::WindowsFilteringPlatform::*;
+use windows::core::GUID;
 
 pub fn condition_remote_addr_v4(ip: u32) -> FWPM_FILTER_CONDITION0 {
   FWPM_FILTER_CONDITION0 {

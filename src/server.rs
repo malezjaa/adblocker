@@ -13,10 +13,7 @@ pub struct AppError(anyhow::Error);
 
 impl IntoResponse for AppError {
   fn into_response(self) -> Response {
-    (
-      StatusCode::INTERNAL_SERVER_ERROR,
-      Json(json!({ "error": self.0.to_string() })),
-    )
+    (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": self.0.to_string() })))
       .into_response()
   }
 }
@@ -28,9 +25,7 @@ impl<E: Into<anyhow::Error>> From<E> for AppError {
 }
 
 pub async fn setup_server(state: State) -> Result<()> {
-  let app = Router::new()
-    .route("/top", get(top_handler))
-    .with_state(state);
+  let app = Router::new().route("/top", get(top_handler)).with_state(state);
 
   let listener = TcpListener::bind("0.0.0.0:3000").await?;
   Ok(axum::serve(listener, app).await?)

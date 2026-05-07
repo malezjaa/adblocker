@@ -10,7 +10,8 @@ pub fn registered_domain(fqdn: &str) -> String {
 }
 
 pub fn query_domain(msg: &Message) -> Option<String> {
-  msg.queries
+  msg
+    .queries
     .first()
     .map(|q| q.name().to_string())
     .map(|d| d.trim_end_matches('.').to_string())

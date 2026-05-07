@@ -1,5 +1,4 @@
-use crate::application::app::resolve_msg;
-use crate::blocker::{check_block, handle_blocked_response, BlockLookup, BlockResult};
+use crate::blocker::check_block;
 use crate::server::AppError;
 use crate::state::State;
 use anyhow::Result;
@@ -8,20 +7,16 @@ use axum::extract::{ConnectInfo, Query, State as AxumState};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::{routing::post, Router};
+use axum::{Router, routing::post};
 use axum_server::tls_rustls::RustlsConfig;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
-use hickory_proto::op::{Message, UpdateMessage};
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use serde::Deserialize;
 use std::net::SocketAddr;
-use tokio::sync::mpsc;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
-pub async fn setup_doh_server(
-  state: State,
-) -> Result<()> {
+pub async fn setup_doh_server(state: State) -> Result<()> {
   async fn root() -> String {
     "hello".to_string()
   }
@@ -32,10 +27,7 @@ pub async fn setup_doh_server(
     .layer(TraceLayer::new_for_http())
     .with_state(state);
 
-  let config = RustlsConfig::from_pem_file(
-    "certs/cert.pem",
-    "certs/key.pem",
-  ).await?;
+  let config = RustlsConfig::from_pem_file("certs/cert.pem", "certs/key.pem").await?;
 
   let addr = SocketAddr::from(([127, 0, 0, 2], 8443));
 
@@ -55,14 +47,13 @@ pub async fn doh_handler(
 ) -> Result<impl IntoResponse, AppError> {
   let (blocked, response) = check_block(state.clone(), body.to_vec(), true).await?;
   state.spawn_query_record(&response, addr, blocked);
-  
+
   Ok((
     StatusCode::OK,
     [("content-type", "application/dns-message")],
     Bytes::from(response.to_vec()?),
   ))
 }
-
 
 #[derive(Deserialize)]
 pub struct DohQuery {

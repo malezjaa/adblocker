@@ -1,15 +1,15 @@
-use crate::application::app::{resolve_msg, App};
+use crate::application::app::resolve_msg;
 use crate::state::State;
-use adblock::request::Request;
 use adblock::Engine;
-use anyhow::{anyhow, Result};
+use adblock::request::Request;
+use anyhow::Result;
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::{A, AAAA};
 use hickory_proto::rr::{RData, Record, RecordType};
 use hickory_proto::serialize::binary::BinDecodable;
 use std::net::{Ipv4Addr, Ipv6Addr};
-use tokio::sync::oneshot::{Receiver, Sender};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::oneshot;
+use tokio::sync::oneshot::Sender;
 use tracing::info;
 
 pub struct BlockLookup {
@@ -53,14 +53,15 @@ pub fn lookup_block(engine: &Engine, msg: &Message, doh: bool) -> BlockResult {
   BlockResult::Ok
 }
 
-pub async fn check_block(state: State, raw: Vec<u8>, doh: bool) -> Result<(bool, Message)> {
+pub async fn check_block(
+  state: State,
+  raw: Vec<u8>,
+  doh: bool,
+) -> Result<(bool, Message)> {
   let msg = Message::from_bytes(&raw)?;
   let (sender, rx) = oneshot::channel();
 
-  let mut lookup = BlockLookup::new(
-    msg.clone(),
-    sender,
-  );
+  let mut lookup = BlockLookup::new(msg.clone(), sender);
   lookup = if doh { lookup.doh() } else { lookup };
 
   state.tx().send(lookup).await?;
@@ -78,9 +79,7 @@ pub fn handle_blocked_response(msg: &Message) -> Result<Message> {
   for query in &msg.queries {
     let rdata = match query.query_type() {
       RecordType::A => Some(RData::A(A(Ipv4Addr::new(127, 0, 0, 1)))),
-      RecordType::AAAA => {
-        Some(RData::AAAA(AAAA(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1))))
-      }
+      RecordType::AAAA => Some(RData::AAAA(AAAA(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)))),
       _ => None,
     };
 

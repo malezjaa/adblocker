@@ -1,5 +1,5 @@
 use anyhow::Result;
-use rcgen::{generate_simple_self_signed, CertifiedKey};
+use rcgen::{CertifiedKey, generate_simple_self_signed};
 
 pub fn generate_cert() -> Result<()> {
   let subject_alt_names = vec!["localhost".to_string()];
