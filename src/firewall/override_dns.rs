@@ -71,7 +71,7 @@ pub fn override_default_dns(
 
   let socket = socket.ip().to_string();
   let secondary_ip =
-    secondary.map(|s| s.ip().to_string()).unwrap_or_else(|| "8.8.8.8".to_string());
+    secondary.map(|s| s.ip().to_string()).unwrap_or_else(|| "1.1.1.1".to_string());
 
   for (name, original) in adapters {
     let mut servers = vec![socket.clone()];

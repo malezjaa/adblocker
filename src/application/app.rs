@@ -1,24 +1,25 @@
 use crate::blocker::check_block;
 use crate::firewall::override_dns::override_default_dns;
 use crate::state::State;
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use hickory_proto::op::Message;
 use hickory_resolver::net::{DnsError, NetError};
 use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::net::UdpSocket;
 use tracing::info;
 
 pub struct App {
-  socket: Arc<UdpSocket>,
+  socket: UdpSocket,
   state: State,
-  addr: SocketAddr
+  addr: SocketAddr,
 }
 
 impl App {
   pub async fn init(addr: SocketAddr, state: State) -> Result<Self> {
-    let socket = Arc::new(UdpSocket::bind(addr).await?);
+    let socket = UdpSocket::bind(addr).await?;
 
     override_default_dns(state.socket().await, state.secondary_name_server().await)?;
     // block_external_dns(config.socket)?;
@@ -30,6 +31,7 @@ impl App {
     let mut buf = vec![0u8; 512];
 
     info!("DNS server running on {}", self.addr);
+
     loop {
       let (len, src) = match self.socket.recv_from(&mut buf).await {
         Ok(v) => v,
@@ -39,9 +41,18 @@ impl App {
 
       let raw = buf[..len].to_vec();
 
+      let start = Instant::now();
       let (blocked, response) = check_block(self.state.clone(), raw, false).await?;
-      self.socket.send_to(&response.to_vec()?, src).await?;
+      let elapsed = start.elapsed();
 
+      info!(
+        "dns request: {}ms blocked={} src={}",
+        elapsed.as_millis(),
+        blocked,
+        response.queries[0].name
+      );
+
+      self.socket.send_to(&response.to_vec()?, src).await?;
       self.state.spawn_query_record(&response, src, blocked);
     }
   }
