@@ -1,11 +1,12 @@
 use crate::cache::CacheFile;
-use adblock::FilterSet;
 use adblock::lists::ParseOptions;
+use adblock::FilterSet;
 use anyhow::Result;
+use chrono::Duration;
 use fs_err::{create_dir_all, read, write};
 use futures::future::join_all;
 use reqwest::{Client, StatusCode};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tracing::info;
 
 pub fn load_cache_file(cache_dir: &Path) -> Result<CacheFile> {
@@ -26,26 +27,22 @@ pub fn load_cache_file(cache_dir: &Path) -> Result<CacheFile> {
   Ok(toml::from_slice(&content)?)
 }
 
+
 pub async fn load_blocklists(
   blocklists: Vec<String>,
   cache_dir: &Path,
 ) -> Result<FilterSet> {
   let mut filterset = FilterSet::new(false);
   let mut cache = load_cache_file(cache_dir)?;
-  let max_age = chrono::Duration::hours(24);
 
   let futures = blocklists.iter().map(|blocklist| {
     let cache_file = cache_dir.join(CacheFile::url_hash(blocklist));
-    let is_fresh = cache.is_fresh(blocklist, max_age);
+    let is_fresh = cache.is_fresh(blocklist, Duration::hours(24));
     let cached_etag = cache.get_by_url(blocklist).and_then(|e| e.etag.clone());
 
     async move {
       if is_fresh && cache_file.exists() {
-        let content = read(&cache_file)?;
-        let rules =
-          String::from_utf8(content)?.lines().map(|l| l.to_string()).collect::<Vec<_>>();
-        info!(%blocklist, "using cached");
-        return Ok::<_, anyhow::Error>((blocklist.clone(), rules, None));
+        return read_rules(blocklist, &cache_file, None);
       }
 
       let client = Client::new();
@@ -56,14 +53,10 @@ pub async fn load_blocklists(
 
       let resp = req.send().await?;
       let new_etag =
-        resp.headers().get("etag").and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+        resp.headers().get("etag").and_then(|v| v.to_str().ok()).map(str::to_owned);
 
       if resp.status() == StatusCode::NOT_MODIFIED {
-        info!(%blocklist, "304 not modified, using cache");
-        let content = read(&cache_file)?;
-        let rules =
-          String::from_utf8(content)?.lines().map(|l| l.to_string()).collect::<Vec<_>>();
-        return Ok((blocklist.clone(), rules, new_etag));
+        return read_rules(blocklist, &cache_file, new_etag);
       }
 
       let body = resp.text().await?;
@@ -88,4 +81,14 @@ pub async fn load_blocklists(
   write(cache_dir.join("cache.toml"), toml::to_string(&cache)?)?;
 
   Ok(filterset)
+}
+
+fn read_rules(blocklist: &String, cache_file: &PathBuf, etag: Option<String>) -> Result<(String, Vec<String>, Option<String>)> {
+  let content = read(&cache_file)?;
+  let rules = String::from_utf8(content)?
+    .lines()
+    .map(ToOwned::to_owned)
+    .collect::<Vec<_>>();
+  info!(%blocklist, "using cached");
+  Ok((blocklist.clone(), rules, etag))
 }
