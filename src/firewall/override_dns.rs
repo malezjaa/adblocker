@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use std::net::SocketAddr;
 use std::process::Command;
 use tracing::info;
@@ -11,7 +11,7 @@ pub fn override_default_dns(
   use crate::windows::adapters::dns_servers_to_strings;
   use windows::Win32::Foundation::{ERROR_BUFFER_OVERFLOW, NO_ERROR};
   use windows::Win32::NetworkManagement::IpHelper::{
-    GAA_FLAG_INCLUDE_PREFIX, GetAdaptersAddresses, IF_TYPE_SOFTWARE_LOOPBACK,
+    GetAdaptersAddresses, GAA_FLAG_INCLUDE_PREFIX, IF_TYPE_SOFTWARE_LOOPBACK,
     IF_TYPE_TUNNEL, IP_ADAPTER_ADDRESSES_LH,
   };
   use windows::Win32::NetworkManagement::Ndis::IfOperStatusUp;
@@ -74,8 +74,6 @@ pub fn override_default_dns(
     secondary.map(|s| s.ip().to_string()).unwrap_or_else(|| "8.8.8.8".to_string());
 
   for (name, original) in adapters {
-    info!("processing adapter: {}", name);
-
     let mut servers = vec![socket.clone()];
     servers.extend(original.iter().filter(|o| *o != &socket).cloned());
 
@@ -86,7 +84,7 @@ pub fn override_default_dns(
     let servers_ps =
       servers.iter().map(|s| format!("\"{}\"", s)).collect::<Vec<_>>().join(",");
 
-    info!("servers_ps = {}", servers_ps);
+    info!("Name servers: {}", servers.join(", "));
 
     let script = format!(
       "Set-DnsClientServerAddress -InterfaceAlias '{name}' -ServerAddresses ({})",
@@ -100,6 +98,8 @@ pub fn override_default_dns(
     if !status.success() {
       bail!("Set-DnsClientServerAddress failed");
     }
+
+    info!("Overridden DNS servers for adapter: {name}");
   }
 
   Ok(())

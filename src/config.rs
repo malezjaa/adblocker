@@ -3,7 +3,7 @@ use fs_err::{create_dir, read, write};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::path::Path;
-use tracing::info;
+use tracing::{debug, info};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -23,7 +23,7 @@ impl Config {
 
   pub fn from_file<P: AsRef<Path>>(file: P) -> Result<Self> {
     let path = file.as_ref();
-    info!(path = path.display().to_string(), "loading config");
+    debug!(path = path.display().to_string(), "loading config");
 
     if !path.exists() {
       let config = Self::default_values()?;

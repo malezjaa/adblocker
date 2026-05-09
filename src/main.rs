@@ -10,11 +10,13 @@ mod firewall;
 mod server;
 mod state;
 mod windows;
+mod logger;
 
 use crate::application::app::App;
-use crate::blocker::{BlockLookup, lookup_block};
+use crate::blocker::{lookup_block, BlockLookup};
 use crate::blocklists::load_blocklists;
 use crate::doh::setup_doh_server;
+use crate::logger::setup_logger;
 use crate::server::setup_server;
 use crate::state::State;
 use adblock::Engine;
@@ -27,10 +29,6 @@ use tokio::task::LocalSet;
 use tokio::time::sleep;
 use tokio::{join, spawn};
 use tracing::{error, info};
-
-fn setup_logger() {
-  tracing_subscriber::fmt().with_env_filter("dns_adblock=info").init();
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {

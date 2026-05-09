@@ -7,11 +7,11 @@ use fs_err::{create_dir_all, read, write};
 use futures::future::join_all;
 use reqwest::{Client, StatusCode};
 use std::path::{Path, PathBuf};
-use tracing::info;
+use tracing::{debug, info};
 
 pub fn load_cache_file(cache_dir: &Path) -> Result<CacheFile> {
   let path = cache_dir.join("cache.toml");
-  info!(path = path.display().to_string(), "loading config");
+  debug!(path = path.display().to_string(), "loading config");
 
   if !path.exists() {
     let cache = CacheFile::default();
@@ -63,7 +63,7 @@ pub async fn load_blocklists(
       let tmp = cache_file.with_extension("tmp");
       write(&tmp, &body)?;
       fs_err::rename(&tmp, &cache_file)?;
-      info!(%blocklist, "using blocklist: ");
+      info!("using blocklist: {blocklist}");
 
       let rules = body.lines().map(|l| l.to_string()).collect::<Vec<_>>();
       Ok((blocklist.clone(), rules, new_etag))

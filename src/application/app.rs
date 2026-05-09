@@ -8,25 +8,28 @@ use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::UdpSocket;
+use tracing::info;
 
 pub struct App {
   socket: Arc<UdpSocket>,
   state: State,
+  addr: SocketAddr
 }
 
 impl App {
-  pub async fn init(socket: SocketAddr, state: State) -> Result<Self> {
-    let socket = Arc::new(UdpSocket::bind(socket).await?);
+  pub async fn init(addr: SocketAddr, state: State) -> Result<Self> {
+    let socket = Arc::new(UdpSocket::bind(addr).await?);
 
     override_default_dns(state.socket().await, state.secondary_name_server().await)?;
     // block_external_dns(config.socket)?;
 
-    Ok(Self { socket, state })
+    Ok(Self { socket, state, addr })
   }
 
   pub async fn run(&self) -> Result<()> {
     let mut buf = vec![0u8; 512];
 
+    info!("DNS server running on {}", self.addr);
     loop {
       let (len, src) = match self.socket.recv_from(&mut buf).await {
         Ok(v) => v,
