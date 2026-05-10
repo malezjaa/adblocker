@@ -8,9 +8,10 @@ mod doh;
 mod domain;
 mod firewall;
 mod logger;
+mod server;
 mod state;
 mod windows;
-mod server;
+mod db;
 
 use crate::application::app::App;
 use crate::blocker::{lookup_block, BlockLookup};
