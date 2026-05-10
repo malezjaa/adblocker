@@ -1,0 +1,5 @@
+[hooks]
+pre-commit = ["cd dashboard", "bun format", "cd ..", "cargo fmt --all"]
+
+[logging]
+verbose = true
