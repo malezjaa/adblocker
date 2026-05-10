@@ -4,8 +4,8 @@ use crate::domain::{query_domain, registered_domain};
 use anyhow::Result;
 use chrono::{Duration as ChronoDuration, Utc};
 use hickory_proto::op::Message;
-use hickory_resolver::config::{ResolverConfig, CLOUDFLARE};
-use hickory_resolver::{net::runtime::TokioRuntimeProvider, TokioResolver};
+use hickory_resolver::config::{OpportunisticEncryption, ResolverConfig, ResolverOpts, CLOUDFLARE, GOOGLE};
+use hickory_resolver::{net::runtime::TokioRuntimeProvider, NameServerTransportState, ResolverBuilder, TokioResolver};
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
@@ -13,6 +13,7 @@ use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
@@ -75,15 +76,24 @@ pub struct DaySummary {
 
 impl State {
   pub fn new(config: Config, db: SqlitePool, tx: Sender<BlockLookup>) -> Result<Self> {
-    let resolver =
-      TokioResolver::builder_with_config(ResolverConfig::udp_and_tcp(&CLOUDFLARE), TokioRuntimeProvider::default()).build()?;
+    let mut r_config = ResolverConfig::udp_and_tcp(&CLOUDFLARE);
+    for ns in GOOGLE.udp_and_tcp() {
+      r_config.add_name_server(ns);
+    }
+
+    let mut resolver_builder =
+      TokioResolver::builder_with_config(r_config, TokioRuntimeProvider::default());
+
+    let opts = resolver_builder.options_mut();
+    opts.negative_min_ttl = Some(Duration::from_secs(60));
+    opts.positive_min_ttl = Some(Duration::from_secs(60));
 
     Ok(Self(Arc::new(StateImpl {
       tx,
       config: RwLock::new(config),
       db,
       total_queries: AtomicUsize::default(),
-      resolver,
+      resolver: resolver_builder.build()?,
     })))
   }
 
