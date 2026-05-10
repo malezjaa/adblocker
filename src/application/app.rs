@@ -1,7 +1,7 @@
 use crate::blocker::check_block;
 use crate::firewall::override_dns::override_default_dns;
 use crate::state::State;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use hickory_proto::op::Message;
 use hickory_resolver::net::{DnsError, NetError};
 use std::io::ErrorKind;

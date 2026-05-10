@@ -1,9 +1,7 @@
-import {Dashboard} from "@/app/dashboard/dashboard.tsx";
+import { Dashboard } from "@/app/dashboard/dashboard.tsx"
 
 export function App() {
-  return (
-      <Dashboard />
-  )
+  return <Dashboard />
 }
 
 export default App

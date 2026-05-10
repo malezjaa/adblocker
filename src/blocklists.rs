@@ -1,6 +1,6 @@
 use crate::cache::CacheFile;
-use adblock::lists::ParseOptions;
 use adblock::FilterSet;
+use adblock::lists::ParseOptions;
 use anyhow::Result;
 use chrono::Duration;
 use fs_err::{create_dir_all, read, write};
@@ -26,7 +26,6 @@ pub fn load_cache_file(cache_dir: &Path) -> Result<CacheFile> {
   let content = read(path)?;
   Ok(toml::from_slice(&content)?)
 }
-
 
 pub async fn load_blocklists(
   blocklists: Vec<String>,
@@ -83,12 +82,14 @@ pub async fn load_blocklists(
   Ok(filterset)
 }
 
-fn read_rules(blocklist: &String, cache_file: &PathBuf, etag: Option<String>) -> Result<(String, Vec<String>, Option<String>)> {
+fn read_rules(
+  blocklist: &String,
+  cache_file: &PathBuf,
+  etag: Option<String>,
+) -> Result<(String, Vec<String>, Option<String>)> {
   let content = read(&cache_file)?;
-  let rules = String::from_utf8(content)?
-    .lines()
-    .map(ToOwned::to_owned)
-    .collect::<Vec<_>>();
+  let rules =
+    String::from_utf8(content)?.lines().map(ToOwned::to_owned).collect::<Vec<_>>();
   info!(%blocklist, "using cached");
   Ok((blocklist.clone(), rules, etag))
 }

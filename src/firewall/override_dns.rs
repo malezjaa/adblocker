@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::net::SocketAddr;
 use std::process::Command;
 use tracing::info;
@@ -11,7 +11,7 @@ pub fn override_default_dns(
   use crate::windows::adapters::dns_servers_to_strings;
   use windows::Win32::Foundation::{ERROR_BUFFER_OVERFLOW, NO_ERROR};
   use windows::Win32::NetworkManagement::IpHelper::{
-    GetAdaptersAddresses, GAA_FLAG_INCLUDE_PREFIX, IF_TYPE_SOFTWARE_LOOPBACK,
+    GAA_FLAG_INCLUDE_PREFIX, GetAdaptersAddresses, IF_TYPE_SOFTWARE_LOOPBACK,
     IF_TYPE_TUNNEL, IP_ADAPTER_ADDRESSES_LH,
   };
   use windows::Win32::NetworkManagement::Ndis::IfOperStatusUp;

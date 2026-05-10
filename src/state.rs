@@ -4,18 +4,23 @@ use crate::domain::{query_domain, registered_domain};
 use anyhow::Result;
 use chrono::{Duration as ChronoDuration, Utc};
 use hickory_proto::op::Message;
-use hickory_resolver::config::{OpportunisticEncryption, ResolverConfig, ResolverOpts, CLOUDFLARE, GOOGLE};
-use hickory_resolver::{net::runtime::TokioRuntimeProvider, NameServerTransportState, ResolverBuilder, TokioResolver};
+use hickory_resolver::config::{
+  CLOUDFLARE, GOOGLE, OpportunisticEncryption, ResolverConfig, ResolverOpts,
+};
+use hickory_resolver::{
+  NameServerTransportState, ResolverBuilder, TokioResolver,
+  net::runtime::TokioRuntimeProvider,
+};
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::net::SocketAddr;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
-use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::Sender;
 use tokio::task::JoinHandle;
 use tracing::warn;
 
@@ -135,12 +140,12 @@ impl State {
     sqlx::query(
       "INSERT INTO query_log (domain, client_ip, blocked, timestamp) VALUES (?, ?, ?, ?)",
     )
-      .bind(&event.domain)
-      .bind(&event.client_ip)
-      .bind(event.blocked)
-      .bind(event.timestamp)
-      .execute(&mut *tx)
-      .await?;
+    .bind(&event.domain)
+    .bind(&event.client_ip)
+    .bind(event.blocked)
+    .bind(event.timestamp)
+    .execute(&mut *tx)
+    .await?;
 
     let hits_blocked = i64::from(event.blocked);
 
@@ -175,9 +180,9 @@ impl State {
              ORDER BY timestamp DESC
              LIMIT ?",
     )
-      .bind(limit)
-      .fetch_all(&self.0.db)
-      .await?;
+    .bind(limit)
+    .fetch_all(&self.0.db)
+    .await?;
 
     Ok(rows)
   }
@@ -191,9 +196,9 @@ impl State {
              ORDER BY hits_blocked DESC
              LIMIT ?",
     )
-      .bind(limit)
-      .fetch_all(&self.0.db)
-      .await?;
+    .bind(limit)
+    .fetch_all(&self.0.db)
+    .await?;
 
     Ok(rows)
   }
@@ -204,16 +209,16 @@ impl State {
     let total_blocked: i64 = sqlx::query_scalar(
       "SELECT COUNT(*) FROM query_log WHERE blocked = 1 AND timestamp >= ?",
     )
-      .bind(since)
-      .fetch_one(&self.0.db)
-      .await?;
+    .bind(since)
+    .fetch_one(&self.0.db)
+    .await?;
 
     let total_allowed: i64 = sqlx::query_scalar(
       "SELECT COUNT(*) FROM query_log WHERE blocked = 0 AND timestamp >= ?",
     )
-      .bind(since)
-      .fetch_one(&self.0.db)
-      .await?;
+    .bind(since)
+    .fetch_one(&self.0.db)
+    .await?;
 
     let total = total_blocked + total_allowed;
     let block_rate =
@@ -278,22 +283,22 @@ impl State {
                timestamp INTEGER NOT NULL
              )",
     )
-      .execute(&self.0.db)
-      .await?;
+    .execute(&self.0.db)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_blocked_timestamp
              ON query_log(blocked, timestamp)",
     )
-      .execute(&self.0.db)
-      .await?;
+    .execute(&self.0.db)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_domain
              ON query_log(domain)",
     )
-      .execute(&self.0.db)
-      .await?;
+    .execute(&self.0.db)
+    .await?;
 
     sqlx::query(
       "CREATE TABLE IF NOT EXISTS domain_stats (
@@ -304,22 +309,22 @@ impl State {
               last_seen          INTEGER NOT NULL
             );",
     )
-      .execute(&self.0.db)
-      .await?;
+    .execute(&self.0.db)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_registered
                 ON domain_stats(registered_domain);",
     )
-      .execute(&self.0.db)
-      .await?;
+    .execute(&self.0.db)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_last_seen
              ON domain_stats(last_seen)",
     )
-      .execute(&self.0.db)
-      .await?;
+    .execute(&self.0.db)
+    .await?;
 
     Ok(())
   }
