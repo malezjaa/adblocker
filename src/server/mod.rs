@@ -1,28 +1,14 @@
+pub mod app_error;
+
+pub use crate::server::app_error::AppError;
 use crate::state::{State, TopDomain};
 use anyhow::Result;
 use axum::extract::{Query, State as AxumState};
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
+use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Json, Router};
 use serde::Deserialize;
-use serde_json::json;
 use tokio::net::TcpListener;
-
-pub struct AppError(anyhow::Error);
-
-impl IntoResponse for AppError {
-  fn into_response(self) -> Response {
-    (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": self.0.to_string() })))
-      .into_response()
-  }
-}
-
-impl<E: Into<anyhow::Error>> From<E> for AppError {
-  fn from(e: E) -> Self {
-    Self(e.into())
-  }
-}
 
 pub async fn setup_server(state: State) -> Result<()> {
   let app = Router::new().route("/top", get(top_handler)).with_state(state);

@@ -8,12 +8,12 @@ mod doh;
 mod domain;
 mod firewall;
 mod logger;
-mod server;
 mod state;
 mod windows;
+mod server;
 
 use crate::application::app::App;
-use crate::blocker::{BlockLookup, lookup_block};
+use crate::blocker::{lookup_block, BlockLookup};
 use crate::blocklists::load_blocklists;
 use crate::doh::setup_doh_server;
 use crate::logger::setup_logger;
