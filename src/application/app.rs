@@ -1,7 +1,7 @@
 use crate::blocker::check_block;
 use crate::firewall::override_dns::override_default_dns;
 use crate::state::State;
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use hickory_proto::op::Message;
 use hickory_resolver::net::{DnsError, NetError};
 use std::io::ErrorKind;
@@ -44,16 +44,9 @@ impl App {
       let start = Instant::now();
       let (blocked, response) = check_block(self.state.clone(), raw, false).await?;
       let elapsed = start.elapsed();
-
-      info!(
-        "dns request: {}ms blocked={} src={}",
-        elapsed.as_millis(),
-        blocked,
-        response.queries[0].name
-      );
-
+      
       self.socket.send_to(&response.to_vec()?, src).await?;
-      self.state.spawn_query_record(&response, src, blocked);
+      self.state.spawn_query_record(&response, src, blocked, elapsed.as_millis() as i64);
     }
   }
 }

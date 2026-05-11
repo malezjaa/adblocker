@@ -14,7 +14,7 @@ use std::path::Path;
 use std::sync::atomic::Ordering;
 use tokio::sync::mpsc::Sender;
 use tokio::task::JoinHandle;
-use tracing::warn;
+use tracing::{debug, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryEvent {
@@ -23,16 +23,18 @@ pub struct QueryEvent {
   pub client_ip: String,
   pub blocked: bool,
   pub timestamp: i64,
+  pub response_time: i64,
 }
 
 impl QueryEvent {
-  pub fn new(domain: String, client_ip: String, blocked: bool) -> Self {
+  pub fn new(domain: String, client_ip: String, blocked: bool, response_time: i64) -> Self {
     Self {
       registered_domain: registered_domain(&domain),
       domain,
       client_ip,
       blocked,
       timestamp: Utc::now().timestamp(),
+      response_time,
     }
   }
 }
@@ -57,6 +59,7 @@ pub struct Stats {
   pub total_blocked: i64,
   pub total_allowed: i64,
   pub block_rate: f64,
+  pub avg_response_time: f64,
 }
 
 impl State {
@@ -76,12 +79,13 @@ impl State {
     let mut tx = self.0.db.begin().await?;
 
     sqlx::query(
-      "INSERT INTO query_log (domain, client_ip, blocked, timestamp) VALUES (?, ?, ?, ?)",
+      "INSERT INTO query_log (domain, client_ip, blocked, timestamp, response_time) VALUES (?, ?, ?, ?, ?)",
     )
       .bind(&event.domain)
       .bind(&event.client_ip)
       .bind(event.blocked)
       .bind(event.timestamp)
+      .bind(event.response_time)
       .execute(&mut *tx)
       .await?;
 
@@ -154,8 +158,10 @@ impl State {
          AND (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-      .bind(since_ts).bind(since_ts)
-      .bind(until_ts).bind(until_ts)
+      .bind(since_ts)
+      .bind(since_ts)
+      .bind(until_ts)
+      .bind(until_ts)
       .fetch_one(&self.0.db)
       .await?;
 
@@ -164,20 +170,39 @@ impl State {
          AND (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-      .bind(since_ts).bind(since_ts)
-      .bind(until_ts).bind(until_ts)
+      .bind(since_ts)
+      .bind(since_ts)
+      .bind(until_ts)
+      .bind(until_ts)
+      .fetch_one(&self.0.db)
+      .await?;
+
+    let avg_response_time: Option<f64> = sqlx::query_scalar(
+      "SELECT AVG(response_time) FROM query_log
+         WHERE (? IS NULL OR timestamp >= ?)
+         AND (? IS NULL OR timestamp <= ?)",
+    )
+      .bind(since_ts)
+      .bind(since_ts)
+      .bind(until_ts)
+      .bind(until_ts)
       .fetch_one(&self.0.db)
       .await?;
 
     let total = total_blocked + total_allowed;
-    let block_rate =
-      if total > 0 { total_blocked as f64 / total as f64 * 100.0 } else { 0.0 };
+
+    let block_rate = if total > 0 {
+      total_blocked as f64 / total as f64 * 100.0
+    } else {
+      0.0
+    };
 
     Ok(Stats {
       total_queries: total as usize,
       total_blocked,
       total_allowed,
       block_rate,
+      avg_response_time: avg_response_time.unwrap_or(0.0),
     })
   }
 
@@ -203,9 +228,16 @@ impl State {
     })
   }
 
-  pub fn spawn_query_record(&self, response: &Message, src: SocketAddr, blocked: bool) {
+  pub fn spawn_query_record(&self, response: &Message, src: SocketAddr, blocked: bool, response_time: i64) {
     if let Some(domain) = query_domain(response) {
-      let event = QueryEvent::new(domain, src.ip().to_string(), blocked);
+      let event = QueryEvent::new(domain, src.ip().to_string(), blocked, response_time);
+
+      debug!(
+        "dns request: {}ms blocked={} src={}",
+        response_time,
+        blocked,
+        response.queries[0].name
+      );
 
       let state = self.clone();
       tokio::spawn(async move {
@@ -229,7 +261,8 @@ impl State {
                domain    TEXT    NOT NULL,
                client_ip TEXT    NOT NULL,
                blocked   INTEGER NOT NULL,
-               timestamp INTEGER NOT NULL
+               timestamp INTEGER NOT NULL,
+               response_time INTEGER NOT NULL
              )",
     )
       .execute(&self.0.db)

@@ -7,12 +7,13 @@ use axum::extract::{ConnectInfo, Query, State as AxumState};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::{Router, routing::post};
+use axum::{routing::post, Router};
 use axum_server::tls_rustls::RustlsConfig;
-use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::Engine;
 use serde::Deserialize;
 use std::net::SocketAddr;
+use std::time::Instant;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
@@ -45,8 +46,9 @@ pub async fn doh_handler(
   _headers: HeaderMap,
   body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
+  let start = Instant::now();
   let (blocked, response) = check_block(state.clone(), body.to_vec(), true).await?;
-  state.spawn_query_record(&response, addr, blocked);
+  state.spawn_query_record(&response, addr, blocked, start.elapsed().as_millis() as i64);
 
   Ok((
     StatusCode::OK,
@@ -65,10 +67,11 @@ pub async fn doh_get_handler(
   Query(query): Query<DohQuery>,
   ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Result<impl IntoResponse, AppError> {
+  let start = Instant::now();
   let bytes = URL_SAFE_NO_PAD.decode(&query.dns)?;
 
   let (blocked, response) = check_block(state.clone(), bytes, true).await?;
-  state.spawn_query_record(&response, addr, blocked);
+  state.spawn_query_record(&response, addr, blocked, start.elapsed().as_millis() as i64);
 
   Ok((
     StatusCode::OK,

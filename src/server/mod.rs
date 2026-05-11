@@ -13,11 +13,21 @@ use axum::{Json, Router};
 use chrono::Duration;
 use serde::Deserialize;
 use tokio::net::TcpListener;
+use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
 
 pub async fn setup_server(state: State) -> Result<()> {
-  let app = Router::new().route("/top", get(top_handler)).route("/stats", get(stats)).route("/", any(ws_handler)).with_state(state);
+  let app = Router::new()
+    .route("/top", get(top_handler))
+    .route("/stats", get(stats))
+    .route("/", any(ws_handler))
+    .layer(
+      CorsLayer::new()
+        .allow_origin(AllowOrigin::any())
+        .allow_methods(AllowMethods::any())
+    )
+    .with_state(state);
 
-  let listener = TcpListener::bind("0.0.0.0:3000").await?;
+  let listener = TcpListener::bind("0.0.0.0:3116").await?;
   Ok(axum::serve(listener, app).await?)
 }
 
@@ -37,7 +47,7 @@ async fn top_handler(
 #[derive(Deserialize)]
 struct StatsQuery {
   since: Option<Duration>,
-  until: Option<Duration>
+  until: Option<Duration>,
 }
 
 async fn stats(

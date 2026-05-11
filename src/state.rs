@@ -2,20 +2,15 @@ use crate::blocker::BlockLookup;
 use crate::config::Config;
 use crate::server::ws::WsEvent;
 use anyhow::Result;
-use hickory_resolver::config::{
-  ResolverConfig, CLOUDFLARE, GOOGLE,
-};
-use hickory_resolver::{
-  net::runtime::TokioRuntimeProvider,
-  TokioResolver,
-};
+use hickory_resolver::config::{CLOUDFLARE, GOOGLE, ResolverConfig};
+use hickory_resolver::{TokioResolver, net::runtime::TokioRuntimeProvider};
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{RwLock, broadcast};
 
 #[derive(Debug, Clone)]
 pub struct State(pub Arc<StateImpl>);
@@ -54,7 +49,6 @@ impl State {
     })))
   }
 
-
   pub fn tx(&self) -> Sender<BlockLookup> {
     self.0.tx.clone()
   }
@@ -75,5 +69,7 @@ impl State {
     self.0.config.read().await.secondary_name_server
   }
 
-  pub fn ws_tx(&self) -> broadcast::Sender<WsEvent> { self.0.ws_tx.clone() }
+  pub fn ws_tx(&self) -> broadcast::Sender<WsEvent> {
+    self.0.ws_tx.clone()
+  }
 }
