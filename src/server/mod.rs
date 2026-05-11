@@ -23,7 +23,7 @@ pub async fn setup_server(state: State) -> Result<()> {
     .layer(
       CorsLayer::new()
         .allow_origin(AllowOrigin::any())
-        .allow_methods(AllowMethods::any())
+        .allow_methods(AllowMethods::any()),
     )
     .with_state(state);
 
