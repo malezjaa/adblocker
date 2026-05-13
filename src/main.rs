@@ -14,7 +14,7 @@ mod state;
 mod windows;
 
 use crate::application::app::App;
-use crate::blocker::{BlockLookup, lookup_block};
+use crate::blocker::{lookup_block, BlockLookup};
 use crate::blocklists::load_blocklists;
 use crate::doh::setup_doh_server;
 use crate::logger::setup_logger;
@@ -44,10 +44,9 @@ async fn main() -> Result<()> {
   let (tx, rx) = mpsc::channel::<BlockLookup>(100);
   let state = State::from_paths(home_path.join("config.toml"), db_path, tx).await?;
 
-  let blocklists = state.blocklists().await;
   let socket = state.socket().await;
   let start = Instant::now();
-  let rules = load_blocklists(blocklists, &cache_dir).await?;
+  let rules = load_blocklists(state.clone(), &cache_dir).await?;
 
   info!("loaded lists in {:.2?}", start.elapsed());
   let engine = Engine::from_filter_set(rules, true);

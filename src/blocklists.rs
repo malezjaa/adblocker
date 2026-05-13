@@ -1,6 +1,6 @@
 use crate::cache::CacheFile;
-use adblock::FilterSet;
 use adblock::lists::ParseOptions;
+use adblock::FilterSet;
 use anyhow::Result;
 use chrono::Duration;
 use fs_err::{create_dir_all, read, write};
@@ -8,6 +8,7 @@ use futures::future::join_all;
 use reqwest::{Client, StatusCode};
 use std::path::{Path, PathBuf};
 use tracing::{debug, info};
+use crate::state::State;
 
 pub fn load_cache_file(cache_dir: &Path) -> Result<CacheFile> {
   let path = cache_dir.join("cache.toml");
@@ -28,12 +29,18 @@ pub fn load_cache_file(cache_dir: &Path) -> Result<CacheFile> {
 }
 
 pub async fn load_blocklists(
-  blocklists: Vec<String>,
+  state: State,
   cache_dir: &Path,
 ) -> Result<FilterSet> {
   let mut filterset = FilterSet::new(false);
   let mut cache = load_cache_file(cache_dir)?;
-
+  let blocklists = state.blocklists().await;
+  
+  if let Some(block_rules) = state.block_rules().await {
+    filterset.add_filters(&block_rules, Default::default());
+    info!("loaded {} custom block {}", block_rules.len(), if block_rules.len() == 1 { "block" } else { "blocks" });
+  }
+  
   let futures = blocklists.iter().map(|blocklist| {
     let cache_file = cache_dir.join(CacheFile::url_hash(blocklist));
     let is_fresh = cache.is_fresh(blocklist, Duration::hours(24));

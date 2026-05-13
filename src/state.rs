@@ -61,6 +61,10 @@ impl State {
     self.0.config.read().await.blocklists.clone()
   }
 
+  pub async fn block_rules(&self) -> Option<Vec<String>> {
+    self.0.config.read().await.block_rules.clone()
+  }
+
   pub async fn socket(&self) -> SocketAddr {
     self.0.config.read().await.socket
   }
