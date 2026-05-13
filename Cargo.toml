@@ -34,6 +34,7 @@ axum-server = { version = "0.8", features = ["tls-rustls"] }
 tower-http = { version = "0.6.9", features = ["trace", "cors"] }
 base64 = "0.22.1"
 yansi = "1.0.1"
+parking_lot = "0.12.5"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = [

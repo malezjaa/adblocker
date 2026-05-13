@@ -626,6 +626,7 @@ dependencies = [
  "futures",
  "hickory-proto",
  "hickory-resolver",
+ "parking_lot",
  "rcgen",
  "reqwest",
  "scopeguard",

@@ -4,13 +4,14 @@ use crate::server::ws::WsEvent;
 use anyhow::Result;
 use hickory_resolver::config::{CLOUDFLARE, GOOGLE, ResolverConfig};
 use hickory_resolver::{TokioResolver, net::runtime::TokioRuntimeProvider};
+use parking_lot::RwLock;
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::time::Duration;
+use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
-use tokio::sync::{RwLock, broadcast};
 
 #[derive(Debug, Clone)]
 pub struct State(pub Arc<StateImpl>);
@@ -57,20 +58,20 @@ impl State {
     &self.0.resolver
   }
 
-  pub async fn blocklists(&self) -> Vec<String> {
-    self.0.config.read().await.blocklists.clone()
+  pub fn blocklists(&self) -> Vec<String> {
+    self.0.config.read().blocklists.clone()
   }
 
-  pub async fn block_rules(&self) -> Option<Vec<String>> {
-    self.0.config.read().await.block_rules.clone()
+  pub fn block_rules(&self) -> Option<Vec<String>> {
+    self.0.config.read().block_rules.clone()
   }
 
-  pub async fn socket(&self) -> SocketAddr {
-    self.0.config.read().await.socket
+  pub fn socket(&self) -> SocketAddr {
+    self.0.config.read().socket
   }
 
-  pub async fn secondary_name_server(&self) -> Option<SocketAddr> {
-    self.0.config.read().await.secondary_name_server
+  pub fn secondary_name_server(&self) -> Option<SocketAddr> {
+    self.0.config.read().secondary_name_server
   }
 
   pub fn ws_tx(&self) -> broadcast::Sender<WsEvent> {

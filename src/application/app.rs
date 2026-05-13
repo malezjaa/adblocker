@@ -14,23 +14,22 @@ use tracing::info;
 pub struct App {
   socket: UdpSocket,
   state: State,
-  addr: SocketAddr,
 }
 
 impl App {
-  pub async fn init(addr: SocketAddr, state: State) -> Result<Self> {
-    let socket = UdpSocket::bind(addr).await?;
+  pub async fn init(state: State) -> Result<Self> {
+    let socket = UdpSocket::bind(state.socket()).await?;
 
-    override_default_dns(state.socket().await, state.secondary_name_server().await)?;
+    override_default_dns(state.socket(), state.secondary_name_server())?;
     // block_external_dns(config.socket)?;
 
-    Ok(Self { socket, state, addr })
+    Ok(Self { socket, state })
   }
 
   pub async fn run(&self) -> Result<()> {
     let mut buf = vec![0u8; 512];
 
-    info!("DNS server running on {}", self.addr);
+    info!("DNS server running on {}", self.state.socket());
 
     loop {
       let (len, src) = match self.socket.recv_from(&mut buf).await {

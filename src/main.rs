@@ -14,7 +14,7 @@ mod state;
 mod windows;
 
 use crate::application::app::App;
-use crate::blocker::{lookup_block, BlockLookup};
+use crate::blocker::{BlockLookup, lookup_block};
 use crate::blocklists::load_blocklists;
 use crate::doh::setup_doh_server;
 use crate::logger::setup_logger;
@@ -44,7 +44,6 @@ async fn main() -> Result<()> {
   let (tx, rx) = mpsc::channel::<BlockLookup>(100);
   let state = State::from_paths(home_path.join("config.toml"), db_path, tx).await?;
 
-  let socket = state.socket().await;
   let start = Instant::now();
   let rules = load_blocklists(state.clone(), &cache_dir).await?;
 
@@ -70,7 +69,7 @@ async fn main() -> Result<()> {
       let dns_state = state.clone();
       let dns = spawn(async move {
         loop {
-          if let Err(err) = App::init(socket, dns_state.clone()).await?.run().await {
+          if let Err(err) = App::init(dns_state.clone()).await?.run().await {
             error!(error = ?err, "dns adblocker failed. trying to restart in 3s");
             sleep(Duration::from_secs(3)).await;
           }
