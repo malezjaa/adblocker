@@ -38,7 +38,7 @@ pub async fn load_blocklists(state: State, cache_dir: &Path) -> Result<FilterSet
     info!(
       "loaded {} custom block {}",
       block_rules.len(),
-      if block_rules.len() == 1 { "block" } else { "blocks" }
+      if block_rules.len() == 1 { "rule" } else { "rules" }
     );
   }
 
