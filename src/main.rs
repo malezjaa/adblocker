@@ -31,6 +31,19 @@ use tokio::time::sleep;
 use tokio::{join, spawn};
 use tracing::{error, info};
 
+async fn retry_task<F, Fut>(name: &'static str, delay: Duration, f: F)
+where
+  F: Fn() -> Fut,
+  Fut: Future<Output = Result<()>>,
+{
+  loop {
+    if let Err(err) = f().await {
+      error!(error = ?err, "{name} failed, restarting in {delay:?}");
+      sleep(delay).await;
+    }
+  }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
   setup_logger();
@@ -67,24 +80,16 @@ async fn main() -> Result<()> {
       let server = spawn(setup_server(state.clone()));
 
       let dns_state = state.clone();
-      let dns = spawn(async move {
-        loop {
-          if let Err(err) = App::init(dns_state.clone()).await?.run().await {
-            error!(error = ?err, "dns adblocker failed. trying to restart in 3s");
-            sleep(Duration::from_secs(3)).await;
-          }
-        }
-        Ok::<(), anyhow::Error>(())
-      });
+      let dns = spawn(retry_task("DNS adblocker", Duration::from_secs(3), move || {
+        let s = dns_state.clone();
+        async move { App::init(s.clone()).await?.run().await }
+      }));
 
-      let doh = spawn(async move {
-        loop {
-          if let Err(err) = setup_doh_server(state.clone()).await {
-            sleep(Duration::from_secs(3)).await;
-            error!(error = ?err, "DoH server failed, restarting in 3s");
-          }
-        }
-      });
+      let doh_state = state.clone();
+      let doh = spawn(retry_task("DoH server", Duration::from_secs(3), move || {
+        let s = doh_state.clone();
+        async move { setup_doh_server(s.clone()).await }
+      }));
 
       let _ = join!(dns, server, doh);
     })

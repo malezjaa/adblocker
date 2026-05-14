@@ -1,4 +1,5 @@
 use crate::blocker::check_block;
+use crate::firewall::external_dns::block_external_dns;
 use crate::firewall::override_dns::override_default_dns;
 use crate::state::State;
 use anyhow::{Result, bail};
@@ -21,7 +22,7 @@ impl App {
     let socket = UdpSocket::bind(state.socket()).await?;
 
     override_default_dns(state.socket(), state.secondary_name_server())?;
-    // block_external_dns(config.socket)?;
+    block_external_dns(state.socket())?;
 
     Ok(Self { socket, state })
   }
