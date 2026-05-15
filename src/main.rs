@@ -12,11 +12,14 @@ mod logger;
 mod server;
 mod state;
 mod windows;
+pub mod dot;
 
 use crate::application::app::App;
-use crate::blocker::{BlockLookup, lookup_block};
+use crate::blocker::{lookup_block, BlockLookup};
 use crate::blocklists::load_blocklists;
+use crate::cert::get_certs;
 use crate::doh::setup_doh_server;
+use crate::dot::setup_dot_server;
 use crate::logger::setup_logger;
 use crate::server::setup_server;
 use crate::state::State;
@@ -47,7 +50,7 @@ where
 #[tokio::main]
 async fn main() -> Result<()> {
   setup_logger();
-  // generate_cert()?;
+  let certs = get_certs()?;
   let home_path = dirs::home_dir().unwrap().join("adb");
   let cache_dir = home_path.join("cache");
 
@@ -65,7 +68,7 @@ async fn main() -> Result<()> {
 
   async fn run_engine(engine: Engine, mut rx: mpsc::Receiver<BlockLookup>) -> Result<()> {
     while let Some(lookup) = rx.recv().await {
-      lookup.sender.send(lookup_block(&engine, &lookup.msg, lookup.doh)).ok();
+      lookup.sender.send(lookup_block(&engine, &lookup.msg, lookup.origin)).ok();
     }
     Ok(())
   }
@@ -91,7 +94,15 @@ async fn main() -> Result<()> {
         async move { setup_doh_server(s.clone()).await }
       }));
 
-      let _ = join!(dns, server, doh);
+      let dot_state = state.clone();
+      let dot = spawn(retry_task("DoT server", Duration::from_secs(3), move || {
+        let s = dot_state.clone();
+        let certs = certs.clone();
+
+        async move { setup_dot_server(s.clone(), certs).await }
+      }));
+
+      let _ = join!(dns, server, doh, dot);
     })
     .await;
 

@@ -1,30 +1,38 @@
 use crate::application::app::resolve_msg;
 use crate::state::State;
-use adblock::Engine;
 use adblock::request::Request;
+use adblock::Engine;
 use anyhow::Result;
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::{A, AAAA};
 use hickory_proto::rr::{RData, Record, RecordType};
 use hickory_proto::serialize::binary::BinDecodable;
+use serde::{Deserialize, Serialize};
 use std::net::{Ipv4Addr, Ipv6Addr};
 use tokio::sync::oneshot;
 use tokio::sync::oneshot::Sender;
 use tracing::info;
 
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub enum BlockOrigin {
+  Plain,
+  DoH,
+  DoT,
+}
+
 pub struct BlockLookup {
   pub msg: Message,
   pub sender: Sender<BlockResult>,
-  pub doh: bool,
+  pub origin: BlockOrigin,
 }
 
 impl BlockLookup {
   pub fn new(msg: Message, sender: Sender<BlockResult>) -> Self {
-    Self { msg, sender, doh: false }
+    Self { msg, sender, origin: BlockOrigin::Plain }
   }
 
-  pub fn doh(mut self) -> Self {
-    self.doh = true;
+  pub fn origin(mut self, origin: BlockOrigin) -> Self {
+    self.origin = origin;
     self
   }
 }
@@ -35,7 +43,7 @@ pub enum BlockResult {
   Block,
 }
 
-pub fn lookup_block(engine: &Engine, msg: &Message, doh: bool) -> BlockResult {
+pub fn lookup_block(engine: &Engine, msg: &Message, origin: BlockOrigin) -> BlockResult {
   for query in &msg.queries {
     let host = query.name().to_string();
     let host = host.trim_end_matches('.');
@@ -44,7 +52,7 @@ pub fn lookup_block(engine: &Engine, msg: &Message, doh: bool) -> BlockResult {
     if let Ok(req) = Request::new(&url, "", "document") {
       let res = engine.check_network_request(&req);
       if res.matched && res.exception.is_none() {
-        info!(?url, ?doh, "blocked");
+        info!(?url, ?origin, "blocked");
         return BlockResult::Block;
       }
     }
@@ -56,13 +64,12 @@ pub fn lookup_block(engine: &Engine, msg: &Message, doh: bool) -> BlockResult {
 pub async fn check_block(
   state: State,
   raw: Vec<u8>,
-  doh: bool,
+  origin: BlockOrigin,
 ) -> Result<(bool, Message)> {
   let msg = Message::from_bytes(&raw)?;
   let (sender, rx) = oneshot::channel();
 
-  let mut lookup = BlockLookup::new(msg.clone(), sender);
-  lookup = if doh { lookup.doh() } else { lookup };
+  let lookup = BlockLookup::new(msg.clone(), sender).origin(origin);
 
   state.tx().send(lookup).await?;
 

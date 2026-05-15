@@ -35,6 +35,10 @@ tower-http = { version = "0.6.9", features = ["trace", "cors"] }
 base64 = "0.22.1"
 yansi = "1.0.1"
 parking_lot = "0.12.5"
+rustls = "0.23.40"
+time = "0.3.47"
+rustls-pemfile = "2.2.0"
+tokio-rustls = "0.26.4"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = [

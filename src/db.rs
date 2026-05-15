@@ -1,14 +1,14 @@
-use crate::ChronoDuration;
-use crate::blocker::BlockLookup;
+use crate::blocker::{BlockLookup, BlockOrigin};
 use crate::config::Config;
 use crate::domain::{query_domain, registered_domain};
 use crate::server::ws::WsEvent;
 use crate::state::State;
+use crate::ChronoDuration;
 use chrono::Utc;
 use hickory_proto::op::Message;
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::atomic::Ordering;
@@ -22,6 +22,7 @@ pub struct QueryEvent {
   pub registered_domain: String,
   pub client_ip: String,
   pub blocked: bool,
+  pub block_origin: BlockOrigin,
   pub timestamp: i64,
   pub response_time: i64,
 }
@@ -31,6 +32,7 @@ impl QueryEvent {
     domain: String,
     client_ip: String,
     blocked: bool,
+    block_origin: BlockOrigin,
     response_time: i64,
   ) -> Self {
     Self {
@@ -38,6 +40,7 @@ impl QueryEvent {
       domain,
       client_ip,
       blocked,
+      block_origin,
       timestamp: Utc::now().timestamp(),
       response_time,
     }
@@ -84,11 +87,16 @@ impl State {
     let mut tx = self.0.db.begin().await?;
 
     sqlx::query(
-      "INSERT INTO query_log (domain, client_ip, blocked, timestamp, response_time) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO query_log (domain, client_ip, blocked, block_origin, timestamp, response_time) VALUES (?, ?, ?, ?, ?, ?)",
     )
       .bind(&event.domain)
       .bind(&event.client_ip)
       .bind(event.blocked)
+      .bind(match event.block_origin {
+        BlockOrigin::Plain => "plain",
+        BlockOrigin::DoH => "doh",
+        BlockOrigin::DoT => "dot",
+      })
       .bind(event.timestamp)
       .bind(event.response_time)
       .execute(&mut *tx)
@@ -127,9 +135,9 @@ impl State {
              ORDER BY timestamp DESC
              LIMIT ?",
     )
-    .bind(limit)
-    .fetch_all(&self.0.db)
-    .await?;
+      .bind(limit)
+      .fetch_all(&self.0.db)
+      .await?;
 
     Ok(rows)
   }
@@ -143,9 +151,9 @@ impl State {
              ORDER BY hits_blocked DESC
              LIMIT ?",
     )
-    .bind(limit)
-    .fetch_all(&self.0.db)
-    .await?;
+      .bind(limit)
+      .fetch_all(&self.0.db)
+      .await?;
 
     Ok(rows)
   }
@@ -163,36 +171,36 @@ impl State {
          AND (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-    .bind(since_ts)
-    .bind(since_ts)
-    .bind(until_ts)
-    .bind(until_ts)
-    .fetch_one(&self.0.db)
-    .await?;
+      .bind(since_ts)
+      .bind(since_ts)
+      .bind(until_ts)
+      .bind(until_ts)
+      .fetch_one(&self.0.db)
+      .await?;
 
     let total_allowed: i64 = sqlx::query_scalar(
       "SELECT COUNT(*) FROM query_log WHERE blocked = 0
          AND (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-    .bind(since_ts)
-    .bind(since_ts)
-    .bind(until_ts)
-    .bind(until_ts)
-    .fetch_one(&self.0.db)
-    .await?;
+      .bind(since_ts)
+      .bind(since_ts)
+      .bind(until_ts)
+      .bind(until_ts)
+      .fetch_one(&self.0.db)
+      .await?;
 
     let avg_response_time: Option<f64> = sqlx::query_scalar(
       "SELECT AVG(response_time) FROM query_log
          WHERE (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-    .bind(since_ts)
-    .bind(since_ts)
-    .bind(until_ts)
-    .bind(until_ts)
-    .fetch_one(&self.0.db)
-    .await?;
+      .bind(since_ts)
+      .bind(since_ts)
+      .bind(until_ts)
+      .bind(until_ts)
+      .fetch_one(&self.0.db)
+      .await?;
 
     let total = total_blocked + total_allowed;
 
@@ -235,10 +243,17 @@ impl State {
     response: &Message,
     src: SocketAddr,
     blocked: bool,
+    block_origin: BlockOrigin,
     response_time: i64,
   ) {
     if let Some(domain) = query_domain(response) {
-      let event = QueryEvent::new(domain, src.ip().to_string(), blocked, response_time);
+      let event = QueryEvent::new(
+        domain,
+        src.ip().to_string(),
+        blocked,
+        block_origin,
+        response_time,
+      );
 
       debug!(
         "dns request: {}ms blocked={} src={}",
@@ -263,30 +278,31 @@ impl State {
   async fn init_schema(&self) -> anyhow::Result<()> {
     sqlx::query(
       "CREATE TABLE IF NOT EXISTS query_log (
-               id        INTEGER PRIMARY KEY AUTOINCREMENT,
-               domain    TEXT    NOT NULL,
-               client_ip TEXT    NOT NULL,
-               blocked   INTEGER NOT NULL,
-               timestamp INTEGER NOT NULL,
-               response_time INTEGER NOT NULL
-             )",
+         id            INTEGER PRIMARY KEY AUTOINCREMENT,
+         domain        TEXT    NOT NULL,
+         client_ip     TEXT    NOT NULL,
+         blocked       INTEGER NOT NULL,
+         block_origin  TEXT,
+         timestamp     INTEGER NOT NULL,
+         response_time INTEGER NOT NULL
+       )",
     )
-    .execute(&self.0.db)
-    .await?;
+      .execute(&self.0.db)
+      .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_blocked_timestamp
              ON query_log(blocked, timestamp)",
     )
-    .execute(&self.0.db)
-    .await?;
+      .execute(&self.0.db)
+      .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_domain
              ON query_log(domain)",
     )
-    .execute(&self.0.db)
-    .await?;
+      .execute(&self.0.db)
+      .await?;
 
     sqlx::query(
       "CREATE TABLE IF NOT EXISTS domain_stats (
@@ -297,22 +313,22 @@ impl State {
               last_seen          INTEGER NOT NULL
             );",
     )
-    .execute(&self.0.db)
-    .await?;
+      .execute(&self.0.db)
+      .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_registered
                 ON domain_stats(registered_domain);",
     )
-    .execute(&self.0.db)
-    .await?;
+      .execute(&self.0.db)
+      .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_last_seen
              ON domain_stats(last_seen)",
     )
-    .execute(&self.0.db)
-    .await?;
+      .execute(&self.0.db)
+      .await?;
 
     Ok(())
   }
