@@ -1,11 +1,11 @@
-use crate::blocker::{check_block, BlockOrigin};
+use crate::blocker::{BlockOrigin, check_block};
 use crate::cert::Certs;
 use crate::state::State;
 use anyhow::Result;
 use hickory_proto::op::Message;
 use hickory_proto::serialize::binary::BinDecodable;
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls::ServerConfig;
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
@@ -15,7 +15,9 @@ use tokio_rustls::{TlsAcceptor, TlsStream};
 use tracing::{debug, error, info};
 
 pub async fn setup_dot_server<'a>(state: State, certs: Certs) -> Result<()> {
-  let config = ServerConfig::builder().with_no_client_auth().with_single_cert(certs.certs, certs.key)?;
+  let config = ServerConfig::builder()
+    .with_no_client_auth()
+    .with_single_cert(certs.certs, certs.key)?;
   let acceptor = TlsAcceptor::from(Arc::new(config));
 
   let addr: SocketAddr = "0.0.0.0:853".parse()?;
@@ -61,8 +63,15 @@ async fn handle_connection(
     let msg = Message::from_bytes(&msg_buf)?;
 
     let start = Instant::now();
-    let (blocked, response) = check_block(state.clone(), msg.to_vec()?, BlockOrigin::DoT).await?;
-    state.spawn_query_record(&response, peer, blocked, BlockOrigin::DoT, start.elapsed().as_millis() as i64);
+    let (blocked, response) =
+      check_block(state.clone(), msg.to_vec()?, BlockOrigin::DoT).await?;
+    state.spawn_query_record(
+      &response,
+      peer,
+      blocked,
+      BlockOrigin::DoT,
+      start.elapsed().as_millis() as i64,
+    );
 
     let response_bytes = response.to_vec()?;
     let len = (response_bytes.len() as u16).to_be_bytes();

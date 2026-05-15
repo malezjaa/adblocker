@@ -1,4 +1,4 @@
-use crate::blocker::{check_block, BlockOrigin};
+use crate::blocker::{BlockOrigin, check_block};
 use crate::firewall::external_dns::block_external_dns;
 use crate::firewall::override_dns::override_default_dns;
 use crate::state::State;
@@ -42,11 +42,18 @@ impl App {
       let raw = buf[..len].to_vec();
 
       let start = Instant::now();
-      let (blocked, response) = check_block(self.state.clone(), raw, BlockOrigin::Plain).await?;
+      let (blocked, response) =
+        check_block(self.state.clone(), raw, BlockOrigin::Plain).await?;
       let elapsed = start.elapsed();
 
       self.socket.send_to(&response.to_vec()?, src).await?;
-      self.state.spawn_query_record(&response, src, blocked, BlockOrigin::Plain, elapsed.as_millis() as i64);
+      self.state.spawn_query_record(
+        &response,
+        src,
+        blocked,
+        BlockOrigin::Plain,
+        elapsed.as_millis() as i64,
+      );
     }
   }
 }

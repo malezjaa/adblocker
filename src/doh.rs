@@ -1,4 +1,4 @@
-use crate::blocker::{check_block, BlockOrigin};
+use crate::blocker::{BlockOrigin, check_block};
 use crate::server::AppError;
 use crate::state::State;
 use anyhow::Result;
@@ -47,8 +47,15 @@ pub async fn doh_handler(
   body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
   let start = Instant::now();
-  let (blocked, response) = check_block(state.clone(), body.to_vec(), BlockOrigin::DoH).await?;
-  state.spawn_query_record(&response, addr, blocked, BlockOrigin::DoH, start.elapsed().as_millis() as i64);
+  let (blocked, response) =
+    check_block(state.clone(), body.to_vec(), BlockOrigin::DoH).await?;
+  state.spawn_query_record(
+    &response,
+    addr,
+    blocked,
+    BlockOrigin::DoH,
+    start.elapsed().as_millis() as i64,
+  );
 
   Ok((
     StatusCode::OK,
@@ -71,7 +78,13 @@ pub async fn doh_get_handler(
   let bytes = URL_SAFE_NO_PAD.decode(&query.dns)?;
 
   let (blocked, response) = check_block(state.clone(), bytes, BlockOrigin::DoH).await?;
-  state.spawn_query_record(&response, addr, blocked, BlockOrigin::DoH, start.elapsed().as_millis() as i64);
+  state.spawn_query_record(
+    &response,
+    addr,
+    blocked,
+    BlockOrigin::DoH,
+    start.elapsed().as_millis() as i64,
+  );
 
   Ok((
     StatusCode::OK,

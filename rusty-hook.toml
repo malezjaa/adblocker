@@ -1,5 +1,0 @@
-[hooks]
-pre-commit = "just check-format"
-
-[logging]
-verbose = true

@@ -1,7 +1,7 @@
 use crate::application::app::resolve_msg;
 use crate::state::State;
-use adblock::request::Request;
 use adblock::Engine;
+use adblock::request::Request;
 use anyhow::Result;
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::{A, AAAA};

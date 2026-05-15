@@ -18,10 +18,8 @@ impl Clone for Certs {
 }
 
 pub fn get_certs() -> Result<Certs> {
-  let mut params = CertificateParams::new(vec![
-    "localhost".to_string(),
-    "127.0.0.1".to_string(),
-  ])?;
+  let mut params =
+    CertificateParams::new(vec!["localhost".to_string(), "127.0.0.1".to_string()])?;
 
   params.not_before = OffsetDateTime::now_utc();
   params.not_after = OffsetDateTime::now_utc() + Duration::days(365);

@@ -7,15 +7,15 @@ mod config;
 mod db;
 mod doh;
 mod domain;
+pub mod dot;
 mod firewall;
 mod logger;
 mod server;
 mod state;
 mod windows;
-pub mod dot;
 
 use crate::application::app::App;
-use crate::blocker::{lookup_block, BlockLookup};
+use crate::blocker::{BlockLookup, lookup_block};
 use crate::blocklists::load_blocklists;
 use crate::cert::get_certs;
 use crate::doh::setup_doh_server;
@@ -45,6 +45,23 @@ where
       sleep(delay).await;
     }
   }
+}
+
+macro_rules! task {
+  ($name:literal, $dur:expr, $future:block) => {
+    futures::future::OptionFuture::from(Some(spawn(retry_task(
+      $name,
+      Duration::from_secs($dur),
+      $future,
+    ))))
+  };
+  ($name:literal, $dur:expr, $condition:expr, $future:block) => {
+    futures::future::OptionFuture::from(if $condition {
+      Some(spawn(retry_task($name, Duration::from_secs($dur)), $future))
+    } else {
+      None
+    })
+  };
 }
 
 #[tokio::main]
@@ -82,25 +99,24 @@ async fn main() -> Result<()> {
       let _cleanup = state.clone().spawn_cleanup_task(ChronoDuration::days(30));
       let server = spawn(setup_server(state.clone()));
 
-      let dns_state = state.clone();
-      let dns = spawn(retry_task("DNS adblocker", Duration::from_secs(3), move || {
-        let s = dns_state.clone();
-        async move { App::init(s.clone()).await?.run().await }
-      }));
+      let doh = task!("DoH server", 3, {
+        let s = state.clone();
+        move || setup_doh_server(s.clone())
+      });
 
-      let doh_state = state.clone();
-      let doh = spawn(retry_task("DoH server", Duration::from_secs(3), move || {
-        let s = doh_state.clone();
-        async move { setup_doh_server(s.clone()).await }
-      }));
-
-      let dot_state = state.clone();
-      let dot = spawn(retry_task("DoT server", Duration::from_secs(3), move || {
-        let s = dot_state.clone();
+      let dot = task!("DoT server", 3, {
+        let s = state.clone();
         let certs = certs.clone();
+        move || setup_dot_server(s.clone(), certs.clone())
+      });
 
-        async move { setup_dot_server(s.clone(), certs).await }
-      }));
+      let dns = task!("DNS server", 3, {
+        let s = state.clone();
+        move || {
+          let s = s.clone();
+          async move { App::init(s).await?.run().await }
+        }
+      });
 
       let _ = join!(dns, server, doh, dot);
     })
