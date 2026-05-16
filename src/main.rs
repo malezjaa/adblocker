@@ -15,7 +15,7 @@ mod state;
 mod windows;
 
 use crate::application::app::App;
-use crate::blocker::{BlockLookup, lookup_block};
+use crate::blocker::{lookup_block, BlockLookup};
 use crate::blocklists::load_blocklists;
 use crate::cert::get_certs;
 use crate::doh::setup_doh_server;
@@ -57,7 +57,11 @@ macro_rules! task {
   };
   ($name:literal, $dur:expr, $condition:expr, $future:block) => {
     futures::future::OptionFuture::from(if $condition {
-      Some(spawn(retry_task($name, Duration::from_secs($dur)), $future))
+      Some(spawn(retry_task(
+        $name,
+        Duration::from_secs($dur),
+        $future,
+      )))
     } else {
       None
     })
@@ -97,14 +101,17 @@ async fn main() -> Result<()> {
   local
     .run_until(async {
       let _cleanup = state.clone().spawn_cleanup_task(ChronoDuration::days(30));
-      let server = spawn(setup_server(state.clone()));
+      let backend = task!("Dashboard Backend", 3, state.config().dashboard_enabled(), {
+        let s = state.clone();
+        move || setup_server(s.clone())
+      });
 
-      let doh = task!("DoH server", 3, {
+      let doh = task!("DoH server", 3, state.config().doh_enabled(), {
         let s = state.clone();
         move || setup_doh_server(s.clone())
       });
 
-      let dot = task!("DoT server", 3, {
+      let dot = task!("DoT server", 3, state.config().dot_enabled(), {
         let s = state.clone();
         let certs = certs.clone();
         move || setup_dot_server(s.clone(), certs.clone())
@@ -118,7 +125,7 @@ async fn main() -> Result<()> {
         }
       });
 
-      let _ = join!(dns, server, doh, dot);
+      let _ = join!(dns, backend, doh, dot);
     })
     .await;
 

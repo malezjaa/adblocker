@@ -1,8 +1,8 @@
-use crate::blocker::{BlockOrigin, check_block};
+use crate::blocker::{check_block, BlockOrigin};
 use crate::firewall::external_dns::block_external_dns;
 use crate::firewall::override_dns::override_default_dns;
 use crate::state::State;
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use hickory_proto::op::Message;
 use hickory_resolver::net::{DnsError, NetError};
 use std::io::ErrorKind;
@@ -30,7 +30,7 @@ impl App {
   pub async fn run(&self) -> Result<()> {
     let mut buf = vec![0u8; 512];
 
-    info!("DNS server running on {}", self.state.socket());
+    info!("DNS server listening on {}", self.state.socket());
 
     loop {
       let (len, src) = match self.socket.recv_from(&mut buf).await {

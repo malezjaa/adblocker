@@ -1,6 +1,7 @@
 pub mod app_error;
 pub mod ws;
 
+use std::net::SocketAddr;
 use crate::db::{Stats, TopDomain};
 pub use crate::server::app_error::AppError;
 use crate::server::ws::ws_handler;
@@ -14,6 +15,7 @@ use chrono::Duration;
 use serde::Deserialize;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
+use tracing::info;
 
 pub async fn setup_server(state: State) -> Result<()> {
   let app = Router::new()
@@ -27,7 +29,9 @@ pub async fn setup_server(state: State) -> Result<()> {
     )
     .with_state(state);
 
-  let listener = TcpListener::bind("0.0.0.0:3116").await?;
+  let addr: SocketAddr = "0.0.0.0:3116".parse()?;
+  let listener = TcpListener::bind(addr).await?;
+  info!("Dashboard backend listening on {addr}");
   Ok(axum::serve(listener, app).await?)
 }
 

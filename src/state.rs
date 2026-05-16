@@ -2,13 +2,13 @@ use crate::blocker::BlockLookup;
 use crate::config::Config;
 use crate::server::ws::WsEvent;
 use anyhow::Result;
-use hickory_resolver::config::{CLOUDFLARE, GOOGLE, ResolverConfig};
-use hickory_resolver::{TokioResolver, net::runtime::TokioRuntimeProvider};
-use parking_lot::RwLock;
+use hickory_resolver::config::{ResolverConfig, CLOUDFLARE, GOOGLE};
+use hickory_resolver::{net::runtime::TokioRuntimeProvider, TokioResolver};
+use parking_lot::{RwLock, RwLockReadGuard};
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
@@ -68,6 +68,10 @@ impl State {
 
   pub fn socket(&self) -> SocketAddr {
     self.0.config.read().socket
+  }
+
+  pub fn config(&self) -> RwLockReadGuard<Config> {
+    self.0.config.read()
   }
 
   pub fn secondary_name_server(&self) -> Option<SocketAddr> {

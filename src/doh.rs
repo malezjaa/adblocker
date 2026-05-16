@@ -1,4 +1,4 @@
-use crate::blocker::{BlockOrigin, check_block};
+use crate::blocker::{check_block, BlockOrigin};
 use crate::server::AppError;
 use crate::state::State;
 use anyhow::Result;
@@ -7,10 +7,10 @@ use axum::extract::{ConnectInfo, Query, State as AxumState};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::{Router, routing::post};
+use axum::{routing::post, Router};
 use axum_server::tls_rustls::RustlsConfig;
-use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::Engine;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::time::Instant;
@@ -32,7 +32,7 @@ pub async fn setup_doh_server(state: State) -> Result<()> {
 
   let addr = SocketAddr::from(([127, 0, 0, 2], 8443));
 
-  info!("DoH listening on https://127.0.0.2:8443");
+  info!("DoH server listening on {addr}");
   axum_server::bind_rustls(addr, config)
     .serve(app.into_make_service_with_connect_info::<SocketAddr>())
     .await?;
