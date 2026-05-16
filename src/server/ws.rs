@@ -1,11 +1,10 @@
-use crate::state::State;
+use crate::context::Context;
+use axum::extract::ws::{WebSocket, WebSocketUpgrade};
 use axum::extract::ConnectInfo;
 use axum::extract::State as AxumState;
-use axum::extract::ws::{WebSocket, WebSocketUpgrade};
 use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use tokio::spawn;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum WsEvent {
@@ -14,14 +13,14 @@ pub enum WsEvent {
 
 pub(super) async fn ws_handler(
   ws: WebSocketUpgrade,
-  AxumState(state): AxumState<State>,
+  AxumState(ctx): AxumState<Context>,
   ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
-  ws.on_upgrade(move |socket| handle_socket(state, socket, addr))
+  ws.on_upgrade(move |socket| handle_socket(ctx, socket, addr))
 }
 
-async fn handle_socket(state: State, mut socket: WebSocket, who: SocketAddr) {
-  let mut rx = state.ws_tx().subscribe();
+async fn handle_socket(ctx: Context, mut socket: WebSocket, who: SocketAddr) {
+  let mut rx = ctx.ws_tx().subscribe();
 
   while let Ok(event) = rx.recv().await {
     println!("{:?}", event);

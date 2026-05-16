@@ -1,7 +1,7 @@
 use crate::application::app::resolve_msg;
-use crate::state::State;
-use adblock::Engine;
+use crate::context::Context;
 use adblock::request::Request;
+use adblock::Engine;
 use anyhow::Result;
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::{A, AAAA};
@@ -62,7 +62,7 @@ pub fn lookup_block(engine: &Engine, msg: &Message, origin: BlockOrigin) -> Bloc
 }
 
 pub async fn check_block(
-  state: State,
+  ctx: Context,
   raw: Vec<u8>,
   origin: BlockOrigin,
 ) -> Result<(bool, Message)> {
@@ -71,10 +71,10 @@ pub async fn check_block(
 
   let lookup = BlockLookup::new(msg.clone(), sender).origin(origin);
 
-  state.tx().send(lookup).await?;
+  ctx.tx().send(lookup).await?;
 
   Ok(match rx.await? {
-    BlockResult::Ok => (false, resolve_msg(&msg, state.clone()).await?),
+    BlockResult::Ok => (false, resolve_msg(&msg, ctx.clone()).await?),
     BlockResult::Block => (true, handle_blocked_response(&msg)?),
   })
 }

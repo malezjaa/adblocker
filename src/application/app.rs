@@ -1,69 +1,50 @@
-use crate::blocker::{check_block, BlockOrigin};
+use crate::context::Context;
 use crate::firewall::external_dns::block_external_dns;
 use crate::firewall::override_dns::override_default_dns;
-use crate::state::State;
+use crate::task::spawn_task;
 use anyhow::{bail, Result};
 use hickory_proto::op::Message;
 use hickory_resolver::net::{DnsError, NetError};
-use std::io::ErrorKind;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::time::Instant;
-use tokio::net::UdpSocket;
-use tracing::info;
 
+#[derive(Clone)]
 pub struct App {
-  socket: UdpSocket,
-  state: State,
+  pub ctx: Context,
 }
 
 impl App {
-  pub async fn init(state: State) -> Result<Self> {
-    let socket = UdpSocket::bind(state.socket()).await?;
+  pub async fn init(ctx: Context) -> Result<Self> {
+    override_default_dns(ctx.socket(), ctx.secondary_name_server())?;
+    block_external_dns(ctx.socket())?;
 
-    override_default_dns(state.socket(), state.secondary_name_server())?;
-    block_external_dns(state.socket())?;
-
-    Ok(Self { socket, state })
+    Ok(Self { ctx })
   }
 
-  pub async fn run(&self) -> Result<()> {
-    let mut buf = vec![0u8; 512];
+  pub async fn start_all(&self) -> Result<()> {
+    let config = self.ctx.config();
 
-    info!("DNS server listening on {}", self.state.socket());
+    let tasks = vec![
+      spawn_task("DNS server", true, Self::start_dns(self.ctx.clone())),
+      spawn_task("DoT server", config.dot_enabled(), Self::start_dot(self.ctx.clone())),
+      spawn_task("DoH server", config.doh_enabled(), Self::start_doh(self.ctx.clone())),
+      spawn_task("Dashboard backend", config.dashboard_enabled(), Self::start_dashboard(self.ctx.clone()))
+    ];
 
-    loop {
-      let (len, src) = match self.socket.recv_from(&mut buf).await {
-        Ok(v) => v,
-        Err(e) if e.kind() == ErrorKind::ConnectionReset => continue,
-        Err(e) => return Err(e.into()),
-      };
-
-      let raw = buf[..len].to_vec();
-
-      let start = Instant::now();
-      let (blocked, response) =
-        check_block(self.state.clone(), raw, BlockOrigin::Plain).await?;
-      let elapsed = start.elapsed();
-
-      self.socket.send_to(&response.to_vec()?, src).await?;
-      self.state.spawn_query_record(
-        &response,
-        src,
-        blocked,
-        BlockOrigin::Plain,
-        elapsed.as_millis() as i64,
-      );
+    for task in tasks {
+      if let Some(task) = task {
+        task.await?
+      }
     }
+
+    Ok(())
   }
 }
 
-pub async fn resolve_msg(msg: &Message, state: State) -> Result<Message> {
+pub async fn resolve_msg(msg: &Message, ctx: Context) -> Result<Message> {
   let Some(query) = msg.queries.first() else { bail!("No name or record") };
 
   let mut response = msg.clone().into_response();
 
-  match state.resolver().lookup(query.name.to_owned(), query.query_type).await {
+  match ctx.resolver().lookup(query.name.to_owned(), query.query_type).await {
     Ok(lookup) => {
       for record in lookup.answers() {
         response.add_answer(record.clone());

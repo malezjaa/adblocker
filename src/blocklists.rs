@@ -1,7 +1,7 @@
 use crate::cache::CacheFile;
-use crate::state::State;
-use adblock::FilterSet;
+use crate::context::Context;
 use adblock::lists::ParseOptions;
+use adblock::FilterSet;
 use anyhow::Result;
 use chrono::Duration;
 use fs_err::{create_dir_all, read, write};
@@ -28,12 +28,12 @@ pub fn load_cache_file(cache_dir: &Path) -> Result<CacheFile> {
   Ok(toml::from_slice(&content)?)
 }
 
-pub async fn load_blocklists(state: State, cache_dir: &Path) -> Result<FilterSet> {
+pub async fn load_blocklists(ctx: Context, cache_dir: &Path) -> Result<FilterSet> {
   let mut filterset = FilterSet::new(false);
   let mut cache = load_cache_file(cache_dir)?;
-  let blocklists = state.blocklists();
+  let blocklists = ctx.blocklists();
 
-  if let Some(block_rules) = state.block_rules() {
+  if let Some(block_rules) = ctx.block_rules() {
     filterset.add_filters(&block_rules, Default::default());
     info!(
       "loaded {} custom block {}",

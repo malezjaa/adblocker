@@ -1,0 +1,40 @@
+use std::io::ErrorKind;
+use tokio::net::UdpSocket;
+use tokio::time::Instant;
+use tracing::info;
+use crate::application::app::App;
+use crate::blocker::{check_block, BlockOrigin};
+use crate::context::Context;
+
+impl App {
+  pub async fn start_dns(ctx: Context) -> anyhow::Result<()> {
+    let mut buf = vec![0u8; 512];
+    let socket = UdpSocket::bind(ctx.socket()).await?;
+    
+    info!("DNS server listening on {}", ctx.socket());
+
+    loop {
+      let (len, src) = match socket.recv_from(&mut buf).await {
+        Ok(v) => v,
+        Err(e) if e.kind() == ErrorKind::ConnectionReset => continue,
+        Err(e) => return Err(e.into()),
+      };
+
+      let raw = buf[..len].to_vec();
+
+      let start = Instant::now();
+      let (blocked, response) =
+        check_block(ctx.clone(), raw, BlockOrigin::Plain).await?;
+      let elapsed = start.elapsed();
+
+      socket.send_to(&response.to_vec()?, src).await?;
+      ctx.spawn_query_record(
+        &response,
+        src,
+        blocked,
+        BlockOrigin::Plain,
+        elapsed.as_millis() as i64,
+      );
+    }
+  }
+}
