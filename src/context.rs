@@ -1,14 +1,16 @@
 use crate::blocker::BlockLookup;
-use crate::cert::Certs;
+use crate::cert::{Certs, get_certs};
 use crate::config::Config;
+use crate::db::DB;
 use crate::server::ws::WsEvent;
 use anyhow::Result;
-use hickory_resolver::config::{ResolverConfig, CLOUDFLARE, GOOGLE};
-use hickory_resolver::{net::runtime::TokioRuntimeProvider, TokioResolver};
+use fs_err::create_dir_all;
+use hickory_resolver::config::{CLOUDFLARE, GOOGLE, ResolverConfig};
+use hickory_resolver::{TokioResolver, net::runtime::TokioRuntimeProvider};
 use parking_lot::{RwLock, RwLockReadGuard};
-use sqlx::SqlitePool;
+use rustls::ServerConfig;
 use std::net::SocketAddr;
-use std::sync::atomic::AtomicUsize;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
@@ -22,14 +24,25 @@ pub struct ContextImpl {
   pub tx: Sender<BlockLookup>,
   pub ws_tx: broadcast::Sender<WsEvent>,
   pub config: RwLock<Config>,
-  pub db: SqlitePool,
-  pub total_queries: AtomicUsize,
   pub resolver: TokioResolver,
-  pub certs: Certs,
+  pub db: DB,
+  pub cache_dir: PathBuf,
+  pub server_config: Arc<ServerConfig>,
 }
 
 impl Context {
-  pub fn new(config: Config, db: SqlitePool, tx: Sender<BlockLookup>, certs: Certs) -> Result<Self> {
+  pub async fn new(tx: Sender<BlockLookup>) -> Result<Self> {
+    let Certs { key, certs } = get_certs()?;
+    let home_path = dirs::home_dir().unwrap().join("adb");
+    let cache_dir = home_path.join("cache");
+
+    create_dir_all(&cache_dir)?;
+
+    let db_path = home_path.join("dns-adblock.sqlite");
+    let db = DB::from_path(db_path).await?;
+
+    let config = Config::from_file(home_path.join("config.toml"))?;
+
     let mut r_config = ResolverConfig::udp_and_tcp(&CLOUDFLARE);
     for ns in GOOGLE.udp_and_tcp() {
       r_config.add_name_server(ns);
@@ -42,15 +55,31 @@ impl Context {
     opts.negative_min_ttl = Some(Duration::from_secs(60));
     opts.positive_min_ttl = Some(Duration::from_secs(60));
 
+    let server_config = Arc::new(
+      ServerConfig::builder().with_no_client_auth().with_single_cert(certs, key)?,
+    );
+
     Ok(Self(Arc::new(ContextImpl {
       tx,
       config: RwLock::new(config),
       db,
-      total_queries: AtomicUsize::default(),
       resolver: resolver_builder.build()?,
       ws_tx: broadcast::channel(100).0,
-      certs,
+      cache_dir,
+      server_config,
     })))
+  }
+
+  pub fn server_config(&self) -> Arc<ServerConfig> {
+    self.0.server_config.clone()
+  }
+
+  pub fn db(&self) -> &DB {
+    &self.0.db
+  }
+
+  pub fn cache_dir(&self) -> &Path {
+    self.0.cache_dir.as_ref()
   }
 
   pub fn tx(&self) -> Sender<BlockLookup> {
@@ -73,7 +102,7 @@ impl Context {
     self.0.config.read().socket
   }
 
-  pub fn config(&self) -> RwLockReadGuard<Config> {
+  pub fn config(&self) -> RwLockReadGuard<'_, Config> {
     self.0.config.read()
   }
 
@@ -83,9 +112,5 @@ impl Context {
 
   pub fn ws_tx(&self) -> broadcast::Sender<WsEvent> {
     self.0.ws_tx.clone()
-  }
-  
-  pub fn certs(&self) -> &Certs {
-    &self.0.certs
   }
 }

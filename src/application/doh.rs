@@ -1,17 +1,17 @@
 use crate::application::app::App;
-use crate::blocker::{check_block, BlockOrigin};
+use crate::blocker::{BlockOrigin, check_block};
 use crate::context::Context;
 use crate::server::AppError;
 use anyhow::Result;
 use axum::body::Bytes;
 use axum::extract::{ConnectInfo, Query, State as AxumState};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::{routing::post, Router};
+use axum::{Router, routing::post};
 use axum_server::tls_rustls::RustlsConfig;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::time::Instant;
@@ -35,8 +35,7 @@ impl App {
       .layer(TraceLayer::new_for_http())
       .with_state(ctx.clone());
 
-    let config = RustlsConfig::from_pem_file("../../certs/cert.pem", "../../certs/key.pem").await?;
-
+    let config = RustlsConfig::from_config(ctx.server_config());
     let addr = SocketAddr::from(([127, 0, 0, 2], 8443));
 
     info!("DoH server listening on {addr}");
@@ -47,10 +46,14 @@ impl App {
     Ok(())
   }
 
-  async fn handle_doh_request(ctx: Context, addr: SocketAddr, bytes: Vec<u8>) -> Result<impl IntoResponse, AppError> {
+  async fn handle_doh_request(
+    ctx: Context,
+    addr: SocketAddr,
+    bytes: Vec<u8>,
+  ) -> Result<impl IntoResponse, AppError> {
     let start = Instant::now();
     let (blocked, response) = check_block(ctx.clone(), bytes, BlockOrigin::DoH).await?;
-    ctx.spawn_query_record(
+    ctx.db().spawn_query_record(
       &response,
       addr,
       blocked,
@@ -82,4 +85,3 @@ impl App {
     Self::handle_doh_request(ctx, addr, body.to_vec()).await
   }
 }
-

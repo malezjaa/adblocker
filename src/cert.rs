@@ -35,7 +35,7 @@ pub fn get_certs() -> Result<Certs> {
   fs_err::create_dir_all("certs")?;
   fs_err::write("certs/cert.pem", cert.pem())?;
   fs_err::write("certs/key.pem", key_pair.serialize_pem())?;
-  
+
   let certs = certs(&mut BufReader::new(File::open("certs/cert.pem")?))
     .collect::<Result<Vec<_>, _>>()?;
   let key = private_key(&mut BufReader::new(File::open("certs/key.pem")?))?

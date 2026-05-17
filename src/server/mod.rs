@@ -8,7 +8,6 @@ pub use crate::server::app_error::AppError;
 use crate::server::ws::ws_handler;
 use anyhow::Result;
 use axum::extract::{Query, State as AxumState};
-use axum::response::IntoResponse;
 use axum::routing::{any, get};
 use axum::{Json, Router};
 use chrono::Duration;
@@ -38,7 +37,6 @@ impl App {
   }
 }
 
-
 #[derive(Deserialize)]
 struct Limit {
   limit: i64,
@@ -48,7 +46,7 @@ async fn top_handler(
   AxumState(ctx): AxumState<Context>,
   Query(limit): Query<Limit>,
 ) -> Result<Json<Vec<TopDomain>>, AppError> {
-  let top = ctx.top_blocked(limit.limit).await?;
+  let top = ctx.db().top_blocked(limit.limit).await?;
   Ok(Json(top))
 }
 
@@ -62,6 +60,6 @@ async fn stats(
   AxumState(ctx): AxumState<Context>,
   Query(query): Query<StatsQuery>,
 ) -> Result<Json<Stats>, AppError> {
-  let stats = ctx.stats(query.since, query.until).await?;
+  let stats = ctx.db().stats(query.since, query.until).await?;
   Ok(Json(stats))
 }

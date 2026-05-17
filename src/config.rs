@@ -3,7 +3,7 @@ use fs_err::{create_dir, read, write};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::path::Path;
-use tracing::{debug, info};
+use tracing::debug;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -48,15 +48,14 @@ impl Config {
   }
 
   pub fn doh_enabled(&self) -> bool {
-    self.doh.map(|d| d).unwrap_or(true)
+    self.doh.unwrap_or(true)
   }
 
-
   pub fn dot_enabled(&self) -> bool {
-    self.dot.map(|d| d).unwrap_or(true)
+    self.dot.unwrap_or(true)
   }
 
   pub fn dashboard_enabled(&self) -> bool {
-    self.dashboard.map(|d| d).unwrap_or(true)
+    self.dashboard.unwrap_or(true)
   }
 }

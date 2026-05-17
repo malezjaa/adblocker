@@ -1,10 +1,20 @@
+use crate::blocker::BlockLookup;
+use crate::blocklists::load_blocklists;
 use crate::context::Context;
+use crate::db::DB;
 use crate::firewall::external_dns::block_external_dns;
 use crate::firewall::override_dns::override_default_dns;
-use crate::task::spawn_task;
-use anyhow::{bail, Result};
+use crate::run_engine;
+use adblock::Engine;
+use anyhow::{Result, bail};
+use chrono::Duration;
 use hickory_proto::op::Message;
 use hickory_resolver::net::{DnsError, NetError};
+use std::time::Instant;
+use tokio::sync::mpsc::Receiver;
+use tokio::task::{JoinSet, LocalSet};
+use tracing::log::warn;
+use tracing::{error, info};
 
 #[derive(Clone)]
 pub struct App {
@@ -19,23 +29,60 @@ impl App {
     Ok(Self { ctx })
   }
 
-  pub async fn start_all(&self) -> Result<()> {
-    let config = self.ctx.config();
+  pub async fn start_all(&self, rx: Receiver<BlockLookup>) -> Result<()> {
+    let start = Instant::now();
+    let rules = load_blocklists(self.ctx.clone()).await?;
+    info!("loaded lists in {:.2?}", start.elapsed());
 
-    let tasks = vec![
-      spawn_task("DNS server", true, Self::start_dns(self.ctx.clone())),
-      spawn_task("DoT server", config.dot_enabled(), Self::start_dot(self.ctx.clone())),
-      spawn_task("DoH server", config.doh_enabled(), Self::start_doh(self.ctx.clone())),
-      spawn_task("Dashboard backend", config.dashboard_enabled(), Self::start_dashboard(self.ctx.clone()))
-    ];
+    let engine = Engine::from_filter_set(rules, true);
 
-    for task in tasks {
-      if let Some(task) = task {
-        task.await?
-      }
-    }
+    let local = LocalSet::new();
 
-    Ok(())
+    local
+      .run_until(async {
+        let config = self.ctx.config();
+
+        let mut tasks = JoinSet::new();
+
+        tasks.spawn_local(run_engine(engine, rx));
+        tasks
+          .spawn(DB::spawn_cleanup_task(self.ctx.db().pool.clone(), Duration::days(30)));
+        tasks.spawn(Self::start_dns(self.ctx.clone()));
+        if config.dot_enabled() {
+          tasks.spawn(Self::start_dot(self.ctx.clone()));
+        }
+        if config.doh_enabled() {
+          tasks.spawn(Self::start_doh(self.ctx.clone()));
+        }
+        if config.dashboard_enabled() {
+          tasks.spawn(Self::start_dashboard(self.ctx.clone()));
+        }
+        // mutex guard would be held across await point below
+        drop(config);
+
+        while let Some(result) = tasks.join_next().await {
+          match result {
+            Ok(Ok(())) => {
+              warn!("a background task exited unexpectedly");
+            }
+            Ok(Err(err)) => {
+              error!("a background task failed: {:?}", err);
+            }
+            Err(err) => {
+              if err.is_cancelled() {
+                warn!("a background task was cancelled");
+              } else if err.is_panic() {
+                error!("a background task panicked: {:?}", err);
+              } else {
+                error!("task join error: {:?}", err);
+              }
+            }
+          }
+        }
+
+        Ok(())
+      })
+      .await
   }
 }
 

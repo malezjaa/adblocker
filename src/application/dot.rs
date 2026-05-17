@@ -1,14 +1,10 @@
 use crate::application::app::App;
-use crate::blocker::{check_block, BlockOrigin};
-use crate::cert::Certs;
+use crate::blocker::{BlockOrigin, check_block};
 use crate::context::Context;
 use anyhow::Result;
 use hickory_proto::op::Message;
 use hickory_proto::serialize::binary::BinDecodable;
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
-use rustls::ServerConfig;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use std::time::Instant;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -17,10 +13,7 @@ use tracing::{debug, error, info};
 
 impl App {
   pub async fn start_dot(ctx: Context) -> Result<()> {
-    let config = ServerConfig::builder()
-      .with_no_client_auth()
-      .with_single_cert(ctx.certs().certs.clone(), ctx.certs().key.clone_key())?;
-    let acceptor = TlsAcceptor::from(Arc::new(config));
+    let acceptor = TlsAcceptor::from(ctx.server_config());
 
     let addr: SocketAddr = "0.0.0.0:853".parse()?;
     let listener = TcpListener::bind(addr).await?;
@@ -35,7 +28,9 @@ impl App {
         debug!("connection from {peer}");
         match acceptor.accept(stream).await {
           Ok(tls_stream) => {
-            if let Err(e) = Self::handle_connection(ctx, peer, TlsStream::from(tls_stream)).await {
+            if let Err(e) =
+              Self::handle_connection(ctx, peer, TlsStream::from(tls_stream)).await
+            {
               error!("Connection error: {e}");
             }
           }
@@ -65,7 +60,7 @@ impl App {
       let start = Instant::now();
       let (blocked, response) =
         check_block(ctx.clone(), msg.to_vec()?, BlockOrigin::DoT).await?;
-      ctx.spawn_query_record(
+      ctx.db().spawn_query_record(
         &response,
         peer,
         blocked,
