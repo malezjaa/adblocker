@@ -8,7 +8,6 @@ use tracing::debug;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
   pub blocklists: Vec<String>,
-  pub socket: SocketAddr,
   pub secondary_name_server: Option<SocketAddr>,
   pub block_rules: Option<Vec<String>>,
   pub doh: Option<bool>,
@@ -20,7 +19,6 @@ impl Config {
   pub fn default_values() -> Result<Self> {
     Ok(Self {
       blocklists: vec!["https://big.oisd.nl".into()],
-      socket: "127.0.0.2:53".parse()?,
       secondary_name_server: None,
       block_rules: None,
       doh: Some(true),

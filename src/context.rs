@@ -1,12 +1,12 @@
 use crate::blocker::BlockLookup;
-use crate::cert::{Certs, get_certs};
+use crate::cert::{get_certs, Certs};
 use crate::config::Config;
 use crate::db::DB;
 use crate::server::ws::WsEvent;
 use anyhow::Result;
 use fs_err::create_dir_all;
-use hickory_resolver::config::{CLOUDFLARE, GOOGLE, ResolverConfig};
-use hickory_resolver::{TokioResolver, net::runtime::TokioRuntimeProvider};
+use hickory_resolver::config::{ResolverConfig, CLOUDFLARE, GOOGLE};
+use hickory_resolver::{net::runtime::TokioRuntimeProvider, TokioResolver};
 use parking_lot::{RwLock, RwLockReadGuard};
 use rustls::ServerConfig;
 use std::net::SocketAddr;
@@ -99,7 +99,7 @@ impl Context {
   }
 
   pub fn socket(&self) -> SocketAddr {
-    self.0.config.read().socket
+    SocketAddr::from(([127, 0, 0, 2], 53))
   }
 
   pub fn config(&self) -> RwLockReadGuard<'_, Config> {
