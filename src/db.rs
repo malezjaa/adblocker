@@ -1,6 +1,6 @@
 use crate::ChronoDuration;
-use crate::blocker::BlockOrigin;
 use crate::domain::{query_domain, registered_domain};
+use crate::engine::BlockOrigin;
 use chrono::Utc;
 use hickory_proto::op::Message;
 use serde::{Deserialize, Serialize};

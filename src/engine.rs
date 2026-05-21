@@ -1,17 +1,23 @@
-use crate::application::app::resolve_msg;
 use crate::context::Context;
+use crate::rewrite::apply::{apply_rewrites, restore_original_queries};
+use crate::rewrite::record::construct_rewrite_records;
+use crate::rewrite::{Rewrite, RewriteAction, RewriteMatchWhenType};
 use adblock::Engine;
 use adblock::request::Request;
-use anyhow::Result;
-use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
+use anyhow::{Error, Result, bail};
+use hickory_proto::op::{Message, Query, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::{A, AAAA};
-use hickory_proto::rr::{RData, Record, RecordType};
+use hickory_proto::rr::{Name, RData, Record, RecordType};
 use hickory_proto::serialize::binary::BinDecodable;
+use hickory_resolver::net::{DnsError, NetError};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::net::{Ipv4Addr, Ipv6Addr};
+use std::str::FromStr;
+use std::vec;
 use tokio::sync::oneshot;
 use tokio::sync::oneshot::Sender;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum BlockOrigin {
@@ -61,22 +67,37 @@ pub fn lookup_block(engine: &Engine, msg: &Message, origin: BlockOrigin) -> Bloc
   BlockResult::Ok
 }
 
-pub async fn check_block(
+pub async fn process_message(
   ctx: Context,
   raw: Vec<u8>,
   origin: BlockOrigin,
 ) -> Result<(bool, Message)> {
-  let msg = Message::from_bytes(&raw)?;
-  let (sender, rx) = oneshot::channel();
+  let mut msg = Message::from_bytes(&raw)?;
+  let original_queries = msg.queries.clone();
 
-  let lookup = BlockLookup::new(msg.clone(), sender).origin(origin);
+  let rewrite_result = apply_rewrites(&ctx, &mut msg)?;
 
-  ctx.tx().send(lookup).await?;
+  let (tx, rx) = oneshot::channel();
 
-  Ok(match rx.await? {
-    BlockResult::Ok => (false, resolve_msg(&msg, ctx.clone()).await?),
-    BlockResult::Block => (true, handle_blocked_response(&msg)?),
-  })
+  ctx.tx().send(BlockLookup::new(msg.clone(), tx).origin(origin)).await?;
+
+  match rx.await? {
+    BlockResult::Block => Ok((true, handle_blocked_response(&msg)?)),
+
+    BlockResult::Ok => {
+      let mut response = if rewrite_result.synthetic_response {
+        msg.clone().into_response()
+      } else {
+        resolve_msg(&msg, ctx).await?
+      };
+
+      if rewrite_result.restore_original_queries {
+        restore_original_queries(&mut response, &original_queries);
+      }
+
+      Ok((false, response))
+    }
+  }
 }
 
 pub fn handle_blocked_response(msg: &Message) -> Result<Message> {
@@ -98,6 +119,28 @@ pub fn handle_blocked_response(msg: &Message) -> Result<Message> {
 
   if response.answers.is_empty() {
     response.metadata.response_code = ResponseCode::NXDomain;
+  }
+
+  Ok(response)
+}
+
+pub async fn resolve_msg(msg: &Message, ctx: Context) -> Result<Message> {
+  let Some(query) = msg.queries.first() else { bail!("No name or record") };
+
+  let mut response = msg.clone().into_response();
+
+  match ctx.resolver().lookup(query.name.to_owned(), query.query_type).await {
+    Ok(lookup) => {
+      for record in lookup.answers() {
+        response.add_answer(record.clone());
+      }
+    }
+    Err(e) => match e {
+      NetError::Dns(DnsError::NoRecordsFound(no)) => {
+        response.metadata.response_code = no.response_code;
+      }
+      _ => return Err(e.into()),
+    },
   }
 
   Ok(response)

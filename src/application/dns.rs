@@ -1,6 +1,6 @@
 use crate::application::app::App;
-use crate::blocker::{check_block, BlockOrigin};
 use crate::context::Context;
+use crate::engine::{BlockOrigin, process_message};
 use std::io::ErrorKind;
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
@@ -24,7 +24,8 @@ impl App {
       let raw = buf[..len].to_vec();
 
       let start = Instant::now();
-      let (blocked, response) = check_block(ctx.clone(), raw, BlockOrigin::Plain).await?;
+      let (blocked, response) =
+        process_message(ctx.clone(), raw, BlockOrigin::Plain).await?;
       let elapsed = start.elapsed();
 
       socket.send_to(&response.to_vec()?, src).await?;

@@ -1,3 +1,4 @@
+use crate::rewrite::Rewrite;
 use anyhow::Result;
 use fs_err::{create_dir, read, write};
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,7 @@ pub struct Config {
   pub doh: Option<bool>,
   pub dot: Option<bool>,
   pub dashboard: Option<bool>,
+  pub rewrites: Option<Vec<Rewrite>>,
 }
 
 impl Config {
@@ -24,6 +26,7 @@ impl Config {
       doh: Some(true),
       dot: Some(true),
       dashboard: Some(true),
+      rewrites: None,
     })
   }
 

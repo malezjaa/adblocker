@@ -1,6 +1,6 @@
 use crate::application::app::App;
-use crate::blocker::{BlockOrigin, check_block};
 use crate::context::Context;
+use crate::engine::{BlockOrigin, process_message};
 use anyhow::Result;
 use hickory_proto::op::Message;
 use hickory_proto::serialize::binary::BinDecodable;
@@ -59,7 +59,7 @@ impl App {
 
       let start = Instant::now();
       let (blocked, response) =
-        check_block(ctx.clone(), msg.to_vec()?, BlockOrigin::DoT).await?;
+        process_message(ctx.clone(), msg.to_vec()?, BlockOrigin::DoT).await?;
       ctx.db().spawn_query_record(
         &response,
         peer,

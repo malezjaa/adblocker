@@ -1,7 +1,7 @@
-use crate::blocker::BlockLookup;
 use crate::blocklists::load_blocklists;
 use crate::context::Context;
 use crate::db::DB;
+use crate::engine::BlockLookup;
 use crate::firewall::external_dns::block_external_dns;
 use crate::firewall::override_dns::override_default_dns;
 use crate::run_engine;
@@ -41,6 +41,7 @@ impl App {
     local
       .run_until(async {
         let config = self.ctx.config();
+        println!("{:#?}", config);
 
         let mut tasks = JoinSet::new();
 
@@ -84,26 +85,4 @@ impl App {
       })
       .await
   }
-}
-
-pub async fn resolve_msg(msg: &Message, ctx: Context) -> Result<Message> {
-  let Some(query) = msg.queries.first() else { bail!("No name or record") };
-
-  let mut response = msg.clone().into_response();
-
-  match ctx.resolver().lookup(query.name.to_owned(), query.query_type).await {
-    Ok(lookup) => {
-      for record in lookup.answers() {
-        response.add_answer(record.clone());
-      }
-    }
-    Err(e) => match e {
-      NetError::Dns(DnsError::NoRecordsFound(no)) => {
-        response.metadata.response_code = no.response_code;
-      }
-      _ => return Err(e.into()),
-    },
-  }
-
-  Ok(response)
 }

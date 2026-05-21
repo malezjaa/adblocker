@@ -1,5 +1,4 @@
 mod application;
-mod blocker;
 mod blocklists;
 mod cache;
 mod cert;
@@ -7,15 +6,17 @@ mod config;
 mod context;
 mod db;
 mod domain;
+mod engine;
 mod firewall;
 mod logger;
+mod rewrite;
 mod server;
 pub mod task;
 mod windows;
 
 use crate::application::app::App;
-use crate::blocker::{BlockLookup, lookup_block};
 use crate::context::Context;
+use crate::engine::{BlockLookup, lookup_block};
 use crate::logger::setup_logger;
 use adblock::Engine;
 use anyhow::Result;

@@ -1,6 +1,6 @@
 use crate::application::app::App;
-use crate::blocker::{BlockOrigin, check_block};
 use crate::context::Context;
+use crate::engine::{BlockOrigin, process_message};
 use crate::server::AppError;
 use anyhow::Result;
 use axum::body::Bytes;
@@ -52,7 +52,8 @@ impl App {
     bytes: Vec<u8>,
   ) -> Result<impl IntoResponse, AppError> {
     let start = Instant::now();
-    let (blocked, response) = check_block(ctx.clone(), bytes, BlockOrigin::DoH).await?;
+    let (blocked, response) =
+      process_message(ctx.clone(), bytes, BlockOrigin::DoH).await?;
     ctx.db().spawn_query_record(
       &response,
       addr,

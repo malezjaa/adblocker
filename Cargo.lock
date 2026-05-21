@@ -628,6 +628,7 @@ dependencies = [
  "hickory-resolver",
  "parking_lot",
  "rcgen",
+ "regex",
  "reqwest",
  "rustls",
  "rustls-pemfile",

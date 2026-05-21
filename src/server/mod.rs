@@ -12,17 +12,23 @@ use axum::routing::{any, get};
 use axum::{Json, Router};
 use chrono::Duration;
 use serde::Deserialize;
+use serde_json::{Value, json};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
 use tracing::info;
 
+pub async fn server_root() -> Json<Value> {
+  Json(json!({ "version": env!("CARGO_PKG_VERSION") }))
+}
+
 impl App {
   pub async fn start_dashboard(ctx: Context) -> Result<()> {
     let app = Router::new()
+      .route("/", get(server_root))
       .route("/top", get(top_handler))
       .route("/stats", get(stats))
-      .route("/", any(ws_handler))
+      .route("/ws", any(ws_handler))
       .layer(
         CorsLayer::new()
           .allow_origin(AllowOrigin::any())
@@ -30,7 +36,7 @@ impl App {
       )
       .with_state(ctx.clone());
 
-    let addr: SocketAddr = "0.0.0.0:3116".parse()?;
+    let addr: SocketAddr = "127.0.0.64:80".parse()?;
     let listener = TcpListener::bind(addr).await?;
     info!("Dashboard backend listening on {addr}");
     Ok(axum::serve(listener, app).await?)

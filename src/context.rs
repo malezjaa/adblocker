@@ -1,12 +1,12 @@
-use crate::blocker::BlockLookup;
-use crate::cert::{get_certs, Certs};
+use crate::cert::{Certs, get_certs};
 use crate::config::Config;
 use crate::db::DB;
+use crate::engine::BlockLookup;
 use crate::server::ws::WsEvent;
 use anyhow::Result;
 use fs_err::create_dir_all;
-use hickory_resolver::config::{ResolverConfig, CLOUDFLARE, GOOGLE};
-use hickory_resolver::{net::runtime::TokioRuntimeProvider, TokioResolver};
+use hickory_resolver::config::{CLOUDFLARE, GOOGLE, ResolverConfig};
+use hickory_resolver::{TokioResolver, net::runtime::TokioRuntimeProvider};
 use parking_lot::{RwLock, RwLockReadGuard};
 use rustls::ServerConfig;
 use std::net::SocketAddr;
@@ -15,6 +15,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
+use tracing::debug;
 
 #[derive(Debug, Clone)]
 pub struct Context(pub Arc<ContextImpl>);
@@ -41,7 +42,13 @@ impl Context {
     let db_path = home_path.join("dns-adblock.sqlite");
     let db = DB::from_path(db_path).await?;
 
-    let config = Config::from_file(home_path.join("config.toml"))?;
+    let mut config = Config::from_file(home_path.join("config.toml"))?;
+    if let Some(rewrites) = &mut config.rewrites {
+      for rewrite in rewrites {
+        rewrite.compile()?;
+      }
+      debug!("compiled regexes")
+    }
 
     let mut r_config = ResolverConfig::udp_and_tcp(&CLOUDFLARE);
     for ns in GOOGLE.udp_and_tcp() {
