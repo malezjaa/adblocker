@@ -29,6 +29,7 @@ pub struct ContextImpl {
   pub db: DB,
   pub cache_dir: PathBuf,
   pub server_config: Arc<ServerConfig>,
+  pub config_path: PathBuf
 }
 
 impl Context {
@@ -42,7 +43,8 @@ impl Context {
     let db_path = home_path.join("dns-adblock.sqlite");
     let db = DB::from_path(db_path).await?;
 
-    let mut config = Config::from_file(home_path.join("config.toml"))?;
+    let config_path = home_path.join("config.toml");
+    let mut config = Config::from_file(&config_path)?;
     if let Some(rewrites) = &mut config.rewrites {
       for rewrite in rewrites {
         rewrite.compile()?;
@@ -74,6 +76,7 @@ impl Context {
       ws_tx: broadcast::channel(100).0,
       cache_dir,
       server_config,
+      config_path
     })))
   }
 

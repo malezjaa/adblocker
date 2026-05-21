@@ -15,6 +15,7 @@ use tokio::sync::mpsc::Receiver;
 use tokio::task::{JoinSet, LocalSet};
 use tracing::log::warn;
 use tracing::{error, info};
+use crate::config::Config;
 
 #[derive(Clone)]
 pub struct App {
@@ -41,13 +42,14 @@ impl App {
     local
       .run_until(async {
         let config = self.ctx.config();
-        println!("{:#?}", config);
+        Config::spawn_config_watcher(self.ctx.clone())?;
 
         let mut tasks = JoinSet::new();
 
         tasks.spawn_local(run_engine(engine, rx));
         tasks
           .spawn(DB::spawn_cleanup_task(self.ctx.db().pool.clone(), Duration::days(30)));
+
         tasks.spawn(Self::start_dns(self.ctx.clone()));
         if config.dot_enabled() {
           tasks.spawn(Self::start_dot(self.ctx.clone()));

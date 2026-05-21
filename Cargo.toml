@@ -40,6 +40,8 @@ time = "0.3.47"
 rustls-pemfile = "2.2.0"
 tokio-rustls = "0.26.4"
 regex = "1.12.3"
+notify = "9.0.0-rc.4"
+notify-debouncer-full = "0.8.0-rc.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = [

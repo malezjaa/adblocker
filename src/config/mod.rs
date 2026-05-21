@@ -1,3 +1,5 @@
+pub mod watcher;
+
 use crate::rewrite::Rewrite;
 use anyhow::Result;
 use fs_err::{create_dir, read, write};
