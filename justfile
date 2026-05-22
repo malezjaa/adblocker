@@ -7,10 +7,10 @@ _default:
     @just --list -u
 
 format:
-    cd dashboard; bun format; cd ..; cargo fmt --all;
+    cd dashboard; pnpm format; cd ..; cargo fmt --all;
 
 check-format:
-    cd dashboard; bun format --check; cd ..; cargo fmt --all --check;
+    cd dashboard; pnpm format --check; cd ..; cargo fmt --all --check;
 
 fix:
     cargo clippy \

@@ -1,0 +1,4 @@
+minimumReleaseAge: 1080
+blockExoticSubdeps: true
+allowBuilds:
+  msw: true
