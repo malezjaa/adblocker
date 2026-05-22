@@ -16,11 +16,12 @@ mod windows;
 
 use crate::application::app::App;
 use crate::context::Context;
-use crate::engine::{BlockLookup, lookup_block};
+use crate::engine::{lookup_block, BlockLookup};
 use crate::logger::setup_logger;
 use adblock::Engine;
 use anyhow::Result;
 use chrono::Duration as ChronoDuration;
+use clap::Parser;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::channel;
@@ -32,9 +33,16 @@ async fn run_engine(engine: Engine, mut rx: mpsc::Receiver<BlockLookup>) -> Resu
   Ok(())
 }
 
+#[derive(Parser, Debug)]
+struct Cli {
+  #[arg(short, long)]
+  verbose: bool,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
-  setup_logger();
+  let cli = Cli::parse();
+  setup_logger(cli.verbose);
 
   let (tx, rx) = channel(100);
   let ctx = Context::new(tx).await?;
