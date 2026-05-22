@@ -16,7 +16,7 @@ mod windows;
 
 use crate::application::app::App;
 use crate::context::Context;
-use crate::engine::{lookup_block, BlockLookup};
+use crate::engine::{BlockLookup, lookup_block};
 use crate::logger::setup_logger;
 use adblock::Engine;
 use anyhow::Result;

@@ -15,7 +15,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
-use tracing::debug;
 
 #[derive(Debug, Clone)]
 pub struct Context(pub Arc<ContextImpl>);
@@ -29,7 +28,7 @@ pub struct ContextImpl {
   pub db: DB,
   pub cache_dir: PathBuf,
   pub server_config: Arc<ServerConfig>,
-  pub config_path: PathBuf
+  pub config_path: PathBuf,
 }
 
 impl Context {
@@ -71,7 +70,7 @@ impl Context {
       ws_tx: broadcast::channel(100).0,
       cache_dir,
       server_config,
-      config_path
+      config_path,
     })))
   }
 
@@ -118,7 +117,7 @@ impl Context {
   pub fn ws_tx(&self) -> broadcast::Sender<WsEvent> {
     self.0.ws_tx.clone()
   }
-  
+
   pub fn config_path(&self) -> &Path {
     self.0.config_path.as_ref()
   }

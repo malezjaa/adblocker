@@ -1,4 +1,5 @@
 use crate::blocklists::load_blocklists;
+use crate::config::Config;
 use crate::context::Context;
 use crate::db::DB;
 use crate::engine::BlockLookup;
@@ -6,16 +7,13 @@ use crate::firewall::external_dns::block_external_dns;
 use crate::firewall::override_dns::override_default_dns;
 use crate::run_engine;
 use adblock::Engine;
-use anyhow::{Result, bail};
+use anyhow::Result;
 use chrono::Duration;
-use hickory_proto::op::Message;
-use hickory_resolver::net::{DnsError, NetError};
 use std::time::Instant;
 use tokio::sync::mpsc::Receiver;
 use tokio::task::{JoinSet, LocalSet};
 use tracing::log::warn;
 use tracing::{error, info};
-use crate::config::Config;
 
 #[derive(Clone)]
 pub struct App {

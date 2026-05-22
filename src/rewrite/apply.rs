@@ -4,7 +4,6 @@ use crate::rewrite::{Rewrite, RewriteAction, RewriteMatchWhenType};
 use anyhow::Result;
 use hickory_proto::op::{Message, Query, ResponseCode};
 use hickory_proto::rr::{Name, Record};
-use regex::Regex;
 use std::str::FromStr;
 
 pub struct RewriteResult {

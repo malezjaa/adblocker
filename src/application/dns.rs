@@ -2,7 +2,6 @@ use crate::application::app::App;
 use crate::context::Context;
 use crate::engine::{BlockOrigin, process_message};
 use std::io::ErrorKind;
-use std::net::SocketAddr;
 use tokio::net::UdpSocket;
 use tokio::time::Instant;
 use tracing::info;

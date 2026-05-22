@@ -1,23 +1,18 @@
 use crate::context::Context;
 use crate::rewrite::apply::{apply_rewrites, restore_original_queries};
-use crate::rewrite::record::construct_rewrite_records;
-use crate::rewrite::{Rewrite, RewriteAction, RewriteMatchWhenType};
 use adblock::Engine;
 use adblock::request::Request;
-use anyhow::{Error, Result, bail};
-use hickory_proto::op::{Message, Query, ResponseCode, UpdateMessage};
+use anyhow::{Result, bail};
+use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::{A, AAAA};
-use hickory_proto::rr::{Name, RData, Record, RecordType};
+use hickory_proto::rr::{RData, Record, RecordType};
 use hickory_proto::serialize::binary::BinDecodable;
 use hickory_resolver::net::{DnsError, NetError};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::net::{Ipv4Addr, Ipv6Addr};
-use std::str::FromStr;
-use std::vec;
 use tokio::sync::oneshot;
 use tokio::sync::oneshot::Sender;
-use tracing::{info, warn};
+use tracing::info;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum BlockOrigin {

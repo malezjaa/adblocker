@@ -2,9 +2,8 @@ use crate::config::Config;
 use crate::context::Context;
 use anyhow::Result;
 use futures::future::pending;
-use notify::event::{DataChange, ModifyKind};
 use notify::{EventKind, RecursiveMode};
-use notify_debouncer_full::{new_debouncer, DebounceEventResult};
+use notify_debouncer_full::{DebounceEventResult, new_debouncer};
 use std::time::Duration;
 use tokio::spawn;
 use tracing::{debug, error, info, warn};
@@ -57,7 +56,7 @@ impl Config {
 
         Ok::<(), anyhow::Error>(())
       }
-        .await
+      .await
       {
         error!("config watcher failed: {err}");
       }
