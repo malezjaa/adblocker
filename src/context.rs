@@ -45,12 +45,7 @@ impl Context {
 
     let config_path = home_path.join("config.toml");
     let mut config = Config::from_file(&config_path)?;
-    if let Some(rewrites) = &mut config.rewrites {
-      for rewrite in rewrites {
-        rewrite.compile()?;
-      }
-      debug!("compiled regexes")
-    }
+    config.compile_regexes()?;
 
     let mut r_config = ResolverConfig::udp_and_tcp(&CLOUDFLARE);
     for ns in GOOGLE.udp_and_tcp() {
@@ -122,5 +117,9 @@ impl Context {
 
   pub fn ws_tx(&self) -> broadcast::Sender<WsEvent> {
     self.0.ws_tx.clone()
+  }
+  
+  pub fn config_path(&self) -> &Path {
+    self.0.config_path.as_ref()
   }
 }

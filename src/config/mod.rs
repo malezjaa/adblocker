@@ -32,6 +32,17 @@ impl Config {
     })
   }
 
+  pub fn compile_regexes(&mut self) -> Result<()> {
+    if let Some(rewrites) = &mut self.rewrites {
+      for rewrite in rewrites {
+        rewrite.compile()?;
+      }
+      debug!("compiled regexes")
+    }
+
+    Ok(())
+  }
+
   pub fn from_file<P: AsRef<Path>>(file: P) -> Result<Self> {
     let path = file.as_ref();
     debug!(path = path.display().to_string(), "loading config");
