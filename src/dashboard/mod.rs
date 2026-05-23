@@ -1,18 +1,20 @@
 pub mod app_error;
 pub mod ws;
+pub mod frontend;
 
 use crate::application::app::App;
 use crate::context::Context;
+pub use crate::dashboard::app_error::AppError;
+use crate::dashboard::frontend::serve_file;
+use crate::dashboard::ws::ws_handler;
 use crate::db::{Stats, TopDomain};
-pub use crate::server::app_error::AppError;
-use crate::server::ws::ws_handler;
 use anyhow::Result;
 use axum::extract::{Query, State as AxumState};
 use axum::routing::{any, get};
 use axum::{Json, Router};
 use chrono::Duration;
 use serde::Deserialize;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
@@ -26,9 +28,10 @@ impl App {
   pub async fn start_dashboard(ctx: Context) -> Result<()> {
     let app = Router::new()
       .route("/", get(server_root))
-      .route("/top", get(top_handler))
-      .route("/stats", get(stats))
-      .route("/ws", any(ws_handler))
+      .route("/api/top", get(top_handler))
+      .route("/api/stats", get(stats))
+      .route("/api/ws", any(ws_handler))
+      .route("/{*file}", get(serve_file))
       .layer(
         CorsLayer::new()
           .allow_origin(AllowOrigin::any())

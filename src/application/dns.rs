@@ -1,6 +1,6 @@
 use crate::application::app::App;
 use crate::context::Context;
-use crate::engine::{BlockOrigin, process_message};
+use crate::engine::{process_message, BlockOrigin};
 use std::io::ErrorKind;
 use tokio::net::UdpSocket;
 use tokio::time::Instant;
@@ -11,7 +11,7 @@ impl App {
     let mut buf = vec![0u8; 512];
     let socket = UdpSocket::bind(ctx.socket()).await?;
 
-    info!("DNS server listening on {}", ctx.socket());
+    info!("DNS dashboard listening on {}", ctx.socket());
 
     loop {
       let (len, src) = match socket.recv_from(&mut buf).await {

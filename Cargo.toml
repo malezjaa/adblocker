@@ -43,6 +43,8 @@ regex = "1.12.3"
 notify = "9.0.0-rc.4"
 notify-debouncer-full = "0.8.0-rc.2"
 clap = { version = "4.6.1", features = ["derive"] }
+include_dir = "0.7.4"
+mime_guess2 = "2.0.5"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = [

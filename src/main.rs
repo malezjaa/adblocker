@@ -10,13 +10,13 @@ mod engine;
 mod firewall;
 mod logger;
 mod rewrite;
-mod server;
+mod dashboard;
 pub mod task;
 mod windows;
 
 use crate::application::app::App;
 use crate::context::Context;
-use crate::engine::{BlockLookup, lookup_block};
+use crate::engine::{lookup_block, BlockLookup};
 use crate::logger::setup_logger;
 use adblock::Engine;
 use anyhow::Result;

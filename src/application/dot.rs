@@ -1,6 +1,6 @@
 use crate::application::app::App;
 use crate::context::Context;
-use crate::engine::{BlockOrigin, process_message};
+use crate::engine::{process_message, BlockOrigin};
 use anyhow::Result;
 use hickory_proto::op::Message;
 use hickory_proto::serialize::binary::BinDecodable;
@@ -17,7 +17,7 @@ impl App {
 
     let addr: SocketAddr = "0.0.0.0:853".parse()?;
     let listener = TcpListener::bind(addr).await?;
-    info!("DoT server listening on {addr}");
+    info!("DoT dashboard listening on {addr}");
 
     loop {
       let (stream, peer) = listener.accept().await?;
