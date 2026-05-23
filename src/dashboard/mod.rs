@@ -9,7 +9,8 @@ use crate::dashboard::frontend::serve_file;
 use crate::dashboard::ws::ws_handler;
 use crate::db::{Stats, TopDomain};
 use anyhow::Result;
-use axum::extract::{Query, State as AxumState};
+use axum::extract::{Path, Query, State as AxumState};
+use axum::response::IntoResponse;
 use axum::routing::{any, get};
 use axum::{Json, Router};
 use chrono::Duration;
@@ -20,8 +21,8 @@ use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
 use tracing::info;
 
-pub async fn server_root() -> Json<Value> {
-  Json(json!({ "version": env!("CARGO_PKG_VERSION") }))
+pub async fn server_root() -> Result<impl IntoResponse, AppError> {
+  serve_file(Path("index.html".to_string())).await
 }
 
 impl App {

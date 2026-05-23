@@ -13,7 +13,6 @@ pub async fn serve_file(
 ) -> Result<impl IntoResponse, AppError> {
   let file = DIST.get_file(&path);
 
-
   if let Some(file) = file {
     let mut response = Response::new(String::from_utf8(file.contents().to_vec())?);
     let ty = from_path(path);
