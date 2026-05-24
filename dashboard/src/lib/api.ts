@@ -44,3 +44,12 @@ export const useChartData = (days?: number) => {
     queryFn: () => fetchChartData(days),
   })
 }
+
+export type TopBlocked = {
+  domain: string,
+  hits_blocked: number,
+  hits_total: number,
+}
+
+export const useTopBlocked = () =>
+  useQuery<TopBlocked[]>({ queryKey: ["top-blocked"], queryFn: () => api<TopBlocked[]>("api/top") });

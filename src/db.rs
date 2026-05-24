@@ -1,15 +1,15 @@
-use crate::ChronoDuration;
 use crate::domain::{query_domain, registered_domain};
 use crate::engine::BlockOrigin;
+use crate::ChronoDuration;
 use chrono::Utc;
 use hickory_proto::op::Message;
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::path::Path;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, warn};
 
@@ -133,25 +133,35 @@ impl DB {
              ORDER BY timestamp DESC
              LIMIT ?",
     )
-    .bind(limit)
-    .fetch_all(&self.pool)
-    .await?;
+      .bind(limit)
+      .fetch_all(&self.pool)
+      .await?;
 
     Ok(rows)
   }
 
   /// Domains with the most blocked hits, highest first.
-  pub async fn top_blocked(&self, limit: i64) -> anyhow::Result<Vec<TopDomain>> {
-    let rows = sqlx::query_as::<_, TopDomain>(
-      "SELECT domain, registered_domain, hits_blocked, hits_total
-             FROM domain_stats
-             WHERE hits_blocked > 0
-             ORDER BY hits_blocked DESC
-             LIMIT ?",
-    )
-    .bind(limit)
-    .fetch_all(&self.pool)
-    .await?;
+  pub async fn top_blocked(&self, limit: Option<i64>) -> anyhow::Result<Vec<TopDomain>> {
+    let rows = match limit {
+      Some(limit) => sqlx::query_as::<_, TopDomain>(
+        "SELECT domain, registered_domain, hits_blocked, hits_total
+                   FROM domain_stats
+                   WHERE hits_blocked > 0
+                   ORDER BY hits_blocked DESC
+                   LIMIT ?",
+      )
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?,
+      None => sqlx::query_as::<_, TopDomain>(
+        "SELECT domain, registered_domain, hits_blocked, hits_total
+                   FROM domain_stats
+                   WHERE hits_blocked > 0
+                   ORDER BY hits_blocked DESC",
+      )
+        .fetch_all(&self.pool)
+        .await?,
+    };
 
     Ok(rows)
   }
@@ -169,36 +179,36 @@ impl DB {
          AND (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-    .bind(since_ts)
-    .bind(since_ts)
-    .bind(until_ts)
-    .bind(until_ts)
-    .fetch_one(&self.pool)
-    .await?;
+      .bind(since_ts)
+      .bind(since_ts)
+      .bind(until_ts)
+      .bind(until_ts)
+      .fetch_one(&self.pool)
+      .await?;
 
     let total_allowed: i64 = sqlx::query_scalar(
       "SELECT COUNT(*) FROM query_log WHERE blocked = 0
          AND (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-    .bind(since_ts)
-    .bind(since_ts)
-    .bind(until_ts)
-    .bind(until_ts)
-    .fetch_one(&self.pool)
-    .await?;
+      .bind(since_ts)
+      .bind(since_ts)
+      .bind(until_ts)
+      .bind(until_ts)
+      .fetch_one(&self.pool)
+      .await?;
 
     let avg_response_time: Option<f64> = sqlx::query_scalar(
       "SELECT AVG(response_time) FROM query_log
          WHERE (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-    .bind(since_ts)
-    .bind(since_ts)
-    .bind(until_ts)
-    .bind(until_ts)
-    .fetch_one(&self.pool)
-    .await?;
+      .bind(since_ts)
+      .bind(since_ts)
+      .bind(until_ts)
+      .bind(until_ts)
+      .fetch_one(&self.pool)
+      .await?;
 
     let total = total_blocked + total_allowed;
 
@@ -286,22 +296,22 @@ impl DB {
          response_time INTEGER NOT NULL
        )",
     )
-    .execute(&self.pool)
-    .await?;
+      .execute(&self.pool)
+      .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_blocked_timestamp
              ON query_log(blocked, timestamp)",
     )
-    .execute(&self.pool)
-    .await?;
+      .execute(&self.pool)
+      .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_domain
              ON query_log(domain)",
     )
-    .execute(&self.pool)
-    .await?;
+      .execute(&self.pool)
+      .await?;
 
     sqlx::query(
       "CREATE TABLE IF NOT EXISTS domain_stats (
@@ -312,22 +322,22 @@ impl DB {
               last_seen          INTEGER NOT NULL
             );",
     )
-    .execute(&self.pool)
-    .await?;
+      .execute(&self.pool)
+      .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_registered
                 ON domain_stats(registered_domain);",
     )
-    .execute(&self.pool)
-    .await?;
+      .execute(&self.pool)
+      .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_last_seen
              ON domain_stats(last_seen)",
     )
-    .execute(&self.pool)
-    .await?;
+      .execute(&self.pool)
+      .await?;
 
     Ok(())
   }
@@ -345,9 +355,9 @@ impl DB {
              GROUP BY day
              ORDER BY day ASC",
     )
-    .bind(since_ts)
-    .fetch_all(&self.pool)
-    .await?;
+      .bind(since_ts)
+      .fetch_all(&self.pool)
+      .await?;
 
     Ok(rows)
   }

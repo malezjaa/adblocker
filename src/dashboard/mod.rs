@@ -15,7 +15,7 @@ use axum::routing::{any, get};
 use axum::{Json, Router};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
@@ -50,7 +50,7 @@ impl App {
 
 #[derive(Deserialize)]
 struct Limit {
-  limit: i64,
+  limit: Option<i64>,
 }
 
 async fn top_handler(
