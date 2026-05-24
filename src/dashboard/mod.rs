@@ -14,7 +14,7 @@ use axum::response::IntoResponse;
 use axum::routing::{any, get};
 use axum::{Json, Router};
 use chrono::Duration;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
@@ -31,6 +31,7 @@ impl App {
       .route("/", get(server_root))
       .route("/api/top", get(top_handler))
       .route("/api/stats", get(stats))
+      .route("/api/chart-data", get(chart_data))
       .route("/api/ws", any(ws_handler))
       .route("/{*file}", get(serve_file))
       .layer(
@@ -72,4 +73,31 @@ async fn stats(
 ) -> Result<Json<Stats>, AppError> {
   let stats = ctx.db().stats(query.since, query.until).await?;
   Ok(Json(stats))
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ChartData {
+  pub day: String,
+  pub total: i64,
+  pub blocked: i64,
+}
+
+#[derive(Deserialize)]
+struct ChartQuery {
+  days: Option<u32>,
+}
+
+async fn chart_data(
+  AxumState(ctx): AxumState<Context>,
+  Query(query): Query<ChartQuery>,
+) -> Result<Json<Vec<ChartData>>, AppError> {
+  let days = query.days.unwrap_or(7);
+  let rows = ctx.db().stats_by_day(days).await?;
+
+  let data = rows
+    .into_iter()
+    .map(|r| ChartData { day: r.day, total: r.total, blocked: r.blocked })
+    .collect();
+
+  Ok(Json(data))
 }

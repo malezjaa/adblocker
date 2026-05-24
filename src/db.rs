@@ -331,4 +331,31 @@ impl DB {
 
     Ok(())
   }
+
+  pub async fn stats_by_day(&self, days: u32) -> anyhow::Result<Vec<DayStat>> {
+    let since_ts = (Utc::now() - ChronoDuration::days(days as i64)).timestamp();
+
+    let rows = sqlx::query_as::<_, DayStat>(
+      "SELECT
+                 DATE(timestamp, 'unixepoch') AS day,
+                 COUNT(*)                     AS total,
+                 SUM(blocked)                 AS blocked
+             FROM query_log
+             WHERE timestamp >= ?
+             GROUP BY day
+             ORDER BY day ASC",
+    )
+    .bind(since_ts)
+    .fetch_all(&self.pool)
+    .await?;
+
+    Ok(rows)
+  }
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+pub struct DayStat {
+  pub day: String,
+  pub total: i64,
+  pub blocked: i64,
 }
