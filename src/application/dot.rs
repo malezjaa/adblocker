@@ -1,6 +1,6 @@
 use crate::application::app::App;
 use crate::context::Context;
-use crate::engine::{process_message, BlockOrigin};
+use crate::engine::{BlockOrigin, process_message};
 use anyhow::Result;
 use hickory_proto::op::Message;
 use hickory_proto::serialize::binary::BinDecodable;

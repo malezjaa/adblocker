@@ -1,6 +1,6 @@
 pub mod app_error;
-pub mod ws;
 pub mod frontend;
+pub mod ws;
 
 use crate::application::app::App;
 use crate::context::Context;
@@ -15,7 +15,7 @@ use axum::routing::{any, get};
 use axum::{Json, Router};
 use chrono::Duration;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
