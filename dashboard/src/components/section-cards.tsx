@@ -13,6 +13,7 @@ import { TrendingDownIcon, TrendingUpIcon } from "lucide-react"
 import { useStats } from "@/lib/api.ts"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
 import { formatNum } from "@/lib/utils.ts"
+import NumberFlow from '@number-flow/react'
 
 export function SectionCards() {
   const { data, isLoading } = useStats()
@@ -23,7 +24,8 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Total DNS requests</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {isLoading ? <Skeleton /> : <p>{formatNum(data?.total_queries)}</p>}
+
+            {isLoading ? <Skeleton /> : <NumberFlow value={data?.total_queries || 0} />}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
@@ -45,7 +47,7 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Blocked DNS requests</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {isLoading ? <Skeleton /> : <p>{formatNum(data?.total_blocked)}</p>}
+            {isLoading ? <Skeleton /> : <NumberFlow value={data?.total_blocked || 0} />}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
@@ -67,7 +69,7 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Block rate</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {isLoading ? <Skeleton /> : <p>{formatNum(data?.block_rate)}%</p>}
+            {isLoading ? <Skeleton /> : <NumberFlow value={data?.block_rate || 0} />}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
@@ -90,7 +92,7 @@ export function SectionCards() {
             {isLoading ? (
               <Skeleton />
             ) : (
-              <p>{formatNum(data?.avg_response_time)}ms</p>
+              <p><NumberFlow value={data?.total_queries || 0} />ms</p>
             )}
           </CardTitle>
           <CardAction>
