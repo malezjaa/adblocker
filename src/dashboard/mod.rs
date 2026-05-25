@@ -15,7 +15,7 @@ use axum::routing::{any, get};
 use axum::{Json, Router};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
@@ -37,6 +37,7 @@ impl App {
       .layer(
         CorsLayer::new()
           .allow_origin(AllowOrigin::any())
+          .allow_private_network(true)
           .allow_methods(AllowMethods::any()),
       )
       .with_state(ctx.clone());
@@ -44,7 +45,10 @@ impl App {
     let addr: SocketAddr = "127.0.0.64:80".parse()?;
     let listener = TcpListener::bind(addr).await?;
     info!("Dashboard backend listening on {addr}");
-    Ok(axum::serve(listener, app).await?)
+    Ok(
+      axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
+        .await?,
+    )
   }
 }
 

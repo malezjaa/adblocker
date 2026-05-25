@@ -1,4 +1,5 @@
 use crate::context::Context;
+use crate::dashboard::ws::WsEvent;
 use crate::rewrite::apply::{apply_rewrites, restore_original_queries};
 use adblock::Engine;
 use adblock::request::Request;
@@ -74,6 +75,7 @@ pub async fn process_message(
 
   let (tx, rx) = oneshot::channel();
 
+  let _ = ctx.ws_tx().send(WsEvent::DNSRequest);
   ctx.tx().send(BlockLookup::new(msg.clone(), tx).origin(origin)).await?;
 
   match rx.await? {

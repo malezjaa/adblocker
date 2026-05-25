@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect } from "react"
 
 export type Stats = {
   total_queries: number
@@ -46,10 +47,37 @@ export const useChartData = (days?: number) => {
 }
 
 export type TopBlocked = {
-  domain: string,
-  hits_blocked: number,
-  hits_total: number,
+  domain: string
+  hits_blocked: number
+  hits_total: number
 }
 
 export const useTopBlocked = () =>
-  useQuery<TopBlocked[]>({ queryKey: ["top-blocked"], queryFn: () => api<TopBlocked[]>("api/top") });
+  useQuery<TopBlocked[]>({
+    queryKey: ["top-blocked"],
+    queryFn: () => api<TopBlocked[]>("api/top"),
+  })
+
+const WS_URL = "ws://127.0.0.64/api/ws"
+
+export function useStatsWs() {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    const ws = new WebSocket(WS_URL)
+
+    ws.onmessage = (event) => {
+      const stats: Stats = JSON.parse(event.data)
+
+      queryClient.setQueryData(["stats"], stats)
+    }
+
+    ws.onclose = () => {
+      console.log("ws disconnected")
+    }
+
+    return () => {
+      ws.close()
+    }
+  }, [queryClient])
+}
