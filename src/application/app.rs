@@ -14,6 +14,7 @@ use tokio::sync::mpsc::Receiver;
 use tokio::task::{JoinSet, LocalSet};
 use tracing::log::warn;
 use tracing::{error, info};
+use crate::task::named_task;
 
 #[derive(Clone)]
 pub struct App {
@@ -44,19 +45,19 @@ impl App {
 
         let mut tasks = JoinSet::new();
 
-        tasks.spawn_local(run_engine(engine, rx));
+        tasks.spawn_local(named_task("AdBlocking engine", run_engine(engine, rx)));
         tasks
-          .spawn(DB::spawn_cleanup_task(self.ctx.db().pool.clone(), Duration::days(30)));
+          .spawn(named_task("DB cleanup", DB::spawn_cleanup_task(self.ctx.db().pool.clone(), Duration::days(30))));
 
-        tasks.spawn(Self::start_dns(self.ctx.clone()));
+        tasks.spawn(named_task("DNS", Self::start_dns(self.ctx.clone())));
         if config.dot_enabled() {
-          tasks.spawn(Self::start_dot(self.ctx.clone()));
+          tasks.spawn(named_task("DoT", Self::start_dot(self.ctx.clone())));
         }
         if config.doh_enabled() {
-          tasks.spawn(Self::start_doh(self.ctx.clone()));
+          tasks.spawn(named_task("DoH", Self::start_doh(self.ctx.clone())));
         }
         if config.dashboard_enabled() {
-          tasks.spawn(Self::start_dashboard(self.ctx.clone()));
+          tasks.spawn(named_task("Dashboard", Self::start_dashboard(self.ctx.clone())));
         }
         // mutex guard would be held across await point below
         drop(config);
@@ -67,7 +68,7 @@ impl App {
               warn!("a background task exited unexpectedly");
             }
             Ok(Err(err)) => {
-              error!("a background task failed: {:?}", err);
+              error!("{:?}", err);
             }
             Err(err) => {
               if err.is_cancelled() {

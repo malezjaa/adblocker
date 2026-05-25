@@ -1,21 +1,12 @@
 use anyhow::Result;
-use tracing::error;
 
-pub fn spawn_task<Fut>(
-  name: &'static str,
-  enabled: bool,
-  f: Fut,
-) -> Option<tokio::task::JoinHandle<()>>
+pub fn named_task<F, T>(name: &'static str, fut: F) -> impl Future<Output = Result<T>>
 where
-  Fut: Future<Output = Result<()>> + Send + 'static,
+  F: Future<Output = Result<T>>,
 {
-  if !enabled {
-    return None;
+  async move {
+    fut.await.map_err(|e| {
+      anyhow::anyhow!("\ntask '{name}' failed: {e:#}\n")
+    })
   }
-
-  Some(tokio::spawn(async move {
-    if let Err(err) = f.await {
-      error!(error = ?err, "{name} failed");
-    }
-  }))
 }
