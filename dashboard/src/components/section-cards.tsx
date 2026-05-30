@@ -92,7 +92,7 @@ export function SectionCards() {
             {isLoading ? (
               <Skeleton />
             ) : (
-              <p><NumberFlow value={data?.total_queries || 0} />ms</p>
+              <p><NumberFlow value={data?.avg_response_time || 0} />ms</p>
             )}
           </CardTitle>
           <CardAction>
