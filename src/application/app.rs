@@ -6,6 +6,7 @@ use crate::engine::BlockLookup;
 use crate::firewall::external_dns::block_external_dns;
 use crate::firewall::override_dns::override_default_dns;
 use crate::run_engine;
+use crate::task::named_task;
 use adblock::Engine;
 use anyhow::Result;
 use chrono::Duration;
@@ -14,7 +15,6 @@ use tokio::sync::mpsc::Receiver;
 use tokio::task::{JoinSet, LocalSet};
 use tracing::log::warn;
 use tracing::{error, info};
-use crate::task::named_task;
 
 #[derive(Clone)]
 pub struct App {
@@ -46,8 +46,10 @@ impl App {
         let mut tasks = JoinSet::new();
 
         tasks.spawn_local(named_task("AdBlocking engine", run_engine(engine, rx)));
-        tasks
-          .spawn(named_task("DB cleanup", DB::spawn_cleanup_task(self.ctx.db().pool.clone(), Duration::days(30))));
+        tasks.spawn(named_task(
+          "DB cleanup",
+          DB::spawn_cleanup_task(self.ctx.db().pool.clone(), Duration::days(30)),
+        ));
 
         tasks.spawn(named_task("DNS", Self::start_dns(self.ctx.clone())));
         if config.dot_enabled() {

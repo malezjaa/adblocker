@@ -56,6 +56,8 @@ pub struct TopDomain {
   pub domain: String,
   pub hits_blocked: i64,
   pub hits_total: i64,
+  pub last_seen: i64,
+  pub avg_response_time: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -142,29 +144,27 @@ impl DB {
 
   /// Domains with the most blocked hits, highest first.
   pub async fn top_blocked(&self, limit: Option<i64>) -> anyhow::Result<Vec<TopDomain>> {
+    let base = "
+        SELECT
+            ds.domain,
+            ds.hits_blocked,
+            ds.hits_total,
+            ds.last_seen,
+            COALESCE(AVG(ql.response_time), 0.0) AS avg_response_time
+        FROM domain_stats ds
+        LEFT JOIN query_log ql ON ql.domain = ds.domain
+        WHERE ds.hits_blocked > 0
+        GROUP BY ds.domain
+        ORDER BY ds.hits_blocked DESC";
+
     let rows = match limit {
       Some(limit) => {
-        sqlx::query_as::<_, TopDomain>(
-          "SELECT domain, registered_domain, hits_blocked, hits_total
-                   FROM domain_stats
-                   WHERE hits_blocked > 0
-                   ORDER BY hits_blocked DESC
-                   LIMIT ?",
-        )
-        .bind(limit)
-        .fetch_all(&self.pool)
-        .await?
+        sqlx::query_as::<_, TopDomain>(&format!("{base} LIMIT ?"))
+          .bind(limit)
+          .fetch_all(&self.pool)
+          .await?
       }
-      None => {
-        sqlx::query_as::<_, TopDomain>(
-          "SELECT domain, registered_domain, hits_blocked, hits_total
-                   FROM domain_stats
-                   WHERE hits_blocked > 0
-                   ORDER BY hits_blocked DESC",
-        )
-        .fetch_all(&self.pool)
-        .await?
-      }
+      None => sqlx::query_as::<_, TopDomain>(base).fetch_all(&self.pool).await?,
     };
 
     Ok(rows)

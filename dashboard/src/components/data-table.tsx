@@ -1,5 +1,7 @@
 import * as React from "react"
+import { format } from "date-fns"
 import {
+  type Column,
   type ColumnDef,
   flexRender,
   getCoreRowModel,
@@ -23,6 +25,9 @@ import {
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  ChevronsUpDownIcon,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import {
@@ -34,10 +39,23 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { type TopBlocked, useTopBlocked } from "@/lib/api.ts"
+import { formatNum } from "@/lib/utils.ts"
+
+function SortIcon({ column }: { column: Column<TopBlocked> }) {
+  const sorted = column.getIsSorted()
+  if (sorted === "asc")
+    return <ChevronUpIcon className="ml-1 inline h-3 w-3 shrink-0" />
+  if (sorted === "desc")
+    return <ChevronDownIcon className="ml-1 inline h-3 w-3 shrink-0" />
+  return (
+    <ChevronsUpDownIcon className="ml-1 inline h-3 w-3 shrink-0 opacity-40" />
+  )
+}
 
 const columns: ColumnDef<TopBlocked>[] = [
   {
     accessorKey: "domain",
+    size: 300,
     header: "Domain",
     cell: ({ row }) => (
       <span className="font-medium">{row.original.domain}</span>
@@ -45,7 +63,17 @@ const columns: ColumnDef<TopBlocked>[] = [
   },
   {
     accessorKey: "hits_blocked",
-    header: () => <div className="w-full text-right">Blocked</div>,
+    size: 120,
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        className="-mx-4 w-[calc(100%+1.8rem)] justify-end"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Blocked <SortIcon column={column} />
+      </Button>
+    ),
+    sortingFn: "basic",
     cell: ({ row }) => (
       <div className="text-right">
         {row.original.hits_blocked.toLocaleString()}
@@ -54,7 +82,17 @@ const columns: ColumnDef<TopBlocked>[] = [
   },
   {
     accessorKey: "hits_total",
-    header: () => <div className="w-full text-right">Total</div>,
+    size: 120,
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        className="-mx-4 w-[calc(100%+1.8rem)] justify-end"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Total <SortIcon column={column} />
+      </Button>
+    ),
+    sortingFn: "basic",
     cell: ({ row }) => (
       <div className="text-right">
         {row.original.hits_total.toLocaleString()}
@@ -62,18 +100,42 @@ const columns: ColumnDef<TopBlocked>[] = [
     ),
   },
   {
-    id: "block_rate",
-    header: () => <div className="w-full text-right">Block Rate</div>,
-    cell: ({ row }) => {
-      const rate =
-        row.original.hits_total > 0
-          ? (
-              (row.original.hits_blocked / row.original.hits_total) *
-              100
-            ).toFixed(1)
-          : "0.0"
-      return <div className="text-right">{rate}%</div>
-    },
+    accessorKey: "avg_response_time",
+    size: 140,
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        className="-mx-4 w-[calc(100%+1.8rem)] justify-end"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Average Response time <SortIcon column={column} />
+      </Button>
+    ),
+    sortingFn: "basic",
+    cell: ({ row }) => (
+      <div className="text-right">
+        {formatNum(row.original.avg_response_time).toLocaleString()}ms
+      </div>
+    ),
+  },
+  {
+    accessorKey: "last_seen",
+    size: 140,
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        className="-mx-4 w-[calc(100%+1.8rem)] justify-end"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Last seen <SortIcon column={column} />
+      </Button>
+    ),
+    sortingFn: "basic",
+    cell: ({ row }) => (
+      <div className="text-right">
+        {format(new Date(row.original.last_seen * 1000), "HH:mm dd.MM.yyyy")}
+      </div>
+    ),
   },
 ]
 
@@ -116,7 +178,14 @@ export function DataTable() {
     <div className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6">
       <div className="flex flex-col gap-4">
         <div className="overflow-hidden rounded-lg border">
-          <Table>
+          <Table className="w-full table-fixed">
+            <colgroup>
+              <col className="w-75" />
+              <col className="w-30" />
+              <col className="w-30" />
+              <col className="w-40" />
+              <col className="w-40" />
+            </colgroup>
             <TableHeader className="sticky top-0 z-10 bg-muted">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>

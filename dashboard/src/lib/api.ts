@@ -50,6 +50,8 @@ export type TopBlocked = {
   domain: string
   hits_blocked: number
   hits_total: number
+  last_seen: number
+  avg_response_time: number
 }
 
 export const useTopBlocked = () =>
