@@ -36,7 +36,7 @@ impl App {
       .with_state(ctx.clone());
 
     let config = RustlsConfig::from_config(ctx.server_config());
-    let addr = SocketAddr::from(([127, 0, 0, 2], 8443));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 443));
 
     info!("DoH dashboard listening on {addr}");
     axum_server::bind_rustls(addr, config)

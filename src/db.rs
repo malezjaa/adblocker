@@ -126,7 +126,6 @@ impl DB {
     Ok(())
   }
 
-  /// The most recently blocked domains, newest first.
   pub async fn latest_blocked(&self, limit: i64) -> anyhow::Result<Vec<BlockedEntry>> {
     let rows = sqlx::query_as::<_, BlockedEntry>(
       "SELECT domain, client_ip, timestamp
@@ -142,7 +141,6 @@ impl DB {
     Ok(rows)
   }
 
-  /// Domains with the most blocked hits, highest first.
   pub async fn top_blocked(&self, limit: Option<i64>) -> anyhow::Result<Vec<TopDomain>> {
     let base = "
         SELECT

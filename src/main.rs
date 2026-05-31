@@ -10,6 +10,7 @@ mod domain;
 mod engine;
 mod firewall;
 mod logger;
+pub mod mmdb;
 mod rewrite;
 pub mod task;
 mod windows;

@@ -15,7 +15,7 @@ impl App {
   pub async fn start_dot(ctx: Context) -> Result<()> {
     let acceptor = TlsAcceptor::from(ctx.server_config());
 
-    let addr: SocketAddr = "0.0.0.0:853".parse()?;
+    let addr: SocketAddr = SocketAddr::from(([0, 0, 0, 0], 853));
     let listener = TcpListener::bind(addr).await?;
     info!("DoT dashboard listening on {addr}");
 

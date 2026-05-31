@@ -3,6 +3,7 @@ use crate::config::Config;
 use crate::dashboard::ws::WsEvent;
 use crate::db::DB;
 use crate::engine::BlockLookup;
+use crate::mmdb::downloader::download_mmdbs_files;
 use anyhow::Result;
 use fs_err::create_dir_all;
 use hickory_resolver::config::{CLOUDFLARE, GOOGLE, ResolverConfig};
@@ -62,6 +63,8 @@ impl Context {
       ServerConfig::builder().with_no_client_auth().with_single_cert(certs, key)?,
     );
 
+    download_mmdbs_files().await?;
+
     Ok(Self(Arc::new(ContextImpl {
       tx,
       config: RwLock::new(config),
@@ -103,7 +106,7 @@ impl Context {
   }
 
   pub fn socket(&self) -> SocketAddr {
-    SocketAddr::from(([127, 0, 0, 2], 53))
+    SocketAddr::from(([0, 0, 0, 0], 53))
   }
 
   pub fn config(&self) -> RwLockReadGuard<'_, Config> {

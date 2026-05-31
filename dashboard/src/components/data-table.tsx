@@ -56,7 +56,7 @@ const columns: ColumnDef<TopBlocked>[] = [
   {
     accessorKey: "domain",
     size: 300,
-    header: "Domain",
+    header: "Blocked domain",
     cell: ({ row }) => (
       <span className="font-medium">{row.original.domain}</span>
     ),
