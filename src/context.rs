@@ -63,7 +63,7 @@ impl Context {
       ServerConfig::builder().with_no_client_auth().with_single_cert(certs, key)?,
     );
 
-    download_mmdbs_files().await?;
+    download_mmdbs_files();
 
     Ok(Self(Arc::new(ContextImpl {
       tx,
