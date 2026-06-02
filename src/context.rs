@@ -3,7 +3,8 @@ use crate::config::Config;
 use crate::dashboard::ws::WsEvent;
 use crate::db::DB;
 use crate::engine::BlockLookup;
-use crate::mmdb::downloader::download_mmdbs_files;
+use crate::mmdb::downloader::{MMDBSPaths, download_mmdbs_files};
+use crate::mmdb::mmdbs::MMDBS;
 use anyhow::Result;
 use fs_err::create_dir_all;
 use hickory_resolver::config::{CLOUDFLARE, GOOGLE, ResolverConfig};
@@ -30,6 +31,8 @@ pub struct ContextImpl {
   pub cache_dir: PathBuf,
   pub server_config: Arc<ServerConfig>,
   pub config_path: PathBuf,
+  pub mmdbs: RwLock<Option<MMDBS>>,
+  pub paths: MMDBSPaths,
 }
 
 impl Context {
@@ -63,7 +66,7 @@ impl Context {
       ServerConfig::builder().with_no_client_auth().with_single_cert(certs, key)?,
     );
 
-    download_mmdbs_files();
+    let paths = download_mmdbs_files();
 
     Ok(Self(Arc::new(ContextImpl {
       tx,
@@ -74,6 +77,8 @@ impl Context {
       cache_dir,
       server_config,
       config_path,
+      mmdbs: RwLock::new(None),
+      paths,
     })))
   }
 

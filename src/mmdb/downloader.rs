@@ -1,39 +1,67 @@
 use anyhow::Result;
 use fs_err::create_dir_all;
-use std::time::SystemTime;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use time::Duration;
 use tokio::fs::{metadata, write};
 use tracing::{debug, error};
 
-pub fn download_mmdbs_files() {
+pub static DOWNLOADED_MMDBS: AtomicBool = AtomicBool::new(false);
+
+#[derive(Clone, Debug)]
+pub struct MMDBSPaths {
+  pub asn: (String, PathBuf),
+  pub country: (String, PathBuf),
+}
+
+pub fn download_mmdbs_files() -> MMDBSPaths {
+  let mmdbs_path = dirs::home_dir().unwrap().join("adb").join("mmdbs");
+
+  let paths = MMDBSPaths {
+    asn: ("GeoLite2-ASN".to_string(), mmdbs_path.join("GeoLite2-ASN.mmdb")),
+    country: ("GeoLite2-Country".to_string(), mmdbs_path.join("GeoLite2-Country.mmdb")),
+  };
+
+  let new_paths = paths.clone();
   tokio::spawn(async move {
-    if let Err(err) = async {
-      let home_path = dirs::home_dir().unwrap().join("adb");
-      let mmdbs_path = home_path.join("mmdbs");
-      create_dir_all(&mmdbs_path)?;
-
-      for file in ["GeoLite2-ASN.mmdb", "GeoLite2-Country.mmdb"] {
-        let path = mmdbs_path.join(file);
-        let download = if path.exists() {
-          let metadata = metadata(&path).await?;
-          metadata.modified()?.elapsed()? >= Duration::hours(10)
-        } else {
-          true
-        };
-
-        if download {
-          let response = reqwest::get(format!("https://git.io/{file}")).await?;
-          response.error_for_status_ref()?;
-          write(path, response.bytes().await?).await?;
-          debug!("downloaded {file}")
-        }
-      }
-
-      Ok::<_, anyhow::Error>(())
-    }
-      .await
-    {
+    if let Err(err) = download_mmdbs_inner(mmdbs_path, new_paths).await {
       error!("MMDB download failed: {err}");
     }
   });
+
+  paths
+}
+
+async fn download_mmdbs_inner(mmdbs_path: PathBuf, files: MMDBSPaths) -> Result<()> {
+  create_dir_all(&mmdbs_path)?;
+
+  let client = reqwest::Client::new();
+
+  for (name, path) in &[&files.asn, &files.country] {
+    if !should_download(&path).await? {
+      continue;
+    }
+
+    let response = client
+      .get(format!("https://git.io/{name}.mmdb"))
+      .send()
+      .await?
+      .error_for_status()?;
+
+    write(&path, response.bytes().await?).await?;
+
+    debug!("downloaded {name}");
+  }
+  DOWNLOADED_MMDBS.store(true, Ordering::Relaxed);
+
+  Ok(())
+}
+
+async fn should_download(path: &Path) -> Result<bool> {
+  let metadata = match metadata(path).await {
+    Ok(metadata) => metadata,
+    Err(_) => return Ok(true),
+  };
+
+  Ok(metadata.modified()?.elapsed()? >= Duration::days(1))
 }

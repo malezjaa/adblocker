@@ -47,6 +47,7 @@ async fn main() -> Result<()> {
 
   let (tx, rx) = channel(100);
   let ctx = Context::new(tx).await?;
+  ctx.load_mmdbs()?;
 
   let app = Arc::new(App::init(ctx).await?);
   app.start_all(rx).await?;
