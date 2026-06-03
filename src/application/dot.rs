@@ -1,7 +1,7 @@
 use crate::application::app::App;
 use crate::context::Context;
-use crate::engine::{BlockOrigin, process_message};
-use anyhow::{Result, bail};
+use crate::engine::{process_message, BlockOrigin};
+use anyhow::{bail, Result};
 use hickory_proto::op::Message;
 use hickory_proto::serialize::binary::BinDecodable;
 use std::net::SocketAddr;
@@ -17,7 +17,7 @@ impl App {
 
     let addr: SocketAddr = SocketAddr::from(([0, 0, 0, 0], 853));
     let listener = TcpListener::bind(addr).await?;
-    info!("DoT dashboard listening on {addr}");
+    info!("DoT server listening on {addr}");
 
     loop {
       let (stream, peer) = listener.accept().await?;
@@ -60,7 +60,7 @@ impl App {
       let start = Instant::now();
       let (blocked, response) =
         process_message(ctx.clone(), msg.to_vec()?, BlockOrigin::DoT).await?;
-      ctx.db().spawn_query_record(
+      ctx.db().record_query(
         &response,
         peer,
         blocked,

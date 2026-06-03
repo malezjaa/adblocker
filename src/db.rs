@@ -1,16 +1,17 @@
-use crate::ChronoDuration;
 use crate::domain::{query_domain, registered_domain};
 use crate::engine::BlockOrigin;
+use crate::ChronoDuration;
 use chrono::Utc;
 use hickory_proto::op::Message;
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::path::Path;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::{debug, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,17 +74,37 @@ pub struct Stats {
 pub struct DB {
   pub pool: SqlitePool,
   pub total_queries: Arc<AtomicUsize>,
+  pub record_tx: Sender<QueryEvent>,
 }
 
 impl DB {
-  pub async fn from_path<P: AsRef<Path>>(db_path: P) -> anyhow::Result<Self> {
+  pub async fn init<P: AsRef<Path>>(db_path: P) -> anyhow::Result<Self> {
     let pool = Self::init_db(db_path.as_ref()).await?;
-    let db = Self { pool, total_queries: Default::default() };
+    let (tx, rx) = channel(10000);
+
+    let db = Self { pool, total_queries: Default::default(), record_tx: tx };
     db.init_schema().await?;
+    db.spawn_inserter(rx);
+
     Ok(db)
   }
 
-  pub async fn record_query(&self, event: &QueryEvent) -> anyhow::Result<()> {
+  pub fn spawn_inserter(&self, mut rx: Receiver<QueryEvent>) {
+    let db = self.clone();
+    tokio::spawn(async move {
+      while let Some(event) = rx.recv().await {
+        debug!(
+        "dns request: {}ms blocked={} src={}",
+        event.response_time, event.blocked, event.domain
+      );
+        if let Err(err) = db.insert_query(&event).await {
+          warn!(error = ?err, "failed to insert query_log");
+        }
+      }
+    });
+  }
+
+  pub async fn insert_query(&self, event: &QueryEvent) -> anyhow::Result<()> {
     let mut tx = self.pool.begin().await?;
 
     sqlx::query(
@@ -134,9 +155,9 @@ impl DB {
              ORDER BY timestamp DESC
              LIMIT ?",
     )
-    .bind(limit)
-    .fetch_all(&self.pool)
-    .await?;
+      .bind(limit)
+      .fetch_all(&self.pool)
+      .await?;
 
     Ok(rows)
   }
@@ -181,36 +202,36 @@ impl DB {
          AND (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-    .bind(since_ts)
-    .bind(since_ts)
-    .bind(until_ts)
-    .bind(until_ts)
-    .fetch_one(&self.pool)
-    .await?;
+      .bind(since_ts)
+      .bind(since_ts)
+      .bind(until_ts)
+      .bind(until_ts)
+      .fetch_one(&self.pool)
+      .await?;
 
     let total_allowed: i64 = sqlx::query_scalar(
       "SELECT COUNT(*) FROM query_log WHERE blocked = 0
          AND (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-    .bind(since_ts)
-    .bind(since_ts)
-    .bind(until_ts)
-    .bind(until_ts)
-    .fetch_one(&self.pool)
-    .await?;
+      .bind(since_ts)
+      .bind(since_ts)
+      .bind(until_ts)
+      .bind(until_ts)
+      .fetch_one(&self.pool)
+      .await?;
 
     let avg_response_time: Option<f64> = sqlx::query_scalar(
       "SELECT AVG(response_time) FROM query_log
          WHERE (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-    .bind(since_ts)
-    .bind(since_ts)
-    .bind(until_ts)
-    .bind(until_ts)
-    .fetch_one(&self.pool)
-    .await?;
+      .bind(since_ts)
+      .bind(since_ts)
+      .bind(until_ts)
+      .bind(until_ts)
+      .fetch_one(&self.pool)
+      .await?;
 
     let total = total_blocked + total_allowed;
 
@@ -249,7 +270,7 @@ impl DB {
   }
 
   // TODO: possibly use channels for this
-  pub fn spawn_query_record(
+  pub fn record_query(
     &self,
     response: &Message,
     src: SocketAddr,
@@ -266,17 +287,7 @@ impl DB {
         response_time,
       );
 
-      debug!(
-        "dns request: {}ms blocked={} src={}",
-        response_time, blocked, response.queries[0].name
-      );
-
-      let ctx = self.clone();
-      tokio::spawn(async move {
-        if let Err(err) = ctx.record_query(&event).await {
-          warn!(error = ?err, "failed to insert query_log");
-        }
-      });
+      let _ = self.record_tx.try_send(event);
     }
   }
 
@@ -298,22 +309,22 @@ impl DB {
          response_time INTEGER NOT NULL
        )",
     )
-    .execute(&self.pool)
-    .await?;
+      .execute(&self.pool)
+      .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_blocked_timestamp
              ON query_log(blocked, timestamp)",
     )
-    .execute(&self.pool)
-    .await?;
+      .execute(&self.pool)
+      .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_domain
              ON query_log(domain)",
     )
-    .execute(&self.pool)
-    .await?;
+      .execute(&self.pool)
+      .await?;
 
     sqlx::query(
       "CREATE TABLE IF NOT EXISTS domain_stats (
@@ -324,22 +335,22 @@ impl DB {
               last_seen          INTEGER NOT NULL
             );",
     )
-    .execute(&self.pool)
-    .await?;
+      .execute(&self.pool)
+      .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_registered
                 ON domain_stats(registered_domain);",
     )
-    .execute(&self.pool)
-    .await?;
+      .execute(&self.pool)
+      .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_last_seen
              ON domain_stats(last_seen)",
     )
-    .execute(&self.pool)
-    .await?;
+      .execute(&self.pool)
+      .await?;
 
     Ok(())
   }
@@ -357,9 +368,9 @@ impl DB {
              GROUP BY day
              ORDER BY day ASC",
     )
-    .bind(since_ts)
-    .fetch_all(&self.pool)
-    .await?;
+      .bind(since_ts)
+      .fetch_all(&self.pool)
+      .await?;
 
     Ok(rows)
   }
