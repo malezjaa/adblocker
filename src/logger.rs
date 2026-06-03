@@ -1,9 +1,9 @@
 use std::fmt;
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{
-  EnvFilter,
   fmt::{FmtContext, FormatEvent, FormatFields},
   registry::LookupSpan,
+  EnvFilter,
 };
 use yansi::Paint;
 
@@ -21,11 +21,11 @@ where
     event: &Event<'_>,
   ) -> fmt::Result {
     let level = match *event.metadata().level() {
-      Level::ERROR => Paint::red("[ ERROR ]").bold(),
-      Level::WARN => Paint::yellow("[ WARN  ]").bold(),
-      Level::INFO => Paint::green("[ INFO  ]").bold(),
-      Level::DEBUG => Paint::blue("[ DEBUG ]").bold(),
-      Level::TRACE => Paint::magenta("[ TRACE ]").bold(),
+      Level::ERROR => Paint::red("[error]").bold(),
+      Level::WARN => Paint::yellow("[warning]").bold(),
+      Level::INFO => Paint::green("[info]").bold(),
+      Level::DEBUG => Paint::blue("[debug]").bold(),
+      Level::TRACE => Paint::magenta("[trace]").bold(),
     };
 
     write!(writer, "{} ", level)?;

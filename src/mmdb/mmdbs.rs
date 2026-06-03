@@ -1,9 +1,12 @@
 use crate::context::Context;
 use crate::mmdb::downloader::DOWNLOADED_MMDBS;
 use anyhow::Result;
-use maxminddb::{Reader, path};
+use maxminddb::{path, Reader};
 use std::net::IpAddr;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
+use tokio::time::sleep;
+use tracing::error;
 
 #[derive(Debug)]
 pub struct MMDBS {
@@ -19,18 +22,27 @@ pub struct MMDBLookupResult {
 
 impl Context {
   pub fn load_mmdbs(&self) -> Result<()> {
+    let inner = self.0.clone();
     tokio::spawn(async move {
       loop {
         if DOWNLOADED_MMDBS.load(Ordering::Relaxed) {
-          println!("downloaded",);
-          break;
+          match (
+            Reader::open_readfile(inner.paths.asn.1.clone()),
+            Reader::open_readfile(inner.paths.country.1.clone()),
+          ) {
+            (Ok(asn), Ok(country)) => {
+              *inner.mmdbs.write() = Some(MMDBS { asn, country });
+              break;
+            }
+            (Err(e), _) | (_, Err(e)) => {
+              error!("Failed to load MMDBs: {e}");
+            }
+          }
         }
+        sleep(Duration::from_secs(1)).await;
       }
     });
-    let asn = Reader::open_readfile(self.0.paths.asn.1.clone())?;
-    let country = Reader::open_readfile(self.0.paths.country.1.clone())?;
 
-    *self.0.mmdbs.write() = Some(MMDBS { asn, country });
     Ok(())
   }
 
