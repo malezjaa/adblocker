@@ -81,27 +81,18 @@ async fn stats(
 
 #[derive(Serialize, Deserialize)]
 pub struct ChartData {
-  pub day: String,
+  pub hour: String,
   pub total: i64,
   pub blocked: i64,
 }
 
-#[derive(Deserialize)]
-struct ChartQuery {
-  days: Option<u32>,
-}
-
 async fn chart_data(
   AxumState(ctx): AxumState<Context>,
-  Query(query): Query<ChartQuery>,
 ) -> Result<Json<Vec<ChartData>>, AppError> {
-  let days = query.days.unwrap_or(7);
-  let rows = ctx.db().stats_by_day(days).await?;
-
+  let rows = ctx.db().stats_by_hour_today().await?;
   let data = rows
     .into_iter()
-    .map(|r| ChartData { day: r.day, total: r.total, blocked: r.blocked })
+    .map(|r| ChartData { hour: r.hour, total: r.total, blocked: r.blocked })
     .collect();
-
   Ok(Json(data))
 }

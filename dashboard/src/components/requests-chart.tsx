@@ -1,36 +1,25 @@
 "use client"
 
-import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
+import { type CSSProperties, useMemo } from "react"
+import { Bar, BarChart, Rectangle, ReferenceLine, XAxis } from "recharts"
 
-import { useIsMobile } from "@/hooks/use-mobile"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import {
-  type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  type ChartConfig,
 } from "@/components/ui/chart"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Skeleton } from "@/components/ui/skeleton.tsx"
 import { useChartData } from "@/lib/api.ts"
+import { Skeleton } from "@/components/ui/skeleton.tsx"
 
 const chartConfig = {
-  visitors: { label: "DNS requests" },
   total: {
     label: "Total",
     color: "hsl(210, 50%, 55%)",
@@ -41,155 +30,176 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function RequestsChart() {
-  const isMobile = useIsMobile()
-  const [timeRange, setTimeRange] = React.useState<number>(90)
-  const { data, isLoading } = useChartData(timeRange)
+function getRefLines(maxVal: number): number[] {
+  if (maxVal <= 0) return []
 
-  React.useEffect(() => {
-    if (isMobile) {
-      setTimeRange(7)
-    }
-  }, [isMobile])
+  return [0.25, 0.5, 0.75, 1]
+    .map((p) => Math.round(maxVal * p))
+    .filter((v) => v > 0)
+}
+
+function formatLabel(val: number): string {
+  if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`
+  if (val >= 1_000) return `${(val / 1_000).toFixed(1)}k`
+  return val.toString()
+}
+
+export function RequestsChart() {
+  const { data, isLoading } = useChartData()
+
+  const refLines = useMemo(() => {
+    if (!data) return []
+    const maxVal = Math.max(
+      ...data.map((d) => (d.total ?? 0) + (d.blocked ?? 0))
+    )
+
+    return getRefLines(maxVal)
+  }, [data])
 
   if (!data || isLoading) {
     return <Skeleton />
   }
 
-  const filteredData = data.filter((item) => {
-    const date = new Date(item.day)
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - timeRange)
-    startDate.setHours(0, 0, 0, 0)
-    startDate.setDate(startDate.getDate() - timeRange)
-    return date >= startDate
-  })
-
   return (
-    <Card className="@container/card">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle>Total Requests</CardTitle>
-        <CardDescription>
-          <span className="hidden @[540px]/card:block">
-            Total for the last {timeRange} days
-          </span>
-          <span className="@[540px]/card:hidden">Last 3 months</span>
-        </CardDescription>
-        <CardAction>
-          <ToggleGroup
-            multiple={false}
-            value={[timeRange.toString()]}
-            onValueChange={(value) => {
-              if (value) setTimeRange(parseInt(value[0]))
-            }}
-            variant="outline"
-            className="hidden *:data-[slot=toggle-group-item]:px-4! @[767px]/card:flex"
-          >
-            <ToggleGroupItem value="90">Last 3 months</ToggleGroupItem>
-            <ToggleGroupItem value="30">Last 30 days</ToggleGroupItem>
-            <ToggleGroupItem value="7">Last 7 days</ToggleGroupItem>
-          </ToggleGroup>
-          <Select
-            value={timeRange.toString()}
-            onValueChange={(value) => setTimeRange(parseInt(value as string))}
-          >
-            <SelectTrigger
-              className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
-              size="sm"
-              aria-label="Select a value"
-            >
-              <SelectValue placeholder="Last 3 months" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="90" className="rounded-lg">
-                Last 3 months
-              </SelectItem>
-              <SelectItem value="30" className="rounded-lg">
-                Last 30 days
-              </SelectItem>
-              <SelectItem value="7" className="rounded-lg">
-                Last 7 days
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </CardAction>
+        <CardDescription>Hourly DNS requests for today</CardDescription>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-62.5 w-full"
-        >
-          <AreaChart data={filteredData}>
+      <CardContent>
+        <ChartContainer config={chartConfig} className="h-40 w-full">
+          <BarChart
+            accessibilityLayer
+            data={data}
+            margin={{ top: 8, right: 12, bottom: 12, left: 40 }}
+            barCategoryGap="20%"
+          >
+            {refLines.map((val) => (
+              <ReferenceLine
+                key={val}
+                y={val}
+                stroke="var(--border)"
+                strokeDasharray="3 3"
+                strokeOpacity={0.6}
+                strokeWidth={1}
+                position={"start"}
+                label={{
+                  value: formatLabel(val),
+                  position: "left",
+                  fill: "var(--muted-foreground)",
+                  fontSize: 10,
+                  dx: 4,
+                }}
+              />
+            ))}
             <defs>
-              <linearGradient id="fillTotal" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-total)"
-                  stopOpacity={0.8}
+              <pattern
+                id="diagonal-stripe-total"
+                patternUnits="userSpaceOnUse"
+                width="6"
+                height="6"
+              >
+                <rect
+                  width="6"
+                  height="6"
+                  fill="var(--color-total)"
+                  opacity="0.15"
                 />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-total)"
-                  stopOpacity={0.1}
+                <path
+                  d="M0,6 L6,0 M3,9 L9,3 M-3,3 L3,-3"
+                  stroke="var(--color-total)"
+                  strokeWidth="1.5"
+                  opacity="0.7"
                 />
-              </linearGradient>
-              <linearGradient id="fillBlocked" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-blocked)"
-                  stopOpacity={0.8}
+              </pattern>
+
+              <pattern
+                id="diagonal-stripe-blocked"
+                patternUnits="userSpaceOnUse"
+                width="6"
+                height="6"
+              >
+                <rect
+                  width="6"
+                  height="6"
+                  fill="var(--color-blocked)"
+                  opacity="0.15"
                 />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-blocked)"
-                  stopOpacity={0.1}
+                <path
+                  d="M0,6 L6,0 M3,9 L9,3 M-3,3 L3,-3"
+                  stroke="var(--color-blocked)"
+                  strokeWidth="1.5"
+                  opacity="0.7"
                 />
-              </linearGradient>
+              </pattern>
             </defs>
-            <CartesianGrid vertical={false} />
+
             <XAxis
-              dataKey="day"
+              dataKey="hour"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              minTickGap={32}
-              tickFormatter={(value) => {
-                const date = new Date(value)
-                return date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
-              }}
+              interval={3}
+              tickFormatter={(val: string) => val.replace(":00", "")}
             />
             <ChartTooltip
               cursor={false}
               content={
                 <ChartTooltipContent
-                  labelFormatter={(value) => {
-                    return new Date(value).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })
-                  }}
                   indicator="dot"
+                  className="min-w-40 gap-2.5"
+                  labelFormatter={(value) => (
+                    <div className="mb-0.5 flex flex-col gap-0.5 border-b border-border/50 pb-2">
+                      <span className="text-xs font-medium">{value}</span>
+                    </div>
+                  )}
+                  formatter={(value, name) => (
+                    <div className="flex w-full items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <div
+                          className="h-2.5 w-2.5 shrink-0 rounded-xs bg-(--color-bg)"
+                          style={
+                            {
+                              "--color-bg": `var(--color-${name})`,
+                            } as CSSProperties
+                          }
+                        />
+                        <span className="text-muted-foreground">
+                          {chartConfig[name as keyof typeof chartConfig]
+                            ?.label || name}
+                        </span>
+                      </div>
+                      <span className="font-semibold text-foreground">
+                        {(value as number).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
                 />
               }
             />
-            <Area
+            <Bar
               dataKey="blocked"
-              type="natural"
-              fill="url(#fillBlocked)"
+              stackId="a"
+              fill="url(#diagonal-stripe-blocked)"
               stroke="var(--color-blocked)"
-              stackId="a"
+              strokeWidth={1}
+              radius={[0, 0, 4, 4]}
+              minPointSize={0}
+              shape={(props: any) => {
+                if (props.value === 0) return <g />
+                return <Rectangle {...props} />
+              }}
             />
-            <Area
+            <Bar
               dataKey="total"
-              type="natural"
-              fill="url(#fillTotal)"
-              stroke="var(--color-total)"
               stackId="a"
+              fill="url(#diagonal-stripe-total)"
+              stroke="var(--color-total)"
+              strokeWidth={1}
+              radius={[4, 4, 0, 0]}
+              minPointSize={3}
             />
-          </AreaChart>
+          </BarChart>
         </ChartContainer>
       </CardContent>
     </Card>

@@ -28,19 +28,19 @@ export const useStats = () => {
   })
 }
 
-export interface DayStat {
-  day: string
+export interface HourStat {
+  hour: string
   total: number
   blocked: number
 }
 
-export async function fetchChartData(days?: number): Promise<DayStat[]> {
+export async function fetchChartData(days?: number): Promise<HourStat[]> {
   const params = days !== undefined ? `?days=${days}` : ""
-  return api<DayStat[]>(`api/chart-data${params}`)
+  return api<HourStat[]>(`api/chart-data${params}`)
 }
 
 export const useChartData = (days?: number) => {
-  return useQuery<DayStat[]>({
+  return useQuery<HourStat[]>({
     queryKey: ["chart-data", days],
     queryFn: () => fetchChartData(days),
   })

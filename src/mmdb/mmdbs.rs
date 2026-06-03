@@ -1,7 +1,7 @@
 use crate::context::Context;
 use crate::mmdb::downloader::DOWNLOADED_MMDBS;
 use anyhow::Result;
-use maxminddb::{path, Reader};
+use maxminddb::{Reader, path};
 use std::net::IpAddr;
 use std::sync::atomic::Ordering;
 use std::time::Duration;

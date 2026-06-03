@@ -1,17 +1,17 @@
+use crate::ChronoDuration;
 use crate::domain::{query_domain, registered_domain};
 use crate::engine::BlockOrigin;
-use crate::ChronoDuration;
-use chrono::Utc;
+use chrono::{Timelike, Utc};
 use hickory_proto::op::Message;
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::net::SocketAddr;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tracing::{debug, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,9 +94,9 @@ impl DB {
     tokio::spawn(async move {
       while let Some(event) = rx.recv().await {
         debug!(
-        "dns request: {}ms blocked={} src={}",
-        event.response_time, event.blocked, event.domain
-      );
+          "dns request: {}ms blocked={} src={}",
+          event.response_time, event.blocked, event.domain
+        );
         if let Err(err) = db.insert_query(&event).await {
           warn!(error = ?err, "failed to insert query_log");
         }
@@ -155,9 +155,9 @@ impl DB {
              ORDER BY timestamp DESC
              LIMIT ?",
     )
-      .bind(limit)
-      .fetch_all(&self.pool)
-      .await?;
+    .bind(limit)
+    .fetch_all(&self.pool)
+    .await?;
 
     Ok(rows)
   }
@@ -202,36 +202,36 @@ impl DB {
          AND (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-      .bind(since_ts)
-      .bind(since_ts)
-      .bind(until_ts)
-      .bind(until_ts)
-      .fetch_one(&self.pool)
-      .await?;
+    .bind(since_ts)
+    .bind(since_ts)
+    .bind(until_ts)
+    .bind(until_ts)
+    .fetch_one(&self.pool)
+    .await?;
 
     let total_allowed: i64 = sqlx::query_scalar(
       "SELECT COUNT(*) FROM query_log WHERE blocked = 0
          AND (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-      .bind(since_ts)
-      .bind(since_ts)
-      .bind(until_ts)
-      .bind(until_ts)
-      .fetch_one(&self.pool)
-      .await?;
+    .bind(since_ts)
+    .bind(since_ts)
+    .bind(until_ts)
+    .bind(until_ts)
+    .fetch_one(&self.pool)
+    .await?;
 
     let avg_response_time: Option<f64> = sqlx::query_scalar(
       "SELECT AVG(response_time) FROM query_log
          WHERE (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-      .bind(since_ts)
-      .bind(since_ts)
-      .bind(until_ts)
-      .bind(until_ts)
-      .fetch_one(&self.pool)
-      .await?;
+    .bind(since_ts)
+    .bind(since_ts)
+    .bind(until_ts)
+    .bind(until_ts)
+    .fetch_one(&self.pool)
+    .await?;
 
     let total = total_blocked + total_allowed;
 
@@ -309,22 +309,22 @@ impl DB {
          response_time INTEGER NOT NULL
        )",
     )
-      .execute(&self.pool)
-      .await?;
+    .execute(&self.pool)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_blocked_timestamp
              ON query_log(blocked, timestamp)",
     )
-      .execute(&self.pool)
-      .await?;
+    .execute(&self.pool)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_domain
              ON query_log(domain)",
     )
-      .execute(&self.pool)
-      .await?;
+    .execute(&self.pool)
+    .await?;
 
     sqlx::query(
       "CREATE TABLE IF NOT EXISTS domain_stats (
@@ -335,50 +335,60 @@ impl DB {
               last_seen          INTEGER NOT NULL
             );",
     )
-      .execute(&self.pool)
-      .await?;
+    .execute(&self.pool)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_registered
                 ON domain_stats(registered_domain);",
     )
-      .execute(&self.pool)
-      .await?;
+    .execute(&self.pool)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_last_seen
              ON domain_stats(last_seen)",
     )
-      .execute(&self.pool)
-      .await?;
+    .execute(&self.pool)
+    .await?;
 
     Ok(())
   }
 
-  pub async fn stats_by_day(&self, days: u32) -> anyhow::Result<Vec<DayStat>> {
-    let since_ts = (Utc::now() - ChronoDuration::days(days as i64)).timestamp();
+  pub async fn stats_by_hour_today(&self) -> anyhow::Result<Vec<HourStat>> {
+    let now = Utc::now();
+    let start_of_day =
+      now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp();
 
-    let rows = sqlx::query_as::<_, DayStat>(
-      "SELECT
-                 DATE(timestamp, 'unixepoch') AS day,
-                 COUNT(*)                     AS total,
-                 SUM(blocked)                 AS blocked
-             FROM query_log
-             WHERE timestamp >= ?
-             GROUP BY day
-             ORDER BY day ASC",
+    let rows = sqlx::query_as::<_, HourStat>(
+      "WITH RECURSIVE hours(h) AS (
+       SELECT 0
+       UNION ALL
+       SELECT h + 1 FROM hours WHERE h < ?
+     )
+     SELECT
+       printf('%02d:00', hours.h)        AS hour,
+       COALESCE(COUNT(q.id),   0)        AS total,
+       COALESCE(SUM(q.blocked), 0)       AS blocked
+     FROM hours
+     LEFT JOIN query_log q
+       ON  strftime('%H', q.timestamp, 'unixepoch') = printf('%02d', hours.h)
+       AND q.timestamp >= ?
+     GROUP BY hours.h
+     ORDER BY hours.h ASC",
     )
-      .bind(since_ts)
-      .fetch_all(&self.pool)
-      .await?;
+    .bind(23i64)
+    .bind(start_of_day)
+    .fetch_all(&self.pool)
+    .await?;
 
     Ok(rows)
   }
 }
 
-#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
-pub struct DayStat {
-  pub day: String,
+#[derive(sqlx::FromRow)]
+pub struct HourStat {
+  pub hour: String,
   pub total: i64,
   pub blocked: i64,
 }
