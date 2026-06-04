@@ -46,6 +46,7 @@ clap = { version = "4.6.1", features = ["derive"] }
 include_dir = "0.7.4"
 mime_guess2 = "2.0.5"
 maxminddb = { version = "0.28", features = ["mmap"] }
+rand = "0.9.4"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = [

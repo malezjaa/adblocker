@@ -43,6 +43,7 @@ export const useChartData = (days?: number) => {
   return useQuery<HourStat[]>({
     queryKey: ["chart-data", days],
     queryFn: () => fetchChartData(days),
+    refetchInterval: 1000 * 30,
   })
 }
 

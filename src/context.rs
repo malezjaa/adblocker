@@ -1,7 +1,7 @@
 use crate::cert::{get_certs, Certs};
 use crate::config::Config;
 use crate::dashboard::ws::WsEvent;
-use crate::db::DB;
+use crate::database::DB;
 use crate::engine::BlockLookup;
 use crate::mmdb::downloader::{download_mmdbs_files, MMDBSPaths};
 use crate::mmdb::mmdbs::MMDBS;

@@ -729,6 +729,7 @@ dependencies = [
  "notify",
  "notify-debouncer-full",
  "parking_lot",
+ "rand 0.9.4",
  "rcgen",
  "regex",
  "reqwest",

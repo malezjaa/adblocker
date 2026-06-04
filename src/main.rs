@@ -5,7 +5,6 @@ mod cert;
 mod config;
 mod context;
 mod dashboard;
-mod db;
 mod domain;
 mod engine;
 mod firewall;
@@ -14,6 +13,7 @@ pub mod mmdb;
 mod rewrite;
 pub mod task;
 mod windows;
+pub mod database;
 
 use crate::application::app::App;
 use crate::context::Context;

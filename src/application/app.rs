@@ -1,7 +1,7 @@
 use crate::blocklists::load_blocklists;
 use crate::config::Config;
 use crate::context::Context;
-use crate::db::DB;
+use crate::database::DB;
 use crate::engine::BlockLookup;
 use crate::firewall::external_dns::block_external_dns;
 use crate::firewall::open_port::open_ports;
