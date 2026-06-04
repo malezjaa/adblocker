@@ -11,7 +11,7 @@ tokio = { version = "^1", features = [
     "macros",
 ] }
 hickory-proto = "0.26.0"
-hickory-resolver = { version = "0.26.1", features = ["tokio"] }
+hickory-resolver = { version = "0.26.1", features = ["tokio", "https-ring", "rustls-platform-verifier"] }
 adblock = { version = "0.12.3" }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -55,7 +55,7 @@ windows = { version = "0.62", features = [
     "Win32_Security",
     "Win32_Networking_WinSock",
     "Win32_NetworkManagement_IpHelper",
-    "Win32_NetworkManagement_Ndis"
+    "Win32_NetworkManagement_Ndis", "Win32_Networking_WinInet"
 ] }
 widestring = "1.2.1"
 

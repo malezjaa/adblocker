@@ -1,22 +1,21 @@
 use crate::fwpm_transaction;
 use crate::windows::filter::{
-  FilterBuilder, add, condition_remote_addr_v4, condition_remote_port,
+  add, condition_remote_addr_v4, condition_remote_port, FilterBuilder,
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use std::net::{IpAddr, SocketAddr};
 use std::ptr::null;
+use windows::Win32::Foundation::HANDLE;
 
 #[cfg(windows)]
-pub fn block_external_dns(resolver: SocketAddr) -> Result<()> {
+pub fn block_external_dns(resolver: SocketAddr, mut engine: HANDLE) -> Result<()> {
   use crate::windows::pwstr_buf::PwstrBuffer;
   use windows::{
-    Win32::Foundation::HANDLE, Win32::NetworkManagement::WindowsFilteringPlatform::*,
-    Win32::System::Rpc::RPC_C_AUTHN_WINNT, core::PWSTR,
+    core::PWSTR,
+    Win32::NetworkManagement::WindowsFilteringPlatform::*, Win32::System::Rpc::RPC_C_AUTHN_WINNT,
   };
 
   unsafe {
-    let mut engine: HANDLE = HANDLE::default();
-
     let session =
       FWPM_SESSION0 { flags: FWPM_SESSION_FLAG_DYNAMIC, ..Default::default() };
 
@@ -27,13 +26,10 @@ pub fn block_external_dns(resolver: SocketAddr) -> Result<()> {
       Some(&session),
       &mut engine,
     );
+    
     if status != 0 {
       bail!("FwpmEngineOpen0 failed: {}", status);
     }
-
-    let _engine_guard = scopeguard::guard(engine, |eng| {
-      FwpmEngineClose0(eng);
-    });
 
     fwpm_transaction! { engine, {
         let resolver_ip = match resolver.ip() {
@@ -71,8 +67,7 @@ pub fn block_external_dns(resolver: SocketAddr) -> Result<()> {
         }
 
         Ok(())
-    }
-      };
+    }};
 
     Ok(())
   }

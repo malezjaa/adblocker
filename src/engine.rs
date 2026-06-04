@@ -1,9 +1,9 @@
 use crate::context::Context;
 use crate::dashboard::ws::WsEvent;
 use crate::rewrite::apply::{apply_rewrites, restore_original_queries};
-use adblock::Engine;
 use adblock::request::Request;
-use anyhow::{Result, bail};
+use adblock::Engine;
+use anyhow::{bail, Result};
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::{A, AAAA};
 use hickory_proto::rr::{RData, Record, RecordType};
@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::net::{Ipv4Addr, Ipv6Addr};
 use tokio::sync::oneshot;
 use tokio::sync::oneshot::Sender;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum BlockOrigin {
@@ -135,6 +135,9 @@ pub async fn resolve_msg(msg: &Message, ctx: Context) -> Result<Message> {
     Err(e) => match e {
       NetError::Dns(DnsError::NoRecordsFound(no)) => {
         response.metadata.response_code = no.response_code;
+      }
+      NetError::Timeout => {
+        warn!("upstream resolver timed out");
       }
       _ => return Err(e.into()),
     },

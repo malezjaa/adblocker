@@ -4,9 +4,12 @@ use crate::context::Context;
 use crate::db::DB;
 use crate::engine::BlockLookup;
 use crate::firewall::external_dns::block_external_dns;
+use crate::firewall::open_port::open_ports;
 use crate::firewall::override_dns::override_default_dns;
 use crate::run_engine;
 use crate::task::named_task;
+#[cfg(windows)]
+use crate::windows::wfp_session::WfpSession;
 use adblock::Engine;
 use anyhow::Result;
 use chrono::Duration;
@@ -15,16 +18,29 @@ use tokio::sync::mpsc::Receiver;
 use tokio::task::{JoinSet, LocalSet};
 use tracing::log::warn;
 use tracing::{error, info};
+use windows::Win32::Foundation::HANDLE;
 
 #[derive(Clone)]
 pub struct App {
+  #[cfg(windows)]
+  pub wfp_sess: WfpSession,
   pub ctx: Context,
 }
 
 impl App {
+  #[cfg(windows)]
+  pub async fn init(ctx: Context) -> Result<Self> {
+    let engine = HANDLE::default();
+    override_default_dns(ctx.socket(), ctx.secondary_name_server())?;
+    open_ports(engine)?;
+
+    Ok(Self { ctx, wfp_sess: WfpSession { engine } })
+  }
+
+  #[cfg(not(windows))]
   pub async fn init(ctx: Context) -> Result<Self> {
     override_default_dns(ctx.socket(), ctx.secondary_name_server())?;
-    block_external_dns(ctx.socket())?;
+    open_ports()?;
 
     Ok(Self { ctx })
   }

@@ -1,8 +1,10 @@
+use crate::firewall::Protocol;
 use crate::windows::pwstr_buf::PwstrBuffer;
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
+use windows::core::GUID;
 use windows::Win32::Foundation::HANDLE;
 use windows::Win32::NetworkManagement::WindowsFilteringPlatform::*;
-use windows::core::GUID;
+use windows::Win32::Networking::WinSock::{IPPROTO_TCP, IPPROTO_UDP};
 
 pub fn condition_remote_addr_v4(ip: u32) -> FWPM_FILTER_CONDITION0 {
   FWPM_FILTER_CONDITION0 {
@@ -22,6 +24,35 @@ pub fn condition_remote_port(port: u16) -> FWPM_FILTER_CONDITION0 {
     conditionValue: FWP_CONDITION_VALUE0 {
       r#type: FWP_UINT16,
       Anonymous: FWP_CONDITION_VALUE0_0 { uint16: port },
+    },
+  }
+}
+
+pub fn condition_local_port(port: u16) -> FWPM_FILTER_CONDITION0 {
+  FWPM_FILTER_CONDITION0 {
+    fieldKey: FWPM_CONDITION_IP_LOCAL_PORT,
+    matchType: FWP_MATCH_EQUAL,
+    conditionValue: FWP_CONDITION_VALUE0 {
+      r#type: FWP_UINT16,
+      Anonymous: FWP_CONDITION_VALUE0_0 { uint16: port },
+    },
+  }
+}
+
+pub fn condition_protocol(protocol: Protocol) -> FWPM_FILTER_CONDITION0 {
+  let proto = match protocol {
+    Protocol::TCP => IPPROTO_TCP,
+    Protocol::UDP => IPPROTO_UDP,
+  };
+
+  FWPM_FILTER_CONDITION0 {
+    fieldKey: FWPM_CONDITION_IP_PROTOCOL,
+    matchType: FWP_MATCH_EQUAL,
+    conditionValue: FWP_CONDITION_VALUE0 {
+      r#type: FWP_UINT8,
+      Anonymous: FWP_CONDITION_VALUE0_0 {
+        uint8: proto.0 as u8,
+      },
     },
   }
 }
