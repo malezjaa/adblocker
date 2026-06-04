@@ -7,15 +7,16 @@ use crate::context::Context;
 pub use crate::dashboard::app_error::AppError;
 use crate::dashboard::frontend::serve_file;
 use crate::dashboard::ws::ws_handler;
+use crate::database::devices::Device;
 use crate::database::stats::{Stats, TopDomain};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use axum::extract::{Path, Query, State as AxumState};
 use axum::response::IntoResponse;
 use axum::routing::{any, get};
 use axum::{Json, Router};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
@@ -29,6 +30,7 @@ impl App {
   pub async fn start_dashboard(ctx: Context) -> Result<()> {
     let app = Router::new()
       .route("/", get(server_root))
+      .route("/api/devices", get(get_devices_handler).post(create_device_handler))
       .route("/api/top", get(top_handler))
       .route("/api/stats", get(stats))
       .route("/api/chart-data", get(chart_data))
@@ -95,4 +97,25 @@ async fn chart_data(
     .map(|r| ChartData { hour: r.hour, total: r.total, blocked: r.blocked })
     .collect();
   Ok(Json(data))
+}
+
+async fn get_devices_handler(
+  AxumState(ctx): AxumState<Context>,
+) -> Result<Json<Vec<Device>>, AppError> {
+  let devices = ctx.db().get_devices().await.map_err(|err| anyhow!("{err}"))?;
+  Ok(Json(devices))
+}
+
+#[derive(Deserialize)]
+struct CreateDevice {
+  name: String,
+  device_type: String,
+}
+
+async fn create_device_handler(
+  AxumState(ctx): AxumState<Context>,
+  Json(body): Json<CreateDevice>,
+) -> Result<Json<Value>, AppError> {
+  let id = ctx.db().create_device(&body.name, &body.device_type).await.map_err(|err| anyhow!("{err}"))?;
+  Ok(Json(json!({ "id": id })))
 }
