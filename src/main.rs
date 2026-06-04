@@ -5,6 +5,7 @@ mod cert;
 mod config;
 mod context;
 mod dashboard;
+pub mod database;
 mod domain;
 mod engine;
 mod firewall;
@@ -13,12 +14,12 @@ pub mod mmdb;
 mod rewrite;
 pub mod task;
 mod windows;
-pub mod database;
 
 use crate::application::app::App;
 use crate::context::Context;
-use crate::engine::{lookup_block, BlockLookup};
+use crate::engine::{BlockLookup, lookup_block};
 use crate::logger::setup_logger;
+use ::windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0;
 use adblock::Engine;
 use anyhow::Result;
 use chrono::Duration as ChronoDuration;
@@ -28,7 +29,6 @@ use scopeguard::defer;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::channel;
-use ::windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0;
 
 async fn run_engine(engine: Engine, mut rx: mpsc::Receiver<BlockLookup>) -> Result<()> {
   while let Some(lookup) = rx.recv().await {

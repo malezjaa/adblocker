@@ -1,23 +1,23 @@
+pub mod devices;
+pub mod query_logs;
 pub mod schema;
 pub mod stats;
-pub mod query_logs;
-pub mod devices;
 
+use crate::ChronoDuration;
 use crate::database::query_logs::QueryEvent;
 use crate::domain::{query_domain, registered_domain};
 use crate::engine::BlockOrigin;
-use crate::ChronoDuration;
 use chrono::{Timelike, Utc};
 use hickory_proto::op::Message;
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::net::SocketAddr;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tracing::{debug, warn};
 
 #[derive(Debug, Clone)]
@@ -61,4 +61,3 @@ impl DB {
     Ok(())
   }
 }
-

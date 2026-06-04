@@ -1,5 +1,5 @@
-use crate::database::DB;
 use crate::ChronoDuration;
+use crate::database::DB;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
@@ -58,10 +58,10 @@ impl DB {
      GROUP BY hours.h
      ORDER BY hours.h ASC",
     )
-      .bind(23i64)
-      .bind(start_of_day)
-      .fetch_all(&self.pool)
-      .await?;
+    .bind(23i64)
+    .bind(start_of_day)
+    .fetch_all(&self.pool)
+    .await?;
 
     Ok(rows)
   }
@@ -74,9 +74,9 @@ impl DB {
              ORDER BY timestamp DESC
              LIMIT ?",
     )
-      .bind(limit)
-      .fetch_all(&self.pool)
-      .await?;
+    .bind(limit)
+    .fetch_all(&self.pool)
+    .await?;
 
     Ok(rows)
   }
@@ -121,36 +121,36 @@ impl DB {
          AND (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-      .bind(since_ts)
-      .bind(since_ts)
-      .bind(until_ts)
-      .bind(until_ts)
-      .fetch_one(&self.pool)
-      .await?;
+    .bind(since_ts)
+    .bind(since_ts)
+    .bind(until_ts)
+    .bind(until_ts)
+    .fetch_one(&self.pool)
+    .await?;
 
     let total_allowed: i64 = sqlx::query_scalar(
       "SELECT COUNT(*) FROM query_log WHERE blocked = 0
          AND (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-      .bind(since_ts)
-      .bind(since_ts)
-      .bind(until_ts)
-      .bind(until_ts)
-      .fetch_one(&self.pool)
-      .await?;
+    .bind(since_ts)
+    .bind(since_ts)
+    .bind(until_ts)
+    .bind(until_ts)
+    .fetch_one(&self.pool)
+    .await?;
 
     let avg_response_time: Option<f64> = sqlx::query_scalar(
       "SELECT AVG(response_time) FROM query_log
          WHERE (? IS NULL OR timestamp >= ?)
          AND (? IS NULL OR timestamp <= ?)",
     )
-      .bind(since_ts)
-      .bind(since_ts)
-      .bind(until_ts)
-      .bind(until_ts)
-      .fetch_one(&self.pool)
-      .await?;
+    .bind(since_ts)
+    .bind(since_ts)
+    .bind(until_ts)
+    .bind(until_ts)
+    .fetch_one(&self.pool)
+    .await?;
 
     let total = total_blocked + total_allowed;
 

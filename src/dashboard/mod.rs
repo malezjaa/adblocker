@@ -7,6 +7,7 @@ use crate::context::Context;
 pub use crate::dashboard::app_error::AppError;
 use crate::dashboard::frontend::serve_file;
 use crate::dashboard::ws::ws_handler;
+use crate::database::stats::{Stats, TopDomain};
 use anyhow::Result;
 use axum::extract::{Path, Query, State as AxumState};
 use axum::response::IntoResponse;
@@ -19,7 +20,6 @@ use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
 use tracing::info;
-use crate::database::stats::{Stats, TopDomain};
 
 pub async fn server_root() -> Result<impl IntoResponse, AppError> {
   serve_file(Path("index.html".to_string())).await

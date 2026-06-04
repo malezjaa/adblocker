@@ -1,7 +1,7 @@
-use std::path::Path;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::SqlitePool;
 use crate::database::DB;
+use sqlx::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use std::path::Path;
 
 impl DB {
   pub async fn init_db(path: &Path) -> anyhow::Result<SqlitePool> {
@@ -22,22 +22,22 @@ impl DB {
          response_time INTEGER NOT NULL
        )",
     )
-      .execute(&self.pool)
-      .await?;
+    .execute(&self.pool)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_blocked_timestamp
              ON query_log(blocked, timestamp)",
     )
-      .execute(&self.pool)
-      .await?;
+    .execute(&self.pool)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_query_log_domain
              ON query_log(domain)",
     )
-      .execute(&self.pool)
-      .await?;
+    .execute(&self.pool)
+    .await?;
 
     sqlx::query(
       "CREATE TABLE IF NOT EXISTS domain_stats (
@@ -48,17 +48,18 @@ impl DB {
               last_seen          INTEGER NOT NULL
             );",
     )
-      .execute(&self.pool)
-      .await?;
+    .execute(&self.pool)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_registered
                 ON domain_stats(registered_domain);",
     )
-      .execute(&self.pool)
-      .await?;
+    .execute(&self.pool)
+    .await?;
 
-    sqlx::query("CREATE TABLE IF NOT EXISTS device (
+    sqlx::query(
+      "CREATE TABLE IF NOT EXISTS device (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       type TEXT NOT NULL CHECK (
@@ -73,15 +74,17 @@ impl DB {
         )
       ),
       last_seen INTEGER
-    );"
-    ).execute(&self.pool).await?;
+    );",
+    )
+    .execute(&self.pool)
+    .await?;
 
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_last_seen
              ON domain_stats(last_seen)",
     )
-      .execute(&self.pool)
-      .await?;
+    .execute(&self.pool)
+    .await?;
 
     Ok(())
   }

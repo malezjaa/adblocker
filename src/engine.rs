@@ -1,9 +1,9 @@
 use crate::context::Context;
 use crate::dashboard::ws::WsEvent;
 use crate::rewrite::apply::{apply_rewrites, restore_original_queries};
-use adblock::request::Request;
 use adblock::Engine;
-use anyhow::{bail, Result};
+use adblock::request::Request;
+use anyhow::{Result, bail};
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::{A, AAAA};
 use hickory_proto::rr::{RData, Record, RecordType};

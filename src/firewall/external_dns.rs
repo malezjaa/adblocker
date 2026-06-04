@@ -1,8 +1,8 @@
 use crate::fwpm_transaction;
 use crate::windows::filter::{
-  add, condition_remote_addr_v4, condition_remote_port, FilterBuilder,
+  FilterBuilder, add, condition_remote_addr_v4, condition_remote_port,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::net::{IpAddr, SocketAddr};
 use std::ptr::null;
 use windows::Win32::Foundation::HANDLE;
@@ -11,8 +11,8 @@ use windows::Win32::Foundation::HANDLE;
 pub fn block_external_dns(resolver: SocketAddr, mut engine: HANDLE) -> Result<()> {
   use crate::windows::pwstr_buf::PwstrBuffer;
   use windows::{
-    core::PWSTR,
-    Win32::NetworkManagement::WindowsFilteringPlatform::*, Win32::System::Rpc::RPC_C_AUTHN_WINNT,
+    Win32::NetworkManagement::WindowsFilteringPlatform::*,
+    Win32::System::Rpc::RPC_C_AUTHN_WINNT, core::PWSTR,
   };
 
   unsafe {
@@ -26,7 +26,7 @@ pub fn block_external_dns(resolver: SocketAddr, mut engine: HANDLE) -> Result<()
       Some(&session),
       &mut engine,
     );
-    
+
     if status != 0 {
       bail!("FwpmEngineOpen0 failed: {}", status);
     }

@@ -1,6 +1,6 @@
 use crate::firewall::Protocol;
 use crate::windows::filter::{add, condition_protocol};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::ptr::null;
 use tracing::debug;
 
@@ -8,15 +8,22 @@ use windows::Win32::Foundation::HANDLE;
 
 #[cfg(windows)]
 pub fn open_ports(mut engine: HANDLE) -> Result<()> {
-  use windows::core::PWSTR;
-  use windows::Win32::Foundation::HANDLE;
-  use windows::Win32::NetworkManagement::WindowsFilteringPlatform::{FwpmEngineClose0, FwpmEngineOpen0, FWPM_SESSION0, FWPM_SESSION_FLAG_DYNAMIC};
-  use windows::Win32::System::Rpc::RPC_C_AUTHN_WINNT;
-  use windows::Win32::NetworkManagement::WindowsFilteringPlatform::{FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6, FWP_ACTION_PERMIT};
-  use crate::windows::filter::{condition_local_port, FilterBuilder};
-  use crate::windows::pwstr_buf::PwstrBuffer;
-  use windows::Win32::NetworkManagement::WindowsFilteringPlatform::{FwpmTransactionAbort0, FwpmTransactionBegin0, FwpmTransactionCommit0};
   use crate::fwpm_transaction;
+  use crate::windows::filter::{FilterBuilder, condition_local_port};
+  use crate::windows::pwstr_buf::PwstrBuffer;
+  use windows::Win32::Foundation::HANDLE;
+  use windows::Win32::NetworkManagement::WindowsFilteringPlatform::{
+    FWP_ACTION_PERMIT, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4,
+    FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6,
+  };
+  use windows::Win32::NetworkManagement::WindowsFilteringPlatform::{
+    FWPM_SESSION_FLAG_DYNAMIC, FWPM_SESSION0, FwpmEngineClose0, FwpmEngineOpen0,
+  };
+  use windows::Win32::NetworkManagement::WindowsFilteringPlatform::{
+    FwpmTransactionAbort0, FwpmTransactionBegin0, FwpmTransactionCommit0,
+  };
+  use windows::Win32::System::Rpc::RPC_C_AUTHN_WINNT;
+  use windows::core::PWSTR;
 
   unsafe {
     let session =
@@ -33,7 +40,12 @@ pub fn open_ports(mut engine: HANDLE) -> Result<()> {
       bail!("FwpmEngineOpen0 failed: {}", status);
     }
 
-    let rules = &[(Protocol::UDP, 53), (Protocol::TCP, 53), (Protocol::TCP, 853), (Protocol::TCP, 443)];
+    let rules = &[
+      (Protocol::UDP, 53),
+      (Protocol::TCP, 53),
+      (Protocol::TCP, 853),
+      (Protocol::TCP, 443),
+    ];
 
     fwpm_transaction! { engine, {
       for (protocol, port) in rules {
