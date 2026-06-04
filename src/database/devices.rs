@@ -1,5 +1,5 @@
 use crate::database::DB;
-use rand::{distr::Alphanumeric, Rng};
+use rand::{Rng, distr::Alphanumeric};
 use serde::{Deserialize, Serialize};
 
 pub fn generate_device_id() -> String {
@@ -10,18 +10,25 @@ pub fn generate_device_id() -> String {
 #[sqlx(type_name = "TEXT")]
 pub enum DeviceType {
   #[sqlx(rename = "windows")]
+  #[serde(rename = "windows")]
   Windows,
   #[sqlx(rename = "linux")]
+  #[serde(rename = "linux")]
   Linux,
   #[sqlx(rename = "macos")]
+  #[serde(rename = "macos")]
   MacOs,
   #[sqlx(rename = "ios")]
+  #[serde(rename = "ios")]
   Ios,
   #[sqlx(rename = "android")]
+  #[serde(rename = "android")]
   Android,
   #[sqlx(rename = "router")]
+  #[serde(rename = "router")]
   Router,
   #[sqlx(rename = "other")]
+  #[serde(rename = "other")]
   Other,
 }
 
@@ -51,24 +58,35 @@ impl DB {
       return Err(format!("Invalid device type: {device_type}"));
     }
 
+    let exists =
+      sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM device WHERE name = ?)")
+        .bind(name)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to check device name: {e}"))?;
+
+    if exists {
+      return Err(format!("A device named '{name}' already exists"));
+    }
+
     let id = generate_device_id();
 
     sqlx::query(
       "INSERT INTO device (id, name, type, last_seen)
-             VALUES (?, ?, ?, strftime('%s', 'now'))",
+               VALUES (?, ?, ?, strftime('%s', 'now'))",
     )
-      .bind(&id)
-      .bind(name)
-      .bind(device_type)
-      .execute(&self.pool)
-      .await
-      .map_err(|e| {
-        if e.to_string().contains("UNIQUE") {
-          "Generated device ID already exists, please try again".to_string()
-        } else {
-          format!("Failed to create device: {e}")
-        }
-      })?;
+    .bind(&id)
+    .bind(name)
+    .bind(device_type)
+    .execute(&self.pool)
+    .await
+    .map_err(|e| {
+      if e.to_string().contains("UNIQUE") {
+        "Generated device ID already exists, please try again".to_string()
+      } else {
+        format!("Failed to create device: {e}")
+      }
+    })?;
 
     Ok(id)
   }

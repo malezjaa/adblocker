@@ -21,6 +21,18 @@ export async function api<T>(url: string): Promise<T> {
   return (await res.json()) as Promise<T>
 }
 
+export async function post<T>(url: string, data: unknown): Promise<T> {
+  const res = await fetch(`${BASE_URL}/${url}`, {
+    method: "POST",
+    body: JSON.stringify(data),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+
+  return (await res.json()) as Promise<T>
+}
+
 export const useStats = () => {
   return useQuery<Stats>({
     queryKey: ["stats"],
@@ -84,3 +96,26 @@ export function useStatsWs() {
     }
   }, [queryClient])
 }
+
+export enum DeviceType {
+  Windows = "windows",
+  Linux = "linux",
+  MacOs = "macos",
+  Android = "android",
+  iOS = "ios",
+  Router = "router",
+  Other = "other",
+}
+
+export type Device = {
+  id: string
+  name: string
+  device_type: DeviceType
+  last_seen: number
+}
+
+export const useDevices = () =>
+  useQuery<Device[]>({
+    queryKey: ["devices"],
+    queryFn: () => api<Device[]>("api/devices"),
+  })

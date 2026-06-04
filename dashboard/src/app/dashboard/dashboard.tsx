@@ -7,6 +7,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 import data from "./data.json"
 import * as React from "react"
+import Devices from "@/components/devices.tsx"
 
 export function Dashboard() {
   return (
@@ -28,6 +29,11 @@ export function Dashboard() {
               <div className="px-4 lg:px-6">
                 <RequestsChart />
               </div>
+
+              <div className="px-4 lg:px-6">
+                <Devices />
+              </div>
+
               <DataTable data={data} />
             </div>
           </div>

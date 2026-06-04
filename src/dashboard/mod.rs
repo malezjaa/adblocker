@@ -9,14 +9,14 @@ use crate::dashboard::frontend::serve_file;
 use crate::dashboard::ws::ws_handler;
 use crate::database::devices::Device;
 use crate::database::stats::{Stats, TopDomain};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use axum::extract::{Path, Query, State as AxumState};
 use axum::response::IntoResponse;
 use axum::routing::{any, get};
 use axum::{Json, Router};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
@@ -116,6 +116,10 @@ async fn create_device_handler(
   AxumState(ctx): AxumState<Context>,
   Json(body): Json<CreateDevice>,
 ) -> Result<Json<Value>, AppError> {
-  let id = ctx.db().create_device(&body.name, &body.device_type).await.map_err(|err| anyhow!("{err}"))?;
+  let id = ctx
+    .db()
+    .create_device(&body.name, &body.device_type)
+    .await
+    .map_err(|err| anyhow!("{err}"))?;
   Ok(Json(json!({ "id": id })))
 }
