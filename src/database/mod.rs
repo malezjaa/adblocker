@@ -3,10 +3,10 @@ pub mod query_logs;
 pub mod schema;
 pub mod stats;
 
-use crate::ChronoDuration;
 use crate::database::query_logs::QueryEvent;
 use crate::domain::{query_domain, registered_domain};
 use crate::engine::BlockOrigin;
+use chrono::Duration as ChronoDuration;
 use chrono::{Timelike, Utc};
 use hickory_proto::op::Message;
 use serde::{Deserialize, Serialize};

@@ -27,7 +27,6 @@ where
       Level::DEBUG => Paint::blue("[debug]").bold(),
       Level::TRACE => Paint::magenta("[trace]").bold(),
     };
-
     write!(writer, "{} ", level)?;
 
     ctx.field_format().format_fields(writer.by_ref(), event)?;

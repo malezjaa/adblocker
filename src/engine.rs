@@ -11,8 +11,8 @@ use hickory_proto::serialize::binary::BinDecodable;
 use hickory_resolver::net::{DnsError, NetError};
 use serde::{Deserialize, Serialize};
 use std::net::{Ipv4Addr, Ipv6Addr};
-use tokio::sync::oneshot;
 use tokio::sync::oneshot::Sender;
+use tokio::sync::{mpsc, oneshot};
 use tracing::{info, warn};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -144,4 +144,14 @@ pub async fn resolve_msg(msg: &Message, ctx: Context) -> Result<Message> {
   }
 
   Ok(response)
+}
+
+pub async fn run_engine(
+  engine: Engine,
+  mut rx: mpsc::Receiver<BlockLookup>,
+) -> Result<()> {
+  while let Some(lookup) = rx.recv().await {
+    lookup.sender.send(lookup_block(&engine, &lookup.msg, lookup.origin)).ok();
+  }
+  Ok(())
 }

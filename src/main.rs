@@ -1,41 +1,13 @@
-mod application;
-mod blocklists;
-mod cache;
-mod cert;
-mod config;
-mod context;
-mod dashboard;
-pub mod database;
-mod domain;
-mod engine;
-mod firewall;
-mod logger;
-pub mod mmdb;
-mod rewrite;
-pub mod task;
-mod windows;
-
-use crate::application::app::App;
-use crate::context::Context;
-use crate::engine::{BlockLookup, lookup_block};
-use crate::logger::setup_logger;
 use ::windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0;
-use adblock::Engine;
 use anyhow::Result;
-use chrono::Duration as ChronoDuration;
 use clap::Parser;
+use dns_adblock::application::app::App;
+use dns_adblock::context::Context;
+use dns_adblock::logger::setup_logger;
 use rustls::crypto::ring;
 use scopeguard::defer;
 use std::sync::Arc;
-use tokio::sync::mpsc;
 use tokio::sync::mpsc::channel;
-
-async fn run_engine(engine: Engine, mut rx: mpsc::Receiver<BlockLookup>) -> Result<()> {
-  while let Some(lookup) = rx.recv().await {
-    lookup.sender.send(lookup_block(&engine, &lookup.msg, lookup.origin)).ok();
-  }
-  Ok(())
-}
 
 #[derive(Parser, Debug)]
 struct Cli {

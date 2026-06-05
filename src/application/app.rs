@@ -2,11 +2,10 @@ use crate::blocklists::load_blocklists;
 use crate::config::Config;
 use crate::context::Context;
 use crate::database::DB;
-use crate::engine::BlockLookup;
+use crate::engine::{BlockLookup, run_engine};
 use crate::firewall::external_dns::block_external_dns;
 use crate::firewall::open_port::open_ports;
 use crate::firewall::override_dns::override_default_dns;
-use crate::run_engine;
 use crate::task::named_task;
 #[cfg(windows)]
 use crate::windows::wfp_session::WfpSession;

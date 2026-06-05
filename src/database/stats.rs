@@ -1,6 +1,5 @@
-use crate::ChronoDuration;
 use crate::database::DB;
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(sqlx::FromRow)]
@@ -110,8 +109,8 @@ impl DB {
 
   pub async fn stats(
     &self,
-    since: Option<ChronoDuration>,
-    until: Option<ChronoDuration>,
+    since: Option<Duration>,
+    until: Option<Duration>,
   ) -> anyhow::Result<Stats> {
     let since_ts = since.map(|d| (Utc::now() - d).timestamp());
     let until_ts = until.map(|d| (Utc::now() - d).timestamp());

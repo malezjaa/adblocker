@@ -69,3 +69,11 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = true
+
+[[bin]]
+name = "cli"
+path = "src/cli.rs"
+
+[[bin]]
+name = "daemon"
+path = "src/main.rs"
