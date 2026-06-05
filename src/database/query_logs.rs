@@ -62,6 +62,17 @@ impl DB {
   pub async fn insert_query(&self, event: &QueryEvent) -> anyhow::Result<()> {
     let mut tx = self.pool.begin().await?;
 
+    let device = if let Some(device_id) = &event.device {
+      if self.known_devices.contains(device_id) {
+        Some(device_id.clone())
+      } else {
+        warn!("Received query for unknown device: {}", device_id);
+        None
+      }
+    } else {
+      None
+    };
+
     sqlx::query(
       "INSERT INTO query_log (domain, client_ip, blocked, block_origin, timestamp, response_time, device_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
@@ -75,7 +86,7 @@ impl DB {
       })
       .bind(event.timestamp)
       .bind(event.response_time)
-      .bind(&event.device)
+      .bind(&device)
       .execute(&mut *tx)
       .await?;
 

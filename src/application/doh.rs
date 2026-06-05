@@ -1,17 +1,17 @@
 use crate::application::app::App;
 use crate::context::Context;
 use crate::dashboard::AppError;
-use crate::engine::{BlockOrigin, process_message};
+use crate::engine::{process_message, BlockOrigin};
 use anyhow::Result;
 use axum::body::Bytes;
 use axum::extract::{ConnectInfo, Path, Query, State as AxumState};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::{Router, routing::post};
+use axum::{routing::post, Router};
 use axum_server::tls_rustls::RustlsConfig;
-use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::Engine;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::time::Instant;
@@ -38,7 +38,7 @@ impl App {
       .with_state(ctx.clone());
 
     let config = RustlsConfig::from_config(ctx.server_config());
-    let addr = SocketAddr::from(([0, 0, 0, 0], 443));
+    let addr = SocketAddr::from(([127, 0, 0, 1], 443));
 
     info!("DoH server listening on {addr}");
     axum_server::bind_rustls(addr, config)

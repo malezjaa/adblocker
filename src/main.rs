@@ -1,4 +1,3 @@
-use ::windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0;
 use anyhow::Result;
 use clap::Parser;
 use dns_adblock::application::app::App;
@@ -8,6 +7,7 @@ use rustls::crypto::ring;
 use scopeguard::defer;
 use std::sync::Arc;
 use tokio::sync::mpsc::channel;
+use ::windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0;
 
 #[derive(Parser, Debug)]
 struct Cli {

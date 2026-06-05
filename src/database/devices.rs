@@ -96,6 +96,7 @@ impl DB {
         format!("Failed to create device: {e}")
       }
     })?;
+    self.known_devices.insert(id.clone());
 
     Ok(id)
   }
