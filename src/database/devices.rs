@@ -1,12 +1,13 @@
 use crate::database::DB;
-use rand::{Rng, distr::Alphanumeric};
+use clap::ValueEnum;
+use rand::{distr::Alphanumeric, RngExt};
 use serde::{Deserialize, Serialize};
 
 pub fn generate_device_id() -> String {
   rand::rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect()
 }
 
-#[derive(Debug, Clone, Copy, sqlx::Type, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, sqlx::Type, Serialize, Deserialize, ValueEnum)]
 #[sqlx(type_name = "TEXT")]
 pub enum DeviceType {
   #[sqlx(rename = "windows")]
@@ -58,6 +59,10 @@ impl DB {
       return Err(format!("Invalid device type: {device_type}"));
     }
 
+    self._create_device(name, DeviceType::from_str(device_type, true)?).await
+  }
+  
+  pub async fn _create_device(&self, name: &str, device_type: DeviceType) -> Result<String, String> {
     let exists =
       sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM device WHERE name = ?)")
         .bind(name)
@@ -75,18 +80,18 @@ impl DB {
       "INSERT INTO device (id, name, type, last_seen)
                VALUES (?, ?, ?, strftime('%s', 'now'))",
     )
-    .bind(&id)
-    .bind(name)
-    .bind(device_type)
-    .execute(&self.pool)
-    .await
-    .map_err(|e| {
-      if e.to_string().contains("UNIQUE") {
-        "Generated device ID already exists, please try again".to_string()
-      } else {
-        format!("Failed to create device: {e}")
-      }
-    })?;
+      .bind(&id)
+      .bind(name)
+      .bind(device_type)
+      .execute(&self.pool)
+      .await
+      .map_err(|e| {
+        if e.to_string().contains("UNIQUE") {
+          "Generated device ID already exists, please try again".to_string()
+        } else {
+          format!("Failed to create device: {e}")
+        }
+      })?;
 
     Ok(id)
   }

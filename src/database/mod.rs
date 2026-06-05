@@ -10,21 +10,21 @@ use chrono::Duration as ChronoDuration;
 use chrono::{Timelike, Utc};
 use hickory_proto::op::Message;
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::path::Path;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc::{Receiver, Sender, channel};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::{debug, warn};
 
 #[derive(Debug, Clone)]
 pub struct DB {
   pub pool: SqlitePool,
   pub total_queries: Arc<AtomicUsize>,
-  pub record_tx: Sender<QueryEvent>,
+  pub record_tx: Option<Sender<QueryEvent>>,
 }
 
 impl DB {
@@ -32,9 +32,18 @@ impl DB {
     let pool = Self::init_db(db_path.as_ref()).await?;
     let (tx, rx) = channel(10000);
 
-    let db = Self { pool, total_queries: Default::default(), record_tx: tx };
+    let db = Self { pool, total_queries: Default::default(), record_tx: Some(tx) };
     db.init_schema().await?;
     db.spawn_inserter(rx);
+
+    Ok(db)
+  }
+
+  pub async fn init_simple<P: AsRef<Path>>(db_path: P) -> anyhow::Result<Self> {
+    let pool = Self::init_db(db_path.as_ref()).await?;
+
+    let db = Self { pool, total_queries: Default::default(), record_tx: None };
+    db.init_schema().await?;
 
     Ok(db)
   }

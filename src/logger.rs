@@ -1,9 +1,9 @@
 use std::fmt;
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{
-  EnvFilter,
   fmt::{FmtContext, FormatEvent, FormatFields},
   registry::LookupSpan,
+  EnvFilter,
 };
 use yansi::Paint;
 
@@ -40,7 +40,7 @@ pub fn setup_logger(verbose: bool) {
     .without_time()
     .event_format(CustomFormatter)
     .with_env_filter(EnvFilter::new(format!(
-      "dns_adblock={}",
+      "dns_adblock,cli,deamon={}",
       if verbose { "debug" } else { "info" }
     )))
     .init();

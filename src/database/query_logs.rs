@@ -116,7 +116,7 @@ impl DB {
         response_time,
       );
 
-      let _ = self.record_tx.try_send(event);
+      let _ = self.record_tx.as_ref().expect("Should always exist when running from a daemon").try_send(event);
     }
   }
 }
