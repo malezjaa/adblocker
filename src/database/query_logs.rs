@@ -18,6 +18,7 @@ pub struct QueryEvent {
   pub block_origin: BlockOrigin,
   pub timestamp: i64,
   pub response_time: i64,
+  pub device: Option<String>,
 }
 
 impl QueryEvent {
@@ -27,6 +28,7 @@ impl QueryEvent {
     blocked: bool,
     block_origin: BlockOrigin,
     response_time: i64,
+    device: Option<String>,
   ) -> Self {
     Self {
       registered_domain: registered_domain(&domain),
@@ -36,6 +38,7 @@ impl QueryEvent {
       block_origin,
       timestamp: Utc::now().timestamp(),
       response_time,
+      device,
     }
   }
 }
@@ -60,7 +63,7 @@ impl DB {
     let mut tx = self.pool.begin().await?;
 
     sqlx::query(
-      "INSERT INTO query_log (domain, client_ip, blocked, block_origin, timestamp, response_time) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO query_log (domain, client_ip, blocked, block_origin, timestamp, response_time, device_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
       .bind(&event.domain)
       .bind(&event.client_ip)
@@ -72,6 +75,7 @@ impl DB {
       })
       .bind(event.timestamp)
       .bind(event.response_time)
+      .bind(&event.device)
       .execute(&mut *tx)
       .await?;
 
@@ -106,6 +110,7 @@ impl DB {
     blocked: bool,
     block_origin: BlockOrigin,
     response_time: i64,
+    device: Option<String>,
   ) {
     if let Some(domain) = query_domain(response) {
       let event = QueryEvent::new(
@@ -114,9 +119,14 @@ impl DB {
         blocked,
         block_origin,
         response_time,
+        device,
       );
 
-      let _ = self.record_tx.as_ref().expect("Should always exist when running from a daemon").try_send(event);
+      let _ = self
+        .record_tx
+        .as_ref()
+        .expect("Should always exist when running from a daemon")
+        .try_send(event);
     }
   }
 }

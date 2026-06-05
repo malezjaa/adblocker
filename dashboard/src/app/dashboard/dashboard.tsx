@@ -7,7 +7,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 import data from "./data.json"
 import * as React from "react"
-import Devices from "@/components/devices.tsx"
+import Devices from "@/components/devices/devices.tsx"
 
 export function Dashboard() {
   return (

@@ -1,6 +1,6 @@
 use crate::database::DB;
 use clap::ValueEnum;
-use rand::{distr::Alphanumeric, RngExt};
+use rand::{RngExt, distr::Alphanumeric};
 use serde::{Deserialize, Serialize};
 
 pub fn generate_device_id() -> String {
@@ -62,7 +62,11 @@ impl DB {
     self._create_device(name, DeviceType::from_str(device_type, true)?).await
   }
 
-  pub async fn _create_device(&self, name: &str, device_type: DeviceType) -> Result<String, String> {
+  pub async fn _create_device(
+    &self,
+    name: &str,
+    device_type: DeviceType,
+  ) -> Result<String, String> {
     let exists =
       sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM device WHERE name = ?)")
         .bind(name)
@@ -80,18 +84,18 @@ impl DB {
       "INSERT INTO device (id, name, type, last_seen)
                VALUES (?, ?, ?, strftime('%s', 'now'))",
     )
-      .bind(&id)
-      .bind(name)
-      .bind(device_type)
-      .execute(&self.pool)
-      .await
-      .map_err(|e| {
-        if e.to_string().contains("UNIQUE") {
-          "Generated device ID already exists, please try again".to_string()
-        } else {
-          format!("Failed to create device: {e}")
-        }
-      })?;
+    .bind(&id)
+    .bind(name)
+    .bind(device_type)
+    .execute(&self.pool)
+    .await
+    .map_err(|e| {
+      if e.to_string().contains("UNIQUE") {
+        "Generated device ID already exists, please try again".to_string()
+      } else {
+        format!("Failed to create device: {e}")
+      }
+    })?;
 
     Ok(id)
   }
@@ -118,11 +122,13 @@ impl DB {
   }
 
   pub async fn get_device(&self, id: &str) -> Result<Device, String> {
-    sqlx::query_as::<_, Device>("SELECT id, name, type, last_seen FROM device WHERE id = ?")
-      .bind(id)
-      .fetch_optional(&self.pool)
-      .await
-      .map_err(|e| format!("Failed to retrieve device: {e}"))?
-      .ok_or_else(|| format!("No device found with id '{id}'"))
+    sqlx::query_as::<_, Device>(
+      "SELECT id, name, type, last_seen FROM device WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_optional(&self.pool)
+    .await
+    .map_err(|e| format!("Failed to retrieve device: {e}"))?
+    .ok_or_else(|| format!("No device found with id '{id}'"))
   }
 }

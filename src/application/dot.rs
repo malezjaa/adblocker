@@ -66,6 +66,7 @@ impl App {
         blocked,
         BlockOrigin::DoT,
         start.elapsed().as_millis() as i64,
+        None,
       );
 
       let response_bytes = response.to_vec()?;

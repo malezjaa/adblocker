@@ -5,22 +5,33 @@ use std::path::Path;
 
 impl DB {
   pub async fn init_db(path: &Path) -> anyhow::Result<SqlitePool> {
-    let options = SqliteConnectOptions::new().filename(path).create_if_missing(true);
+    let options = SqliteConnectOptions::new()
+      .filename(path)
+      .create_if_missing(true)
+      .foreign_keys(true);
 
     Ok(SqlitePoolOptions::new().max_connections(5).connect_with(options).await?)
   }
 
   pub async fn init_schema(&self) -> anyhow::Result<()> {
     sqlx::query(
-      "CREATE TABLE IF NOT EXISTS query_log (
-         id            INTEGER PRIMARY KEY AUTOINCREMENT,
-         domain        TEXT    NOT NULL,
-         client_ip     TEXT    NOT NULL,
-         blocked       INTEGER NOT NULL,
-         block_origin  TEXT,
-         timestamp     INTEGER NOT NULL,
-         response_time INTEGER NOT NULL
-       )",
+      "
+        CREATE TABLE IF NOT EXISTS query_log (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain        TEXT    NOT NULL,
+            client_ip     TEXT    NOT NULL,
+            blocked       INTEGER NOT NULL,
+            block_origin  TEXT,
+            timestamp     INTEGER NOT NULL,
+            response_time INTEGER NOT NULL,
+
+            device_id     TEXT,
+
+            FOREIGN KEY (device_id)
+                REFERENCES device(id)
+                ON DELETE SET NULL
+                ON UPDATE CASCADE
+        );",
     )
     .execute(&self.pool)
     .await?;

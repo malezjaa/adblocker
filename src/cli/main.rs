@@ -2,7 +2,7 @@ mod cli;
 pub mod devices;
 
 use crate::cli::{Cli, Commands, DeviceCommand};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use clap::Parser;
 use dns_adblock::database::DB;
 use dns_adblock::logger::setup_logger;
@@ -35,8 +35,8 @@ async fn main() -> Result<()> {
     Commands::Devices { command } => match command {
       DeviceCommand::New { name, device_type } => ctx.new_device(name, device_type).await,
       DeviceCommand::List => ctx.list_devices().await,
-      _ => bail!("not implemented")
-    }
+      _ => bail!("not implemented"),
+    },
   };
 
   if let Err(err) = result {

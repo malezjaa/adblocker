@@ -21,6 +21,17 @@ export async function api<T>(url: string): Promise<T> {
   return (await res.json()) as Promise<T>
 }
 
+export async function del<T>(url: string): Promise<T> {
+  const res = await fetch(`${BASE_URL}/${url}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+
+  return (await res.json()) as Promise<T>
+}
+
 export async function post<T>(url: string, data: unknown): Promise<T> {
   const res = await fetch(`${BASE_URL}/${url}`, {
     method: "POST",

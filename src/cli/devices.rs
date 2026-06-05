@@ -1,5 +1,5 @@
 use crate::CliContext;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use dns_adblock::database::devices::DeviceType;
 use yansi::Paint;
 
@@ -39,7 +39,10 @@ fn format_last_seen(last_seen: i64) -> (String, bool) {
 
 impl CliContext {
   pub async fn new_device(&self, name: String, ty: DeviceType) -> Result<()> {
-    let id = self.db._create_device(&name, ty).await
+    let id = self
+      .db
+      ._create_device(&name, ty)
+      .await
       .map_err(|err| anyhow!("couldn't create a new device: {err}"))?;
 
     let type_str = pretty_device_type(ty);
@@ -56,7 +59,10 @@ impl CliContext {
   }
 
   pub async fn list_devices(&self) -> Result<()> {
-    let devices = self.db.get_devices().await
+    let devices = self
+      .db
+      .get_devices()
+      .await
       .map_err(|err| anyhow!("couldn't get list of devices: {err}"))?;
 
     if devices.is_empty() {
@@ -67,7 +73,12 @@ impl CliContext {
     }
 
     println!();
-    println!("  {} {}", "●".dim(), format!("{} device{}", devices.len(), if devices.len() == 1 { "" } else { "s" }).dim());
+    println!(
+      "  {} {}",
+      "●".dim(),
+      format!("{} device{}", devices.len(), if devices.len() == 1 { "" } else { "s" })
+        .dim()
+    );
     println!("  {}", "─".repeat(44).dim());
 
     for device in &devices {
@@ -86,10 +97,7 @@ impl CliContext {
         device.id.cyan().dim(),
         pretty_device_type(device.device_type),
       );
-      println!(
-        "      {}",
-        last_seen_label.dim(),
-      );
+      println!("      {}", last_seen_label.dim(),);
     }
 
     println!("  {}", "─".repeat(44).dim());

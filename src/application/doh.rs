@@ -4,7 +4,7 @@ use crate::dashboard::AppError;
 use crate::engine::{BlockOrigin, process_message};
 use anyhow::Result;
 use axum::body::Bytes;
-use axum::extract::{ConnectInfo, Query, State as AxumState};
+use axum::extract::{ConnectInfo, Path, Query, State as AxumState};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
@@ -32,6 +32,8 @@ impl App {
       .route("/", get(root))
       .route("/dns-query", get(Self::doh_get_handler))
       .route("/dns-query", post(Self::doh_handler))
+      .route("/dns-query/{device}", get(Self::doh_get_device_handler))
+      .route("/dns-query/{device}", post(Self::doh_device_handler))
       .layer(TraceLayer::new_for_http())
       .with_state(ctx.clone());
 
@@ -50,16 +52,20 @@ impl App {
     ctx: Context,
     addr: SocketAddr,
     bytes: Vec<u8>,
+    device: Option<String>,
   ) -> Result<impl IntoResponse, AppError> {
     let start = Instant::now();
+
     let (blocked, response) =
       process_message(ctx.clone(), bytes, BlockOrigin::DoH).await?;
+
     ctx.db().record_query(
       &response,
       addr,
       blocked,
       BlockOrigin::DoH,
       start.elapsed().as_millis() as i64,
+      device,
     );
 
     Ok((
@@ -75,7 +81,7 @@ impl App {
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
   ) -> Result<impl IntoResponse, AppError> {
     let bytes = URL_SAFE_NO_PAD.decode(&query.dns)?;
-    Self::handle_doh_request(ctx, addr, bytes).await
+    Self::handle_doh_request(ctx, addr, bytes, None).await
   }
 
   pub async fn doh_handler(
@@ -83,6 +89,25 @@ impl App {
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     body: Bytes,
   ) -> Result<impl IntoResponse, AppError> {
-    Self::handle_doh_request(ctx, addr, body.to_vec()).await
+    Self::handle_doh_request(ctx, addr, body.to_vec(), None).await
+  }
+
+  pub async fn doh_get_device_handler(
+    AxumState(ctx): AxumState<Context>,
+    Path(device): Path<String>,
+    Query(query): Query<DohQuery>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+  ) -> Result<impl IntoResponse, AppError> {
+    let bytes = URL_SAFE_NO_PAD.decode(&query.dns)?;
+    Self::handle_doh_request(ctx, addr, bytes, Some(device)).await
+  }
+
+  pub async fn doh_device_handler(
+    AxumState(ctx): AxumState<Context>,
+    Path(device): Path<String>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    body: Bytes,
+  ) -> Result<impl IntoResponse, AppError> {
+    Self::handle_doh_request(ctx, addr, body.to_vec(), Some(device)).await
   }
 }
