@@ -9,14 +9,14 @@ use crate::dashboard::frontend::serve_file;
 use crate::dashboard::ws::ws_handler;
 use crate::database::devices::Device;
 use crate::database::stats::{Stats, TopDomain};
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use axum::extract::{Path, Query, State as AxumState};
 use axum::response::IntoResponse;
 use axum::routing::{any, get};
 use axum::{Json, Router};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
@@ -31,6 +31,7 @@ impl App {
     let app = Router::new()
       .route("/", get(server_root))
       .route("/api/devices", get(get_devices_handler).post(create_device_handler))
+      .route("/api/devices/{id}", get(get_device_handler).delete(delete_device_handler))
       .route("/api/top", get(top_handler))
       .route("/api/stats", get(stats))
       .route("/api/chart-data", get(chart_data))
@@ -122,4 +123,20 @@ async fn create_device_handler(
     .await
     .map_err(|err| anyhow!("{err}"))?;
   Ok(Json(json!({ "id": id })))
+}
+
+async fn get_device_handler(
+  AxumState(ctx): AxumState<Context>,
+  Path(id): Path<String>,
+) -> Result<Json<Device>, AppError> {
+  let device = ctx.db().get_device(&id).await.map_err(|e| anyhow!("{e}"))?;
+  Ok(Json(device))
+}
+
+async fn delete_device_handler(
+  AxumState(ctx): AxumState<Context>,
+  Path(id): Path<String>,
+) -> Result<Json<Value>, AppError> {
+  ctx.db().delete_device(&id).await.map_err(|e| anyhow!("{e}"))?;
+  Ok(Json(json!({ "success": true })))
 }

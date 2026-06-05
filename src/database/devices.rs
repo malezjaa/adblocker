@@ -61,7 +61,7 @@ impl DB {
 
     self._create_device(name, DeviceType::from_str(device_type, true)?).await
   }
-  
+
   pub async fn _create_device(&self, name: &str, device_type: DeviceType) -> Result<String, String> {
     let exists =
       sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM device WHERE name = ?)")
@@ -101,5 +101,28 @@ impl DB {
       .fetch_all(&self.pool)
       .await
       .map_err(|e| format!("Failed to retrieve devices: {e}"))
+  }
+
+  pub async fn delete_device(&self, id: &str) -> Result<(), String> {
+    let result = sqlx::query("DELETE FROM device WHERE id = ?")
+      .bind(id)
+      .execute(&self.pool)
+      .await
+      .map_err(|e| format!("Failed to delete device: {e}"))?;
+
+    if result.rows_affected() == 0 {
+      return Err(format!("No device found with id '{id}'"));
+    }
+
+    Ok(())
+  }
+
+  pub async fn get_device(&self, id: &str) -> Result<Device, String> {
+    sqlx::query_as::<_, Device>("SELECT id, name, type, last_seen FROM device WHERE id = ?")
+      .bind(id)
+      .fetch_optional(&self.pool)
+      .await
+      .map_err(|e| format!("Failed to retrieve device: {e}"))?
+      .ok_or_else(|| format!("No device found with id '{id}'"))
   }
 }
