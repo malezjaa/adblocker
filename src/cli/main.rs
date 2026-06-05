@@ -34,6 +34,7 @@ async fn main() -> Result<()> {
   let result = match cli.command {
     Commands::Devices { command } => match command {
       DeviceCommand::New { name, device_type } => ctx.new_device(name, device_type).await,
+      DeviceCommand::List => ctx.list_devices().await,
       _ => bail!("not implemented")
     }
   };
