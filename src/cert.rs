@@ -1,6 +1,9 @@
 use anyhow::Result;
 use fs_err::File;
-use rcgen::{BasicConstraints, CertificateParams, CertifiedIssuer, DistinguishedName, DnType, ExtendedKeyUsagePurpose, IsCa, KeyPair, KeyUsagePurpose};
+use rcgen::{
+  BasicConstraints, CertificateParams, CertifiedIssuer, DistinguishedName, DnType,
+  ExtendedKeyUsagePurpose, IsCa, KeyPair, KeyUsagePurpose,
+};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls_pemfile::{certs, private_key};
 use std::io::{BufReader, Cursor};
@@ -50,10 +53,8 @@ pub fn get_certs() -> Result<Certs> {
 
   // leaf cert signed by ca
   let leaf_key = KeyPair::generate()?;
-  let mut leaf_params = CertificateParams::new(vec![
-    "localhost".to_string(),
-    "127.0.0.1".to_string(),
-  ])?;
+  let mut leaf_params =
+    CertificateParams::new(vec!["localhost".to_string(), "127.0.0.1".to_string()])?;
   leaf_params.is_ca = IsCa::NoCa;
   leaf_params.key_usages = vec![KeyUsagePurpose::DigitalSignature];
   leaf_params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
@@ -68,8 +69,8 @@ pub fn get_certs() -> Result<Certs> {
   fs_err::write(&cert_path, leaf_cert.pem())?;
   fs_err::write(&key_path, leaf_key.serialize_pem())?;
 
-  let certs = certs(&mut Cursor::new(leaf_cert.pem().as_bytes()))
-    .collect::<Result<Vec<_>, _>>()?;
+  let certs =
+    certs(&mut Cursor::new(leaf_cert.pem().as_bytes())).collect::<Result<Vec<_>, _>>()?;
   let key = private_key(&mut Cursor::new(leaf_key.serialize_pem().as_bytes()))?
     .expect("No private key found");
 

@@ -9,9 +9,9 @@ use tracing::info;
 impl App {
   pub async fn start_dns(ctx: Context) -> anyhow::Result<()> {
     let mut buf = vec![0u8; 512];
-    let socket = UdpSocket::bind(ctx.socket()).await?;
+    let socket = UdpSocket::bind(Context::socket()).await?;
 
-    info!("DNS server listening on {}", ctx.socket());
+    info!("DNS server listening on {}", Context::socket());
 
     loop {
       let (len, src) = match socket.recv_from(&mut buf).await {

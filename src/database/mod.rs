@@ -4,16 +4,16 @@ pub mod schema;
 pub mod stats;
 
 use crate::database::query_logs::QueryEvent;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::Duration as ChronoDuration;
 use chrono::Utc;
 use dashmap::DashSet;
 use sqlx::SqlitePool;
 use std::path::Path;
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
 use std::time::Duration;
-use tokio::sync::mpsc::{channel, Sender};
+use tokio::sync::mpsc::{Sender, channel};
 use tracing::warn;
 
 #[derive(Debug, Clone)]
@@ -29,7 +29,12 @@ impl DB {
     let pool = Self::init_db(db_path.as_ref()).await?;
     let (tx, rx) = channel(10000);
 
-    let db = Self { pool, total_queries: Default::default(), record_tx: Some(tx), known_devices: DashSet::new() };
+    let db = Self {
+      pool,
+      total_queries: Default::default(),
+      record_tx: Some(tx),
+      known_devices: DashSet::new(),
+    };
 
     db.init_schema().await?;
     db.populate_devices().await?;
@@ -52,7 +57,12 @@ impl DB {
   pub async fn init_simple<P: AsRef<Path>>(db_path: P) -> Result<Self> {
     let pool = Self::init_db(db_path.as_ref()).await?;
 
-    let db = Self { pool, total_queries: Default::default(), record_tx: None, known_devices: DashSet::new() };
+    let db = Self {
+      pool,
+      total_queries: Default::default(),
+      record_tx: None,
+      known_devices: DashSet::new(),
+    };
     db.init_schema().await?;
 
     Ok(db)

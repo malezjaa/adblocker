@@ -125,7 +125,7 @@ impl Context {
     self.0.config.read().block_rules.clone()
   }
 
-  pub fn socket(&self) -> SocketAddr {
+  pub fn socket() -> SocketAddr {
     SocketAddr::from(([127, 0, 0, 1], 53))
   }
 

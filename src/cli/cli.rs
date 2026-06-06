@@ -18,6 +18,10 @@ pub enum Commands {
     #[command(subcommand)]
     command: DeviceCommand,
   },
+  Dns {
+    #[command(subcommand)]
+    command: DnsCommand,
+  },
 }
 
 #[derive(Subcommand, Debug)]
@@ -34,5 +38,15 @@ pub enum DeviceCommand {
   Delete {
     #[arg()]
     id: String,
+  },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum DnsCommand {
+  Set {
+    #[arg()]
+    device: Option<String>,
+    #[arg(long = "no-doh", default_value = "false")]
+    no_doh: bool,
   },
 }

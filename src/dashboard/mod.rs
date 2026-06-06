@@ -103,7 +103,7 @@ async fn chart_data(
 async fn get_devices_handler(
   AxumState(ctx): AxumState<Context>,
 ) -> Result<Json<Vec<Device>>, AppError> {
-  let devices = ctx.db().get_devices().await.map_err(|err| anyhow!("{err}"))?;
+  let devices = ctx.db().get_devices().await?;
   Ok(Json(devices))
 }
 
@@ -117,11 +117,7 @@ async fn create_device_handler(
   AxumState(ctx): AxumState<Context>,
   Json(body): Json<CreateDevice>,
 ) -> Result<Json<Value>, AppError> {
-  let id = ctx
-    .db()
-    .create_device(&body.name, &body.device_type)
-    .await
-    .map_err(|err| anyhow!("{err}"))?;
+  let id = ctx.db().create_device(&body.name, &body.device_type).await?;
   Ok(Json(json!({ "id": id })))
 }
 
@@ -129,7 +125,7 @@ async fn get_device_handler(
   AxumState(ctx): AxumState<Context>,
   Path(id): Path<String>,
 ) -> Result<Json<Device>, AppError> {
-  let device = ctx.db().get_device(&id).await.map_err(|e| anyhow!("{e}"))?;
+  let device = ctx.db().get_device(&id).await?;
   Ok(Json(device))
 }
 
@@ -137,6 +133,6 @@ async fn delete_device_handler(
   AxumState(ctx): AxumState<Context>,
   Path(id): Path<String>,
 ) -> Result<Json<Value>, AppError> {
-  ctx.db().delete_device(&id).await.map_err(|e| anyhow!("{e}"))?;
+  ctx.db().delete_device(&id).await?;
   Ok(Json(json!({ "success": true })))
 }

@@ -63,7 +63,9 @@ impl DB {
     let mut tx = self.pool.begin().await?;
 
     let device = if let Some(device_id) = &event.device {
-      if let Some(id) = self.known_devices.iter().find(|d| d.to_lowercase() == device_id.to_lowercase()) {
+      if let Some(id) =
+        self.known_devices.iter().find(|d| d.to_lowercase() == device_id.to_lowercase())
+      {
         Some(id.clone())
       } else {
         warn!("Received query for unknown device: {}", device_id);

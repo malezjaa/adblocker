@@ -2,7 +2,7 @@ use crate::blocklists::load_blocklists;
 use crate::config::Config;
 use crate::context::Context;
 use crate::database::DB;
-use crate::engine::{run_engine, BlockLookup};
+use crate::engine::{BlockLookup, run_engine};
 use crate::firewall::open_port::open_ports;
 use crate::firewall::override_dns::override_default_dns;
 use crate::task::named_task;
@@ -29,7 +29,6 @@ impl App {
   #[cfg(windows)]
   pub async fn init(ctx: Context) -> Result<Self> {
     let engine = HANDLE::default();
-    override_default_dns(ctx.socket(), ctx.secondary_name_server())?;
     open_ports(engine)?;
 
     Ok(Self { ctx, wfp_sess: WfpSession { engine } })
@@ -37,7 +36,6 @@ impl App {
 
   #[cfg(not(windows))]
   pub async fn init(ctx: Context) -> Result<Self> {
-    override_default_dns(ctx.socket(), ctx.secondary_name_server())?;
     open_ports()?;
 
     Ok(Self { ctx })

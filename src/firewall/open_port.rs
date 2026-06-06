@@ -11,7 +11,7 @@ pub fn open_ports(mut engine: HANDLE) -> Result<()> {
   use crate::fwpm_transaction;
   use crate::windows::filter::{FilterBuilder, condition_local_port};
   use crate::windows::pwstr_buf::PwstrBuffer;
-  
+
   use windows::Win32::NetworkManagement::WindowsFilteringPlatform::{
     FWP_ACTION_PERMIT, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4,
     FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6,

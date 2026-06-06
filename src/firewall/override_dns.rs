@@ -1,13 +1,24 @@
+use crate::windows::pwstr_buf::PwstrBuffer;
 use anyhow::{Result, bail};
 use std::net::SocketAddr;
-use std::process::Command;
-use tracing::info;
+use windows::Win32::NetworkManagement::IpHelper::{
+  ConvertInterfaceLuidToGuid, DNS_DOH_SERVER_SETTINGS, DNS_DOH_SERVER_SETTINGS_ENABLE,
+  DNS_INTERFACE_SETTINGS, DNS_INTERFACE_SETTINGS_VERSION3, DNS_INTERFACE_SETTINGS3,
+  DNS_SERVER_PROPERTY, DNS_SERVER_PROPERTY_TYPE, DNS_SERVER_PROPERTY_TYPES,
+  DNS_SETTING_DOH, DNS_SETTING_NAMESERVER, SetInterfaceDnsSettings,
+};
+use windows::Win32::NetworkManagement::Ndis::NET_LUID_LH;
+use windows::core::GUID;
+
+#[derive(Debug)]
+pub struct OverrideDns {
+  pub socket: SocketAddr,
+  pub secondary: Option<SocketAddr>,
+  pub doh: Option<String>,
+}
 
 #[cfg(windows)]
-pub fn override_default_dns(
-  socket: SocketAddr,
-  secondary: Option<SocketAddr>,
-) -> Result<()> {
+pub fn override_default_dns(settings: OverrideDns) -> Result<()> {
   use crate::windows::adapters::dns_servers_to_strings;
   use windows::Win32::Foundation::{ERROR_BUFFER_OVERFLOW, NO_ERROR};
   use windows::Win32::NetworkManagement::IpHelper::{
@@ -16,7 +27,6 @@ pub fn override_default_dns(
   };
   use windows::Win32::NetworkManagement::Ndis::IfOperStatusUp;
   use windows::Win32::Networking::WinSock::AF_UNSPEC;
-
   let adapters = unsafe {
     let mut buf_len: u32 = 0;
 
@@ -50,7 +60,7 @@ pub fn override_default_dns(
 
     let mut current = adapter_ptr;
 
-    let mut adapters: Vec<(String, Vec<String>)> = vec![];
+    let mut adapters: Vec<(NET_LUID_LH, Vec<String>)> = vec![];
     while !current.is_null() {
       let adapter = &*current;
 
@@ -60,7 +70,7 @@ pub fn override_default_dns(
       {
         let name = adapter.FriendlyName.to_string()?;
         let existing_dns = dns_servers_to_strings(adapter);
-        adapters.push((name, existing_dns));
+        adapters.push((adapter.Luid, existing_dns));
       }
 
       current = adapter.Next;
@@ -69,37 +79,75 @@ pub fn override_default_dns(
     adapters
   };
 
-  let socket = socket.ip().to_string();
-  let secondary_ip =
-    secondary.map(|s| s.ip().to_string()).unwrap_or_else(|| "1.1.1.1".to_string());
+  let primary = settings.socket.ip().to_string();
+  let secondary = settings
+    .secondary
+    .map(|s| s.ip().to_string())
+    .unwrap_or_else(|| "1.1.1.1".to_string());
 
-  for (name, original) in adapters {
-    let mut servers = vec![socket.clone()];
-    servers.extend(original.iter().filter(|o| *o != &socket).cloned());
+  for (luid, name_servers) in adapters {
+    let mut servers = vec![primary.clone()];
+    servers.extend(name_servers.into_iter().filter(|s| s != &primary));
 
-    if !servers.contains(&secondary_ip) {
-      servers.push(secondary_ip.clone());
+    if !servers.contains(&secondary) {
+      servers.push(secondary.clone());
     }
 
-    let servers_ps =
-      servers.iter().map(|s| format!("\"{}\"", s)).collect::<Vec<_>>().join(",");
+    let dns_string = servers.join(",");
+    let ns = PwstrBuffer::new(&dns_string);
 
-    info!("Name servers: {}", servers.join(", "));
+    let doh_template;
+    let mut doh_settings;
+    let server_property;
 
-    let script = format!(
-      "Set-DnsClientServerAddress -InterfaceAlias '{name}' -ServerAddresses ({})",
-      servers_ps
-    );
+    let (flags, c_server_props, server_props_ptr) = if let Some(doh) = &settings.doh {
+      doh_template = PwstrBuffer::new(doh);
+      doh_settings = DNS_DOH_SERVER_SETTINGS {
+        Template: doh_template.as_pwstr(),
+        Flags: DNS_DOH_SERVER_SETTINGS_ENABLE as u64,
+      };
+      server_property = DNS_SERVER_PROPERTY {
+        Version: 1,
+        ServerIndex: 0,
+        Type: DNS_SERVER_PROPERTY_TYPE(1),
+        Property: DNS_SERVER_PROPERTY_TYPES { DohSettings: &mut doh_settings },
+      };
+      (
+        (DNS_SETTING_NAMESERVER | DNS_SETTING_DOH) as u64,
+        1u32,
+        &server_property as *const _ as *mut DNS_SERVER_PROPERTY,
+      )
+    } else {
+      doh_template = PwstrBuffer::new(&String::new());
+      doh_settings = DNS_DOH_SERVER_SETTINGS::default();
+      server_property = DNS_SERVER_PROPERTY::default();
+      (DNS_SETTING_NAMESERVER as u64, 0u32, std::ptr::null_mut())
+    };
 
-    let status = Command::new("powershell")
-      .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-      .status()?;
+    let settings = DNS_INTERFACE_SETTINGS3 {
+      Version: DNS_INTERFACE_SETTINGS_VERSION3,
+      Flags: flags,
+      NameServer: ns.as_pwstr(),
+      cServerProperties: c_server_props,
+      ServerProperties: server_props_ptr,
+      ..Default::default()
+    };
 
-    if !status.success() {
-      bail!("Set-DnsClientServerAddress failed");
+    unsafe {
+      let mut guid = GUID::default();
+      let status = ConvertInterfaceLuidToGuid(&luid, &mut guid);
+      if status.0 != 0 {
+        bail!("ConvertInterfaceLuidToGuild failed: {status:?}")
+      }
+
+      let status = SetInterfaceDnsSettings(
+        guid,
+        &settings as *const _ as *const DNS_INTERFACE_SETTINGS,
+      );
+      if status.0 != 0 {
+        bail!("SetInterfaceDnsSettings failed: {status:?}");
+      }
     }
-
-    info!("Overridden DNS servers for adapter: {name}");
   }
 
   Ok(())
