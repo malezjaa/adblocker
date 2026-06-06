@@ -38,8 +38,8 @@ impl DB {
     let db = Self { pool, total_queries: Default::default(), record_tx: Some(tx), known_devices: DashSet::new() };
 
     db.init_schema().await?;
-    db.spawn_inserter(rx);
     db.populate_devices().await?;
+    db.spawn_inserter(rx);
 
     Ok(db)
   }
