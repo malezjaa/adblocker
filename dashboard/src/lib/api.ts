@@ -1,5 +1,5 @@
-import {useQuery, useQueryClient} from "@tanstack/react-query"
-import {useEffect} from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect } from "react"
 
 export type Stats = {
   total_queries: number
@@ -98,7 +98,7 @@ export function useStatsWs() {
       queryClient.setQueryData(["stats"], stats)
       await queryClient.invalidateQueries({
         queryKey: ["devices"],
-        refetchType: "all"
+        refetchType: "all",
       })
     }
 

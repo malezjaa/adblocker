@@ -1,5 +1,13 @@
-import {Apple, HelpCircle, Monitor, Router, Smartphone, Tablet, Terminal,} from "lucide-react"
-import {DeviceType} from "@/lib/api"
+import {
+  Apple,
+  HelpCircle,
+  Monitor,
+  Router,
+  Smartphone,
+  Tablet,
+  Terminal,
+} from "lucide-react"
+import { DeviceType } from "@/lib/api"
 
 export const DEVICE_CONFIG: Record<
   DeviceType,
@@ -66,7 +74,7 @@ export function formatLastSeen(ts: number): {
   label: string
   isRecent: boolean
 } {
-  const diff = Date.now() - ts * 1000;
+  const diff = Date.now() - ts * 1000
   const mins = Math.floor(diff / 60_000)
   const hours = Math.floor(diff / 3_600_000)
   const days = Math.floor(diff / 86_400_000)

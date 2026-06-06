@@ -86,6 +86,16 @@ impl DB {
         warn!(error = ?err, "failed to cleanup query_log");
       }
     }
+  }
+
+  pub async fn reset_stats(&self) -> Result<()> {
+    let mut tx = self.pool.begin().await?;
+
+    sqlx::query("DELETE FROM query_log").execute(&mut *tx).await?;
+
+    sqlx::query("DELETE FROM domain_stats").execute(&mut *tx).await?;
+
+    tx.commit().await?;
 
     Ok(())
   }

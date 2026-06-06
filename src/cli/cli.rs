@@ -22,6 +22,8 @@ pub enum Commands {
     #[command(subcommand)]
     command: DnsCommand,
   },
+  #[command(name = "reset-db")]
+  ResetDB,
 }
 
 #[derive(Subcommand, Debug)]
