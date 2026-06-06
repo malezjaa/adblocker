@@ -2,7 +2,7 @@ use crate::blocklists::load_blocklists;
 use crate::config::Config;
 use crate::context::Context;
 use crate::database::DB;
-use crate::engine::{BlockLookup, run_engine};
+use crate::engine::{run_engine, BlockLookup};
 use crate::firewall::open_port::open_ports;
 use crate::firewall::override_dns::override_default_dns;
 use crate::task::named_task;
@@ -66,9 +66,6 @@ impl App {
         ));
 
         tasks.spawn(named_task("DNS", Self::start_dns(self.ctx.clone())));
-        if config.dot_enabled() {
-          tasks.spawn(named_task("DoT", Self::start_dot(self.ctx.clone())));
-        }
         if config.doh_enabled() {
           tasks.spawn(named_task("DoH", Self::start_doh(self.ctx.clone())));
         }

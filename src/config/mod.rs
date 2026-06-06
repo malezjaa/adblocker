@@ -14,7 +14,6 @@ pub struct Config {
   pub secondary_name_server: Option<SocketAddr>,
   pub block_rules: Option<Vec<String>>,
   pub doh: Option<bool>,
-  pub dot: Option<bool>,
   pub dashboard: Option<bool>,
   pub rewrites: Option<Vec<Rewrite>>,
 }
@@ -26,7 +25,6 @@ impl Config {
       secondary_name_server: None,
       block_rules: None,
       doh: Some(true),
-      dot: Some(true),
       dashboard: Some(true),
       rewrites: None,
     })
@@ -63,10 +61,6 @@ impl Config {
 
   pub fn doh_enabled(&self) -> bool {
     self.doh.unwrap_or(true)
-  }
-
-  pub fn dot_enabled(&self) -> bool {
-    self.dot.unwrap_or(true)
   }
 
   pub fn dashboard_enabled(&self) -> bool {

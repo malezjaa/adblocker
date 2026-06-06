@@ -63,8 +63,8 @@ impl DB {
     let mut tx = self.pool.begin().await?;
 
     let device = if let Some(device_id) = &event.device {
-      if self.known_devices.contains(device_id) {
-        Some(device_id.clone())
+      if let Some(id) = self.known_devices.iter().find(|d| d.to_lowercase() == device_id.to_lowercase()) {
+        Some(id.clone())
       } else {
         warn!("Received query for unknown device: {}", device_id);
         None
@@ -82,7 +82,6 @@ impl DB {
       .bind(match event.block_origin {
         BlockOrigin::Plain => "plain",
         BlockOrigin::DoH => "doh",
-        BlockOrigin::DoT => "dot",
       })
       .bind(event.timestamp)
       .bind(event.response_time)

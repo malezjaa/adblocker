@@ -42,7 +42,7 @@ pub fn get_certs() -> Result<Certs> {
   ca_params.not_before = OffsetDateTime::now_utc();
   ca_params.not_after = OffsetDateTime::now_utc() + Duration::days(3650);
   let mut dn = DistinguishedName::new();
-  dn.push(DnType::CommonName, "DoT Local CA");
+  dn.push(DnType::CommonName, "ADB Local CA");
   ca_params.distinguished_name = dn;
 
   let ca = CertifiedIssuer::self_signed(ca_params, ca_key)?;
@@ -60,7 +60,7 @@ pub fn get_certs() -> Result<Certs> {
   leaf_params.not_before = OffsetDateTime::now_utc();
   leaf_params.not_after = OffsetDateTime::now_utc() + Duration::days(365);
   let mut dn = DistinguishedName::new();
-  dn.push(DnType::CommonName, "DoT Local");
+  dn.push(DnType::CommonName, "ADB Local");
   leaf_params.distinguished_name = dn;
 
   let leaf_cert = leaf_params.signed_by(&leaf_key, &ca)?;
