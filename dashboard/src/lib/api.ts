@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect } from "react"
+import {useQuery, useQueryClient} from "@tanstack/react-query"
+import {useEffect} from "react"
 
 export type Stats = {
   total_queries: number
@@ -92,10 +92,14 @@ export function useStatsWs() {
   useEffect(() => {
     const ws = new WebSocket(WS_URL)
 
-    ws.onmessage = (event) => {
+    ws.onmessage = async (event) => {
       const stats: Stats = JSON.parse(event.data)
 
       queryClient.setQueryData(["stats"], stats)
+      await queryClient.invalidateQueries({
+        queryKey: ["devices"],
+        refetchType: "all"
+      })
     }
 
     ws.onclose = () => {

@@ -107,6 +107,13 @@ impl DB {
       .bind(event.timestamp)
       .execute(&mut *tx)
       .await?;
+    if let Some(ref device_id) = device {
+      sqlx::query("UPDATE device SET last_seen = ? WHERE id = ?")
+        .bind(event.timestamp)
+        .bind(device_id)
+        .execute(&mut *tx)
+        .await?;
+    }
 
     tx.commit().await?;
 
