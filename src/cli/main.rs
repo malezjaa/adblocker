@@ -2,14 +2,15 @@ mod cli;
 pub mod devices;
 
 use crate::cli::{Cli, Commands, DeviceCommand, DnsCommand};
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use clap::Parser;
 use dns_adblock::config::Config;
 use dns_adblock::context::Context;
 use dns_adblock::database::DB;
-use dns_adblock::firewall::override_dns::{OverrideDns, override_default_dns};
+use dns_adblock::firewall::override_dns::{override_default_dns, OverrideDns};
 use dns_adblock::logger::setup_logger;
 use tracing::{error, info, warn};
+use yansi::Paint;
 
 #[derive(Debug)]
 pub struct CliContext {
@@ -52,7 +53,6 @@ async fn main() -> Result<()> {
         } else {
           if let Some(device) = device {
             let device = ctx.db.get_device(&device).await?;
-
             Some(format!("https://127.0.0.1:443/dns-query/{}", device.id))
           } else {
             if ctx.config.dashboard_enabled() {
@@ -65,10 +65,35 @@ async fn main() -> Result<()> {
         override_default_dns(OverrideDns {
           socket: Context::socket(),
           secondary: None,
-          doh,
+          doh: doh.clone(),
         })?;
 
-        info!("successfully overriden DNS settings");
+        println!();
+        println!("  {} {}", "✓".green().bold(), "DNS configured".green().bold());
+        println!("  {}", "─".repeat(44).dim());
+
+        match &doh {
+          Some(url) => {
+            println!("  {}  {}", "Protocol:".dim(), "DNS-over-HTTPS".cyan().bold());
+            println!("  {}  {}", "Endpoint:".dim(), url.bold());
+          }
+          None => {
+            println!("  {}  {}", "Protocol:".dim(), "Unencrypted DNS".rgb(251, 113, 133).bold());
+            println!("  {}  {}", "Endpoint:".dim(), "127.0.0.1 (system default)".bold());
+          }
+        }
+
+        if no_doh {
+          println!(
+            "  {} {}",
+            "⚠".rgb(251, 191, 36),
+            "Unencrypted DNS is not recommended".rgb(251, 191, 36).dim()
+          );
+        }
+
+        println!("  {}", "─".repeat(44).dim());
+        println!();
+
         Ok(())
       }
     },
