@@ -4,23 +4,17 @@ pub mod schema;
 pub mod stats;
 
 use crate::database::query_logs::QueryEvent;
-use crate::domain::{query_domain, registered_domain};
-use crate::engine::BlockOrigin;
 use anyhow::{anyhow, Result};
 use chrono::Duration as ChronoDuration;
-use chrono::{Timelike, Utc};
+use chrono::Utc;
 use dashmap::DashSet;
-use hickory_proto::op::Message;
-use serde::{Deserialize, Serialize};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
-use std::net::SocketAddr;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
-use tracing::{debug, warn};
+use tokio::sync::mpsc::{channel, Sender};
+use tracing::warn;
 
 #[derive(Debug, Clone)]
 pub struct DB {

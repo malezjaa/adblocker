@@ -3,7 +3,6 @@ use crate::config::Config;
 use crate::context::Context;
 use crate::database::DB;
 use crate::engine::{BlockLookup, run_engine};
-use crate::firewall::external_dns::block_external_dns;
 use crate::firewall::open_port::open_ports;
 use crate::firewall::override_dns::override_default_dns;
 use crate::task::named_task;

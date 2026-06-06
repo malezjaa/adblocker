@@ -1,7 +1,7 @@
 use crate::application::app::App;
 use crate::context::Context;
 use crate::engine::{BlockOrigin, process_message};
-use anyhow::{Result, bail};
+use anyhow::Result;
 use hickory_proto::op::Message;
 use hickory_proto::serialize::binary::BinDecodable;
 use std::net::SocketAddr;
