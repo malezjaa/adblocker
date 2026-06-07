@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect } from "react"
+import {useQuery, useQueryClient} from "@tanstack/react-query"
+import {useEffect} from "react"
 
 export type Stats = {
   total_queries: number
@@ -107,13 +107,28 @@ export function useStatsWs() {
     const ws = new WebSocket(WS_URL)
 
     ws.onmessage = async (event) => {
-      const stats: Stats = JSON.parse(event.data)
+      try {
+        const payload = JSON.parse(event.data)
 
-      queryClient.setQueryData(["stats"], stats)
-      await queryClient.invalidateQueries({
-        queryKey: ["devices"],
-        refetchType: "all",
-      })
+        if (!payload || !payload.stats) {
+          console.warn("unexpected ws payload, missing stats field", payload)
+          return
+        }
+
+        queryClient.setQueryData(["stats"], payload.stats as Stats)
+
+        if (payload.top_blocked) {
+          queryClient.setQueryData(["top-blocked"], payload.top_blocked as unknown as TopBlocked[])
+        }
+
+        if (payload.hours) {
+          queryClient.setQueryData(["chart-data", undefined], payload.hours as unknown as HourStat[])
+        }
+
+        await queryClient.invalidateQueries({ queryKey: ["devices"], refetchType: "all" })
+      } catch (e) {
+        console.error("failed to parse ws message", e)
+      }
     }
 
     ws.onclose = () => {

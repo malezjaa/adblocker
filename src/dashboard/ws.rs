@@ -1,9 +1,10 @@
 use crate::context::Context;
+use crate::database::stats::{HourStat, Stats, TopDomain};
 use axum::body::Bytes;
-use axum::extract::ConnectInfo;
-use axum::extract::State as AxumState;
 use axum::extract::ws::close_code::NORMAL;
 use axum::extract::ws::{CloseFrame, Message, Utf8Bytes, WebSocket, WebSocketUpgrade};
+use axum::extract::ConnectInfo;
+use axum::extract::State as AxumState;
 use axum::response::IntoResponse;
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -35,6 +36,13 @@ async fn handle_socket(ctx: Context, mut socket: WebSocket, who: SocketAddr) {
   let mut rx = ctx.ws_tx().subscribe();
   let (mut sender, mut receiver) = socket.split();
 
+  #[derive(serde::Serialize)]
+  struct RealtimePayload {
+    stats: Stats,
+    top_blocked: Vec<TopDomain>,
+    hours: Vec<HourStat>,
+  }
+
   let mut send_task = tokio::spawn(async move {
     let mut count = 0;
     while let Ok(event) = rx.recv().await {
@@ -42,7 +50,11 @@ async fn handle_socket(ctx: Context, mut socket: WebSocket, who: SocketAddr) {
       match event {
         WsEvent::DNSRequest => {
           let stats = ctx.db().stats(None, None).await?;
-          sender.send(Message::Text(serde_json::to_string(&stats)?.into())).await?;
+          let top = ctx.db().top_blocked(Some(10)).await?;
+          let hours = ctx.db().stats_by_hour_today().await?;
+
+          let payload = RealtimePayload { stats, top_blocked: top, hours };
+          sender.send(Message::Text(serde_json::to_string(&payload)?.into())).await?;
         }
       }
     }
