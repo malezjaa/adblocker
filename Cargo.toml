@@ -65,11 +65,20 @@ widestring = "1.2.1"
 winres = "0.1"
 
 [profile.release]
+debug = true
+debug-assertions = false
+overflow-checks = false
+lto = "thin"
+codegen-units = 16
+incremental = false
+panic = "abort"
+
+[profile.max-perf]
+inherits = "release"
 opt-level = 3
 lto = "fat"
 codegen-units = 1
 panic = "abort"
-strip = true
 
 [[bin]]
 name = "cli"

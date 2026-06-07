@@ -3,15 +3,17 @@ pub mod query_logs;
 pub mod schema;
 pub mod stats;
 
+use crate::context::{Context, ContextImpl};
 use crate::database::query_logs::QueryEvent;
 use anyhow::{Result, anyhow};
 use chrono::Duration as ChronoDuration;
 use chrono::Utc;
 use dashmap::DashSet;
+use parking_lot::RwLock;
 use sqlx::SqlitePool;
 use std::path::Path;
-use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
+use std::sync::{Arc, Weak};
 use std::time::Duration;
 use tokio::sync::mpsc::{Sender, channel};
 use tracing::warn;
@@ -22,6 +24,7 @@ pub struct DB {
   pub total_queries: Arc<AtomicUsize>,
   pub record_tx: Option<Sender<QueryEvent>>,
   pub known_devices: DashSet<String>,
+  pub ctx_ref: Arc<RwLock<Option<Weak<ContextImpl>>>>,
 }
 
 impl DB {
@@ -34,6 +37,7 @@ impl DB {
       total_queries: Default::default(),
       record_tx: Some(tx),
       known_devices: DashSet::new(),
+      ctx_ref: Default::default(),
     };
 
     db.init_schema().await?;
@@ -62,6 +66,7 @@ impl DB {
       total_queries: Default::default(),
       record_tx: None,
       known_devices: DashSet::new(),
+      ctx_ref: Default::default(),
     };
     db.init_schema().await?;
 
@@ -98,5 +103,13 @@ impl DB {
     tx.commit().await?;
 
     Ok(())
+  }
+
+  pub fn attach_context(&self, ctx: &Context) {
+    *self.ctx_ref.write() = Some(Arc::downgrade(&ctx.0));
+  }
+
+  pub fn context(&self) -> Option<Context> {
+    self.ctx_ref.read().as_ref()?.upgrade().map(Context)
   }
 }

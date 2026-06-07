@@ -1,8 +1,10 @@
+use crate::context::Context;
 use crate::database::DB;
 use crate::domain::{query_domain, registered_domain};
 use crate::engine::BlockOrigin;
 use chrono::Utc;
 use hickory_proto::op::Message;
+use hickory_proto::rr::RData;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::sync::atomic::Ordering;
@@ -14,6 +16,7 @@ pub struct QueryEvent {
   pub domain: String,
   pub registered_domain: String,
   pub client_ip: String,
+  pub resolved_ip: Option<String>,
   pub blocked: bool,
   pub block_origin: BlockOrigin,
   pub timestamp: i64,
@@ -25,6 +28,7 @@ impl QueryEvent {
   pub fn new(
     domain: String,
     client_ip: String,
+    resolved_ip: Option<String>,
     blocked: bool,
     block_origin: BlockOrigin,
     response_time: i64,
@@ -34,6 +38,7 @@ impl QueryEvent {
       registered_domain: registered_domain(&domain),
       domain,
       client_ip,
+      resolved_ip,
       blocked,
       block_origin,
       timestamp: Utc::now().timestamp(),
@@ -62,6 +67,16 @@ impl DB {
   pub async fn insert_query(&self, event: &QueryEvent) -> anyhow::Result<()> {
     let mut tx = self.pool.begin().await?;
 
+    let ctx = self.context();
+
+    let mut resolved_ip = event.resolved_ip.clone();
+    if resolved_ip.is_none() && event.blocked {
+      resolved_ip = resolve_domain_ip(ctx.as_ref(), &event.domain).await;
+    }
+
+    let (country_code, company_name) =
+      lookup_geo_company(ctx.as_ref(), resolved_ip.as_deref());
+
     let device = if let Some(device_id) = &event.device {
       if let Some(id) =
         self.known_devices.iter().find(|d| d.to_lowercase() == device_id.to_lowercase())
@@ -76,7 +91,7 @@ impl DB {
     };
 
     sqlx::query(
-      "INSERT INTO query_log (domain, client_ip, blocked, block_origin, timestamp, response_time, device_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO query_log (domain, client_ip, blocked, block_origin, timestamp, response_time, device_id, country_code, company_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
       .bind(&event.domain)
       .bind(&event.client_ip)
@@ -88,6 +103,8 @@ impl DB {
       .bind(event.timestamp)
       .bind(event.response_time)
       .bind(&device)
+      .bind(country_code)
+      .bind(company_name)
       .execute(&mut *tx)
       .await?;
 
@@ -132,9 +149,12 @@ impl DB {
     device: Option<String>,
   ) {
     if let Some(domain) = query_domain(response) {
+      let resolved_ip = if blocked { None } else { first_answer_ip(response) };
+
       let event = QueryEvent::new(
         domain,
         src.ip().to_string(),
+        resolved_ip,
         blocked,
         block_origin,
         response_time,
@@ -148,4 +168,32 @@ impl DB {
         .try_send(event);
     }
   }
+}
+
+fn first_answer_ip(response: &Message) -> Option<String> {
+  response.answers.iter().find_map(|record| match &record.data {
+    RData::A(ip) => Some(ip.0.to_string()),
+    RData::AAAA(ip) => Some(ip.0.to_string()),
+    _ => None,
+  })
+}
+
+fn lookup_geo_company(
+  ctx: Option<&Context>,
+  ip: Option<&str>,
+) -> (Option<String>, Option<String>) {
+  let (Some(ctx), Some(ip)) = (ctx, ip) else {
+    return (None, None);
+  };
+
+  match ctx.lookup_mmdb(ip.to_string()) {
+    Ok(Some(geo)) => (geo.country, geo.asn_org),
+    _ => (None, None),
+  }
+}
+
+async fn resolve_domain_ip(ctx: Option<&Context>, domain: &str) -> Option<String> {
+  let ctx = ctx?;
+  let lookup = ctx.resolver().lookup_ip(domain.trim_end_matches('.')).await.ok()?;
+  lookup.iter().next().map(|ip| ip.to_string())
 }

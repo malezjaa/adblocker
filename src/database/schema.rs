@@ -24,6 +24,8 @@ impl DB {
             block_origin  TEXT,
             timestamp     INTEGER NOT NULL,
             response_time INTEGER NOT NULL,
+          country_code  TEXT,
+          company_name  TEXT,
 
             device_id     TEXT,
 

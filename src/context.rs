@@ -76,6 +76,7 @@ impl Context {
     let opts = resolver_builder.options_mut();
     opts.negative_min_ttl = Some(Duration::from_secs(60));
     opts.positive_min_ttl = Some(Duration::from_secs(60));
+    opts.num_concurrent_reqs = 3;
 
     let server_config = Arc::new(
       ServerConfig::builder().with_no_client_auth().with_single_cert(certs, key)?,
@@ -83,7 +84,7 @@ impl Context {
 
     let paths = download_mmdbs_files();
 
-    Ok(Self(Arc::new(ContextImpl {
+    let ctx = Self(Arc::new(ContextImpl {
       tx,
       config: RwLock::new(config),
       db,
@@ -94,7 +95,11 @@ impl Context {
       config_path,
       mmdbs: RwLock::new(None),
       paths,
-    })))
+    }));
+
+    ctx.db().attach_context(&ctx);
+
+    Ok(ctx)
   }
 
   pub fn server_config(&self) -> Arc<ServerConfig> {
