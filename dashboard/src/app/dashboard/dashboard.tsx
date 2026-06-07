@@ -1,10 +1,11 @@
+import type { CSSProperties } from "react"
+
 import { AppSidebar } from "@/components/app-sidebar"
 import { RequestsChart } from "@/components/requests-chart.tsx"
 import { SectionCards } from "@/components/section-cards"
+import { TopEntitiesCards } from "@/components/top-entities-cards"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-
-import * as React from "react"
 import Devices from "@/components/devices/devices.tsx"
 
 export function Dashboard() {
@@ -14,7 +15,7 @@ export function Dashboard() {
         {
           "--sidebar-width": "calc(var(--spacing) * 72)",
           "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
+        } as CSSProperties
       }
     >
       <AppSidebar variant="inset" />
@@ -27,6 +28,8 @@ export function Dashboard() {
               <div className="px-4 lg:px-6">
                 <RequestsChart />
               </div>
+
+              <TopEntitiesCards />
 
               <div className="px-4 lg:px-6">
                 <Devices />

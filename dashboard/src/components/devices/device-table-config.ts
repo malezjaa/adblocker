@@ -7,7 +7,7 @@ import {
   Tablet,
   Terminal,
 } from "lucide-react"
-import { DeviceType } from "@/lib/api"
+import { DeviceTypes, type DeviceType } from "@/lib/api"
 
 export const DEVICE_CONFIG: Record<
   DeviceType,
@@ -19,49 +19,49 @@ export const DEVICE_CONFIG: Record<
     badgeColor: string
   }
 > = {
-  [DeviceType.Windows]: {
+  [DeviceTypes.Windows]: {
     label: "Windows",
     icon: Monitor,
     iconColor: "text-sky-400",
     iconBg: "bg-sky-400/15",
     badgeColor: "bg-sky-400/10 text-sky-400 ring-1 ring-sky-400/30",
   },
-  [DeviceType.Linux]: {
+  [DeviceTypes.Linux]: {
     label: "Linux",
     icon: Terminal,
     iconColor: "text-amber-400",
     iconBg: "bg-amber-400/15",
     badgeColor: "bg-amber-400/10 text-amber-400 ring-1 ring-amber-400/30",
   },
-  [DeviceType.MacOs]: {
+  [DeviceTypes.MacOs]: {
     label: "macOS",
     icon: Apple,
     iconColor: "text-violet-400",
     iconBg: "bg-violet-400/15",
     badgeColor: "bg-violet-400/10 text-violet-400 ring-1 ring-violet-400/30",
   },
-  [DeviceType.Android]: {
+  [DeviceTypes.Android]: {
     label: "Android",
     icon: Smartphone,
     iconColor: "text-emerald-400",
     iconBg: "bg-emerald-400/15",
     badgeColor: "bg-emerald-400/10 text-emerald-400 ring-1 ring-emerald-400/30",
   },
-  [DeviceType.iOS]: {
+  [DeviceTypes.iOS]: {
     label: "iOS",
     icon: Tablet,
     iconColor: "text-rose-400",
     iconBg: "bg-rose-400/15",
     badgeColor: "bg-rose-400/10 text-rose-400 ring-1 ring-rose-400/30",
   },
-  [DeviceType.Router]: {
+  [DeviceTypes.Router]: {
     label: "Router",
     icon: Router,
     iconColor: "text-orange-400",
     iconBg: "bg-orange-400/15",
     badgeColor: "bg-orange-400/10 text-orange-400 ring-1 ring-orange-400/30",
   },
-  [DeviceType.Other]: {
+  [DeviceTypes.Other]: {
     label: "Other",
     icon: HelpCircle,
     iconColor: "text-slate-400",

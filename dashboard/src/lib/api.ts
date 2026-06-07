@@ -7,6 +7,20 @@ export type Stats = {
   total_allowed: number
   block_rate: number
   avg_response_time: number
+  top_countries: CountryStat[]
+  top_companies: PopularStat[]
+}
+
+export type CountryStat = {
+  country_code: string
+  total: number
+  blocked: number
+}
+
+export type PopularStat = {
+  label: string
+  total: number
+  blocked: number
 }
 
 const BASE_URL = "http://127.0.0.64"
@@ -112,15 +126,17 @@ export function useStatsWs() {
   }, [queryClient])
 }
 
-export enum DeviceType {
-  Windows = "windows",
-  Linux = "linux",
-  MacOs = "macos",
-  Android = "android",
-  iOS = "ios",
-  Router = "router",
-  Other = "other",
-}
+export const DeviceTypes = {
+  Windows: "windows",
+  Linux: "linux",
+  MacOs: "macos",
+  Android: "android",
+  iOS: "ios",
+  Router: "router",
+  Other: "other",
+} as const
+
+export type DeviceType = (typeof DeviceTypes)[keyof typeof DeviceTypes]
 
 export type Device = {
   id: string

@@ -25,13 +25,29 @@ pub struct TopDomain {
   pub avg_response_time: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
+pub struct CountryStat {
+  pub country_code: String,
+  pub total: i64,
+  pub blocked: i64,
+}
+
+#[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
+pub struct PopularStat {
+  pub label: String,
+  pub total: i64,
+  pub blocked: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Stats {
   pub total_queries: usize,
   pub total_blocked: i64,
   pub total_allowed: i64,
   pub block_rate: f64,
   pub avg_response_time: f64,
+  pub top_countries: Vec<CountryStat>,
+  pub top_companies: Vec<PopularStat>,
 }
 
 impl DB {
@@ -151,6 +167,46 @@ impl DB {
     .fetch_one(&self.pool)
     .await?;
 
+    let top_countries = sqlx::query_as::<_, CountryStat>(
+      "SELECT country_code,
+              COUNT(*) AS total,
+              COALESCE(SUM(blocked), 0) AS blocked
+         FROM query_log
+         WHERE country_code IS NOT NULL
+           AND country_code != ''
+           AND (? IS NULL OR timestamp >= ?)
+           AND (? IS NULL OR timestamp <= ?)
+         GROUP BY country_code
+         ORDER BY total DESC, country_code ASC
+         LIMIT 5",
+    )
+    .bind(since_ts)
+    .bind(since_ts)
+    .bind(until_ts)
+    .bind(until_ts)
+    .fetch_all(&self.pool)
+    .await?;
+
+    let top_companies = sqlx::query_as::<_, PopularStat>(
+      "SELECT company_name AS label,
+              COUNT(*) AS total,
+              COALESCE(SUM(blocked), 0) AS blocked
+         FROM query_log
+         WHERE company_name IS NOT NULL
+           AND company_name != ''
+           AND (? IS NULL OR timestamp >= ?)
+           AND (? IS NULL OR timestamp <= ?)
+         GROUP BY company_name
+         ORDER BY total DESC, label ASC
+         LIMIT 5",
+    )
+    .bind(since_ts)
+    .bind(since_ts)
+    .bind(until_ts)
+    .bind(until_ts)
+    .fetch_all(&self.pool)
+    .await?;
+
     let total = total_blocked + total_allowed;
 
     let block_rate =
@@ -162,6 +218,8 @@ impl DB {
       total_allowed,
       block_rate,
       avg_response_time: avg_response_time.unwrap_or(0.0),
+      top_countries,
+      top_companies,
     })
   }
 }

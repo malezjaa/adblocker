@@ -63,8 +63,8 @@ export function RequestsChart() {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Total Requests</CardTitle>
         <CardDescription>Hourly DNS requests for today</CardDescription>
+        <CardTitle>Total Requests</CardTitle>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-40 w-full">

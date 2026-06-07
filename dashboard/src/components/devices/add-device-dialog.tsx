@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { DeviceType, post } from "@/lib/api"
+import { DeviceTypes, type DeviceType, post } from "@/lib/api"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 import { DEVICE_CONFIG } from "./device-table-config"
@@ -27,7 +27,7 @@ import { DEVICE_CONFIG } from "./device-table-config"
 export function AddDeviceDialog() {
   const [open, setOpen] = useState(false)
   const [deviceName, setDeviceName] = useState("")
-  const [deviceType, setDeviceType] = useState<DeviceType>(DeviceType.Windows)
+  const [deviceType, setDeviceType] = useState<DeviceType>(DeviceTypes.Windows)
   const [nameError, setNameError] = useState("")
   const queryClient = useQueryClient()
 
@@ -43,7 +43,7 @@ export function AddDeviceDialog() {
       toast.success("Device registered successfully")
       await queryClient.invalidateQueries({ queryKey: ["devices"] })
       setDeviceName("")
-      setDeviceType(DeviceType.Windows)
+      setDeviceType(DeviceTypes.Windows)
       setNameError("")
       setOpen(false)
     }
@@ -53,7 +53,7 @@ export function AddDeviceDialog() {
     setOpen(next)
     if (!next) {
       setDeviceName("")
-      setDeviceType(DeviceType.Windows)
+      setDeviceType(DeviceTypes.Windows)
       setNameError("")
     }
   }
