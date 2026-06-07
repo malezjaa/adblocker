@@ -1,18 +1,12 @@
 "use client"
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { useStats } from "@/lib/api.ts"
-import { Skeleton } from "@/components/ui/skeleton.tsx"
-import { ArrowUpRightIcon } from "lucide-react"
-import { useRef, useLayoutEffect } from "react"
+import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,} from "@/components/ui/card"
+import {useStats} from "@/lib/api.ts"
+import {Skeleton} from "@/components/ui/skeleton.tsx"
+import {ArrowUpRightIcon} from "lucide-react"
 import * as React from "react"
+import {useLayoutEffect, useRef} from "react"
+import NumberFlow from "@number-flow/react";
 
 const chartColors = {
   total: "hsl(210, 50%, 55%)",
@@ -121,7 +115,7 @@ function CountBadge({ value, color }: { value: number; color: string }) {
         color,
       }}
     >
-      {value.toLocaleString()}
+      <NumberFlow value={value} />
     </div>
   )
 }
