@@ -1,23 +1,23 @@
 "use client"
 
+import {EllipsisVertical, FolderMinus, FolderPen, Wifi, WifiOff,} from "lucide-react"
+import {useState} from "react"
+import {TableCell, TableRow} from "@/components/ui/table"
+import {Checkbox} from "@/components/ui/checkbox"
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,} from "@/components/ui/dropdown-menu"
 import {
-  EllipsisVertical,
-  FolderMinus,
-  FolderPen,
-  Wifi,
-  WifiOff,
-} from "lucide-react"
-import { TableCell, TableRow } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { cn } from "@/lib/utils"
-import { type Device } from "@/lib/api"
-import { DEVICE_CONFIG, formatLastSeen } from "./device-table-config"
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {Button} from "@/components/ui/button"
+import {cn} from "@/lib/utils"
+import type {Device} from "@/lib/api"
+import {DEVICE_CONFIG, formatLastSeen} from "./device-table-config"
 
 interface DeviceTableRowProps {
   device: Device
@@ -25,6 +25,7 @@ interface DeviceTableRowProps {
 }
 
 export function DeviceTableRow({ device, onDelete }: DeviceTableRowProps) {
+  const [open, setOpen] = useState(false)
   const config = DEVICE_CONFIG[device.device_type]
   const Icon = config.icon
   const { label: lastSeenLabel, isRecent } = formatLastSeen(device.last_seen)
@@ -94,20 +95,45 @@ export function DeviceTableRow({ device, onDelete }: DeviceTableRowProps) {
                 <EllipsisVertical width={16} height={16} />
               </span>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem className="flex cursor-pointer gap-3 hover:bg-accent!">
-                <FolderPen />
-                <span>Edit</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="flex cursor-pointer gap-3 text-destructive focus:bg-destructive/10 focus:text-destructive"
-                onClick={() => onDelete(device.id)}
-              >
-                <FolderMinus />
-                <span>Delete</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem className="flex cursor-pointer gap-3 hover:bg-accent!">
+                  <FolderPen />
+                  <span>Edit</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="flex cursor-pointer gap-3 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                  onClick={() => setOpen(true)}
+                >
+                  <FolderMinus />
+                  <span>Delete</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogContent className="gap-6 rounded-3xl p-6 sm:max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>Delete device</DialogTitle>
+                </DialogHeader>
+                <DialogDescription>
+                  Are you sure you want to delete <strong>{device.name}</strong>? This action cannot be undone.
+                </DialogDescription>
+                <DialogFooter>
+                  <DialogClose>
+                    <Button variant="outline">Cancel</Button>
+                  </DialogClose>
+                  <Button
+                    variant="destructive"
+                    onClick={async () => {
+                      onDelete(device.id)
+                      setOpen(false)
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
         </div>
       </TableCell>
     </TableRow>

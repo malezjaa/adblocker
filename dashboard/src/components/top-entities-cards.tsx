@@ -4,7 +4,7 @@ import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,} 
 import {useStats} from "@/lib/api.ts"
 import {Skeleton} from "@/components/ui/skeleton.tsx"
 import {ArrowUpRightIcon} from "lucide-react"
-import * as React from "react"
+import type {ReactNode} from "react"
 import {useLayoutEffect, useRef} from "react"
 import NumberFlow from "@number-flow/react";
 
@@ -53,7 +53,7 @@ function useFlipAnimation(keys: string[]) {
     })
 
     prevPositions.current = newPositions
-  }, [keys.join(",")])
+  }, [keys.length])
 
   return containerRef
 }
@@ -70,7 +70,7 @@ function TopListCard({
   description: string
   linkLabel: string
   href: string
-  children: React.ReactNode
+  children: ReactNode
   isLoading: boolean
 }) {
   return (
