@@ -2,7 +2,7 @@ use crate::database::DB;
 use anyhow::Result;
 use anyhow::{anyhow, bail};
 use clap::ValueEnum;
-use rand::{distr::Alphanumeric, RngExt};
+use rand::{RngExt, distr::Alphanumeric};
 use serde::{Deserialize, Serialize};
 
 pub fn generate_device_id() -> String {
@@ -77,11 +77,11 @@ impl DB {
       "INSERT INTO device (id, name, type, last_seen)
        VALUES (?, ?, ?, strftime('%s', 'now'))",
     )
-      .bind(&id)
-      .bind(name)
-      .bind(device_type)
-      .execute(&self.pool)
-      .await
+    .bind(&id)
+    .bind(name)
+    .bind(device_type)
+    .execute(&self.pool)
+    .await
     {
       Ok(_) => {}
       Err(e) if e.to_string().contains("UNIQUE") => {
@@ -120,9 +120,9 @@ impl DB {
     sqlx::query_as::<_, Device>(
       "SELECT id, name, type, last_seen FROM device WHERE id = ?",
     )
-      .bind(id)
-      .fetch_optional(&self.pool)
-      .await?
-      .ok_or_else(|| anyhow!("No device found with id '{id}'"))
+    .bind(id)
+    .fetch_optional(&self.pool)
+    .await?
+    .ok_or_else(|| anyhow!("No device found with id '{id}'"))
   }
 }

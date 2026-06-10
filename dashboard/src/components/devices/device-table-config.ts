@@ -22,51 +22,57 @@ export const DEVICE_CONFIG: Record<
   [DeviceTypes.Windows]: {
     label: "Windows",
     icon: Monitor,
-    iconColor: "text-sky-400",
-    iconBg: "bg-sky-400/15",
-    badgeColor: "bg-sky-400/10 text-sky-400 ring-1 ring-sky-400/30",
+    iconColor: "text-blue-400",
+    iconBg: "bg-blue-400/10",
+    badgeColor: "bg-blue-400/10 text-blue-400 ring-1 ring-blue-400/20",
   },
+
   [DeviceTypes.Linux]: {
     label: "Linux",
     icon: Terminal,
-    iconColor: "text-amber-400",
-    iconBg: "bg-amber-400/15",
-    badgeColor: "bg-amber-400/10 text-amber-400 ring-1 ring-amber-400/30",
+    iconColor: "text-zinc-400",
+    iconBg: "bg-zinc-400/10",
+    badgeColor: "bg-zinc-400/10 text-zinc-400 ring-1 ring-zinc-400/20",
   },
+
   [DeviceTypes.MacOs]: {
     label: "macOS",
     icon: Apple,
-    iconColor: "text-violet-400",
-    iconBg: "bg-violet-400/15",
-    badgeColor: "bg-violet-400/10 text-violet-400 ring-1 ring-violet-400/30",
+    iconColor: "text-slate-300",
+    iconBg: "bg-slate-300/10",
+    badgeColor: "bg-slate-300/10 text-slate-300 ring-1 ring-slate-300/20",
   },
+
   [DeviceTypes.Android]: {
     label: "Android",
     icon: Smartphone,
-    iconColor: "text-emerald-400",
-    iconBg: "bg-emerald-400/15",
-    badgeColor: "bg-emerald-400/10 text-emerald-400 ring-1 ring-emerald-400/30",
+    iconColor: "text-emerald-300",
+    iconBg: "bg-emerald-300/10",
+    badgeColor: "bg-emerald-300/10 text-emerald-300 ring-1 ring-emerald-300/20",
   },
+
   [DeviceTypes.iOS]: {
     label: "iOS",
     icon: Tablet,
-    iconColor: "text-rose-400",
-    iconBg: "bg-rose-400/15",
-    badgeColor: "bg-rose-400/10 text-rose-400 ring-1 ring-rose-400/30",
+    iconColor: "text-indigo-300",
+    iconBg: "bg-indigo-300/10",
+    badgeColor: "bg-indigo-300/10 text-indigo-300 ring-1 ring-indigo-300/20",
   },
+
   [DeviceTypes.Router]: {
     label: "Router",
     icon: Router,
-    iconColor: "text-orange-400",
-    iconBg: "bg-orange-400/15",
-    badgeColor: "bg-orange-400/10 text-orange-400 ring-1 ring-orange-400/30",
+    iconColor: "text-amber-300",
+    iconBg: "bg-amber-300/10",
+    badgeColor: "bg-amber-300/10 text-amber-300 ring-1 ring-amber-300/20",
   },
+
   [DeviceTypes.Other]: {
     label: "Other",
     icon: HelpCircle,
-    iconColor: "text-slate-400",
-    iconBg: "bg-slate-400/15",
-    badgeColor: "bg-slate-400/10 text-slate-400 ring-1 ring-slate-400/30",
+    iconColor: "text-muted-foreground",
+    iconBg: "bg-muted",
+    badgeColor: "bg-muted text-muted-foreground ring-1 ring-border",
   },
 }
 

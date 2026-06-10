@@ -1,5 +1,5 @@
-import {useQuery, useQueryClient} from "@tanstack/react-query"
-import {useEffect} from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect } from "react"
 
 export type Stats = {
   total_queries: number
@@ -118,14 +118,23 @@ export function useStatsWs() {
         queryClient.setQueryData(["stats"], payload.stats as Stats)
 
         if (payload.top_blocked) {
-          queryClient.setQueryData(["top-blocked"], payload.top_blocked as unknown as TopBlocked[])
+          queryClient.setQueryData(
+            ["top-blocked"],
+            payload.top_blocked as unknown as TopBlocked[]
+          )
         }
 
         if (payload.hours) {
-          queryClient.setQueryData(["chart-data", undefined], payload.hours as unknown as HourStat[])
+          queryClient.setQueryData(
+            ["chart-data", undefined],
+            payload.hours as unknown as HourStat[]
+          )
         }
 
-        await queryClient.invalidateQueries({ queryKey: ["devices"], refetchType: "all" })
+        await queryClient.invalidateQueries({
+          queryKey: ["devices"],
+          refetchType: "all",
+        })
       } catch (e) {
         console.error("failed to parse ws message", e)
       }

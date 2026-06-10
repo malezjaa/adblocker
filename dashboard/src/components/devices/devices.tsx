@@ -11,7 +11,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -28,6 +27,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { AddDeviceDialog } from "./add-device-dialog"
 import { DeviceTableRow } from "./device-table-row"
 import { DEVICE_CONFIG } from "./device-table-config"
+import { DashboardCard } from "@/components/dashboard-card.tsx"
 
 const DeviceTable = () => {
   const { data: devices = [], isLoading, isError } = useDevices()
@@ -55,7 +55,7 @@ const DeviceTable = () => {
   }
 
   return (
-    <Card className="h-full w-full gap-6 pt-6 pb-0">
+    <DashboardCard className="h-full w-full gap-6 pt-6 pb-0">
       <CardHeader className="items-center justify-between px-6 sm:flex">
         <div>
           <CardTitle className="leading-normal">Connected Devices</CardTitle>
@@ -135,7 +135,7 @@ const DeviceTable = () => {
           </Table>
         </div>
       </CardContent>
-    </Card>
+    </DashboardCard>
   )
 }
 

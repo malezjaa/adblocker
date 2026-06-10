@@ -1,10 +1,10 @@
 use crate::context::Context;
 use crate::database::stats::{HourStat, Stats, TopDomain};
 use axum::body::Bytes;
-use axum::extract::ws::close_code::NORMAL;
-use axum::extract::ws::{CloseFrame, Message, Utf8Bytes, WebSocket, WebSocketUpgrade};
 use axum::extract::ConnectInfo;
 use axum::extract::State as AxumState;
+use axum::extract::ws::close_code::NORMAL;
+use axum::extract::ws::{CloseFrame, Message, Utf8Bytes, WebSocket, WebSocketUpgrade};
 use axum::response::IntoResponse;
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};

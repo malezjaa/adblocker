@@ -1,44 +1,29 @@
-import type { CSSProperties } from "react"
-
-import { AppSidebar } from "@/components/app-sidebar"
 import { RequestsChart } from "@/components/requests-chart.tsx"
 import { SectionCards } from "@/components/section-cards"
 import { TopEntitiesCards } from "@/components/top-entities-cards"
-import { SiteHeader } from "@/components/site-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import Devices from "@/components/devices/devices.tsx"
+import { AppShell } from "@/components/app/app-shell.tsx"
 
 export function Dashboard() {
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <SectionCards />
-              <div className="px-4 lg:px-6">
-                <RequestsChart />
-              </div>
+    <AppShell>
+      <div className="flex flex-1 flex-col">
+        <div className="@container/main flex flex-1 flex-col gap-2">
+          <div className="flex border-collapse flex-col py-4 md:py-6">
+            <SectionCards />
+            <div className="px-4 lg:px-6">
+              <RequestsChart />
+            </div>
 
-              <TopEntitiesCards />
+            <TopEntitiesCards />
 
-              <div className="px-4 lg:px-6">
-                <Devices />
-              </div>
+            <div className="px-4 lg:px-6">
+              <Devices />
             </div>
           </div>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </AppShell>
   )
 }
 

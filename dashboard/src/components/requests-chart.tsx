@@ -4,7 +4,6 @@ import { type CSSProperties, useMemo } from "react"
 import { Bar, BarChart, Rectangle, ReferenceLine, XAxis } from "recharts"
 
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -18,15 +17,16 @@ import {
 } from "@/components/ui/chart"
 import { useChartData } from "@/lib/api.ts"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
+import { DashboardCard } from "@/components/dashboard-card.tsx"
 
 const chartConfig = {
   total: {
     label: "Total",
-    color: "hsl(210, 50%, 55%)",
+    color: "var(--color-chart-2)",
   },
   blocked: {
     label: "Blocked",
-    color: "hsl(25, 60%, 55%)",
+    color: "var(--color-chart-4)",
   },
 } satisfies ChartConfig
 
@@ -61,7 +61,7 @@ export function RequestsChart() {
   }
 
   return (
-    <Card className="w-full">
+    <DashboardCard className="w-full">
       <CardHeader>
         <CardDescription>Hourly DNS requests for today</CardDescription>
         <CardTitle>Total Requests</CardTitle>
@@ -202,6 +202,6 @@ export function RequestsChart() {
           </BarChart>
         </ChartContainer>
       </CardContent>
-    </Card>
+    </DashboardCard>
   )
 }

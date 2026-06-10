@@ -1,17 +1,20 @@
 "use client"
 
-import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,} from "@/components/ui/card"
-import {useStats} from "@/lib/api.ts"
-import {Skeleton} from "@/components/ui/skeleton.tsx"
-import {ArrowUpRightIcon} from "lucide-react"
-import type {ReactNode} from "react"
-import {useLayoutEffect, useRef} from "react"
-import NumberFlow from "@number-flow/react";
-
-const chartColors = {
-  total: "hsl(210, 50%, 55%)",
-  blocked: "hsl(25, 60%, 55%)",
-}
+import {
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { useStats } from "@/lib/api.ts"
+import { Skeleton } from "@/components/ui/skeleton.tsx"
+import { ArrowUpRightIcon } from "lucide-react"
+import type { ReactNode } from "react"
+import { useLayoutEffect, useRef } from "react"
+import NumberFlow from "@number-flow/react"
+import { DashboardCard } from "@/components/dashboard-card.tsx"
+import { chartColors } from "@/lib/utils.ts"
 
 function countryFlag(countryCode: string) {
   const code = countryCode.trim().toUpperCase()
@@ -74,7 +77,7 @@ function TopListCard({
   isLoading: boolean
 }) {
   return (
-    <Card className="@container/card gap-3 border-border/50 shadow-sm">
+    <DashboardCard className="@container/card gap-3 border-border/50 shadow-sm">
       <CardHeader className="px-5 py-3">
         <CardDescription className="text-xs">{description}</CardDescription>
         <CardTitle>{title}</CardTitle>
@@ -101,19 +104,14 @@ function TopListCard({
           <ArrowUpRightIcon className="size-3" />
         </a>
       </CardFooter>
-    </Card>
+    </DashboardCard>
   )
 }
 
 function CountBadge({ value, color }: { value: number; color: string }) {
   return (
     <div
-      className="rounded-md px-2 py-1 text-center text-xs font-medium tabular-nums"
-      style={{
-        backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${color} 15%, transparent)`,
-        color,
-      }}
+      className={`rounded-md px-2 py-1 text-center text-xs font-medium tabular-nums ${color}`}
     >
       <NumberFlow value={value} />
     </div>
@@ -130,7 +128,7 @@ export function TopEntitiesCards() {
   const companyListRef = useFlipAnimation(companyKeys)
 
   return (
-    <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 dark:*:data-[slot=card]:bg-card">
+    <div className="grid border-collapse grid-cols-1 px-4 lg:px-6 @xl/main:grid-cols-2">
       <TopListCard
         title="Top countries"
         description="Most active country codes"
@@ -138,22 +136,16 @@ export function TopEntitiesCards() {
         href="/"
         isLoading={isLoading}
       >
-        <div className="grid grid-cols-[minmax(0,1fr)_120px] items-end gap-2 border-b border-border/50 pb-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_200px] items-end gap-2 border-b border-border/50 pb-2">
           <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
             Country
           </span>
 
           <div className="grid grid-cols-2 gap-1 text-center">
-            <span
-              className="text-[9px] font-semibold tracking-widest uppercase"
-              style={{ color: chartColors.total }}
-            >
+            <span className="text-[9px] font-semibold tracking-widest text-muted-foreground uppercase">
               Total
             </span>
-            <span
-              className="text-[9px] font-semibold tracking-widest uppercase"
-              style={{ color: chartColors.blocked }}
-            >
+            <span className="text-[9px] font-semibold tracking-widest text-muted-foreground uppercase">
               Blocked
             </span>
           </div>
@@ -163,7 +155,7 @@ export function TopEntitiesCards() {
             <li
               key={item.country_code}
               data-key={item.country_code}
-              className="grid grid-cols-[minmax(0,1fr)_120px] items-center gap-2 rounded-md px-1 py-1.5 transition-colors hover:bg-muted/40"
+              className="grid grid-cols-[minmax(0,1fr)_200px] items-center gap-2 rounded-md px-1 py-1.5 transition-colors hover:bg-muted/40"
             >
               <div className="flex min-w-0 items-center gap-2">
                 <span className="text-sm leading-none" aria-hidden="true">
@@ -199,22 +191,16 @@ export function TopEntitiesCards() {
         href="/"
         isLoading={isLoading}
       >
-        <div className="grid grid-cols-[minmax(0,1fr)_120px] items-end gap-2 border-b border-border/50 pb-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_200px] items-end gap-2 border-b border-border/50 pb-2">
           <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
             Company
           </span>
 
           <div className="grid grid-cols-2 gap-1 text-center">
-            <span
-              className="text-[9px] font-semibold tracking-widest uppercase"
-              style={{ color: chartColors.total }}
-            >
+            <span className="text-[9px] font-semibold tracking-widest text-muted-foreground uppercase">
               Total
             </span>
-            <span
-              className="text-[9px] font-semibold tracking-widest uppercase"
-              style={{ color: chartColors.blocked }}
-            >
+            <span className="text-[9px] font-semibold tracking-widest text-muted-foreground uppercase">
               Blocked
             </span>
           </div>
@@ -224,7 +210,7 @@ export function TopEntitiesCards() {
             <li
               key={item.label}
               data-key={item.label}
-              className="grid grid-cols-[minmax(0,1fr)_120px] items-center gap-2 rounded-md px-1 py-1.5 transition-colors hover:bg-muted/40"
+              className="grid grid-cols-[minmax(0,1fr)_200px] items-center gap-2 rounded-md px-1 py-1.5 transition-colors hover:bg-muted/40"
             >
               <div className="min-w-0">
                 <p className="truncate text-xs leading-tight font-medium">
