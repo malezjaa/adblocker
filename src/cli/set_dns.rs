@@ -1,7 +1,8 @@
+use crate::pretty::{print_field, print_separator, print_success, print_warning};
 use crate::CliContext;
 use anyhow::Result;
 use dns_adblock::context::Context;
-use dns_adblock::firewall::override_dns::{OverrideDns, override_default_dns};
+use dns_adblock::firewall::override_dns::{override_default_dns, OverrideDns};
 use tracing::warn;
 use yansi::Paint;
 
@@ -31,34 +32,25 @@ pub async fn set_dns(
     doh: doh.clone(),
   })?;
 
-  println!();
-  println!("  {} {}", "✓".green().bold(), "DNS configured".green().bold());
-  println!("  {}", "─".repeat(44).dim());
+  print_success("DNS configured");
+  print_separator(44);
 
   match &doh {
     Some(url) => {
-      println!("  {}  {}", "Protocol:".dim(), "DNS-over-HTTPS".cyan().bold());
-      println!("  {}  {}", "Endpoint:".dim(), url.bold());
+      print_field("Protocol:", "DNS-over-HTTPS".cyan().bold());
+      print_field("Endpoint:", url.bold());
     }
     None => {
-      println!(
-        "  {}  {}",
-        "Protocol:".dim(),
-        "Unencrypted DNS".rgb(251, 113, 133).bold()
-      );
-      println!("  {}  {}", "Endpoint:".dim(), "127.0.0.1 (system default)".bold());
+      print_field("Protocol:", "Unencrypted DNS".rgb(251, 113, 133).bold());
+      print_field("Endpoint:", "127.0.0.1 (system default)".bold());
     }
   }
 
   if no_doh {
-    println!(
-      "  {} {}",
-      "⚠".rgb(251, 191, 36),
-      "Unencrypted DNS is not recommended".rgb(251, 191, 36).dim()
-    );
+    print_warning("Unencrypted DNS is not recommended");
   }
 
-  println!("  {}", "─".repeat(44).dim());
+  print_separator(44);
   println!();
 
   Ok(())

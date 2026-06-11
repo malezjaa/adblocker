@@ -1,15 +1,16 @@
 mod cli;
 pub mod devices;
 pub mod set_dns;
+pub mod pretty;
 
 use crate::cli::{Cli, Commands, DeviceCommand, DnsCommand};
 use crate::set_dns::set_dns;
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use clap::Parser;
 use dns_adblock::config::Config;
 use dns_adblock::context::Context;
 use dns_adblock::database::DB;
-use dns_adblock::firewall::override_dns::{OverrideDns, override_default_dns};
+use dns_adblock::firewall::override_dns::{override_default_dns, OverrideDns};
 use dns_adblock::logger::setup_logger;
 use tracing::{error, info, warn};
 use yansi::Paint;

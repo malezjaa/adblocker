@@ -1,3 +1,4 @@
+use crate::pretty::{print_field, print_separator, print_success};
 use crate::CliContext;
 use anyhow::{Result, anyhow};
 use dns_adblock::database::devices::DeviceType;
@@ -47,13 +48,12 @@ impl CliContext {
 
     let type_str = pretty_device_type(ty);
 
-    println!();
-    println!("  {} {}", "✓".green().bold(), "Device created".green().bold());
-    println!("  {}", "─".repeat(30).dim());
-    println!("  {}  {}", "Name:".dim(), name.bold());
-    println!("  {}    {}", "ID:".dim(), id.cyan());
-    println!("  {}  {}", "Type:".dim(), type_str);
-    println!("  {}", "─".repeat(30).dim());
+    print_success("Device created");
+    print_separator(30);
+    print_field("Name:", name.bold());
+    print_field("ID:  ", id.cyan());
+    print_field("Type:", type_str);
+    print_separator(30);
 
     Ok(())
   }
@@ -79,7 +79,7 @@ impl CliContext {
       format!("{} device{}", devices.len(), if devices.len() == 1 { "" } else { "s" })
         .dim()
     );
-    println!("  {}", "─".repeat(44).dim());
+    print_separator(44);
 
     for device in &devices {
       let (last_seen_label, is_recent) = format_last_seen(device.last_seen);
@@ -97,10 +97,10 @@ impl CliContext {
         device.id.cyan().dim(),
         pretty_device_type(device.device_type),
       );
-      println!("      {}", last_seen_label.dim(),);
+      println!("      {}", last_seen_label.dim());
     }
 
-    println!("  {}", "─".repeat(44).dim());
+    print_separator(44);
 
     Ok(())
   }
