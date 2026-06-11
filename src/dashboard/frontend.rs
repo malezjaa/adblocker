@@ -18,10 +18,7 @@ pub async fn serve_file(Path(path): Path<String>) -> Result<impl IntoResponse, A
     ));
   } else {
     DIST.get_file("index.html").ok_or_else(|| {
-      AppError::with_code(
-        "index.html not found",
-        StatusCode::INTERNAL_SERVER_ERROR,
-      )
+      AppError::with_code("index.html not found", StatusCode::INTERNAL_SERVER_ERROR)
     })?
   };
 
@@ -36,10 +33,7 @@ pub async fn serve_file(Path(path): Path<String>) -> Result<impl IntoResponse, A
   };
 
   if let Some(mime) = mime {
-    response.headers_mut().insert(
-      header::CONTENT_TYPE,
-      mime.to_string().parse()?,
-    );
+    response.headers_mut().insert(header::CONTENT_TYPE, mime.to_string().parse()?);
   }
 
   Ok(response)

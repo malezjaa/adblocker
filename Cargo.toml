@@ -48,6 +48,8 @@ mime_guess2 = "2.0.5"
 maxminddb = { version = "0.28", features = ["mmap"] }
 rand = "0.10.1"
 dashmap = "7.0.0-rc2"
+argon2 = "0.6.0-rc.8"
+cliclack = "0.5.4"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = [

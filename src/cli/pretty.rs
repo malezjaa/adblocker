@@ -10,11 +10,11 @@ pub fn print_success(label: &str) {
 }
 
 pub fn print_warning(msg: &str) {
-  println!(
-    "  {} {}",
-    "⚠".rgb(251, 191, 36),
-    msg.rgb(251, 191, 36).dim()
-  );
+  println!("  {} {}", "⚠".bright_yellow(), msg.rgb(251, 191, 36));
+}
+
+pub fn print_error(msg: &str) {
+  println!("  {} {}", "✗".red().bold(), msg.bright_red().bold());
 }
 
 pub fn print_field(key: &str, value: impl std::fmt::Display) {

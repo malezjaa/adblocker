@@ -24,8 +24,8 @@ impl DB {
             block_origin  TEXT,
             timestamp     INTEGER NOT NULL,
             response_time INTEGER NOT NULL,
-          country_code  TEXT,
-          company_name  TEXT,
+            country_code  TEXT,
+            company_name  TEXT,
 
             device_id     TEXT,
 
@@ -95,6 +95,17 @@ impl DB {
     sqlx::query(
       "CREATE INDEX IF NOT EXISTS idx_domain_stats_last_seen
              ON domain_stats(last_seen)",
+    )
+    .execute(&self.pool)
+    .await?;
+
+    sqlx::query(
+      "CREATE TABLE IF NOT EXISTS admin (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            password_hash TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            last_login INTEGER
+          );",
     )
     .execute(&self.pool)
     .await?;

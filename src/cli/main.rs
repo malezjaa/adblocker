@@ -1,18 +1,17 @@
+pub mod admin;
 mod cli;
 pub mod devices;
-pub mod set_dns;
 pub mod pretty;
+pub mod set_dns;
 
-use crate::cli::{Cli, Commands, DeviceCommand, DnsCommand};
+use crate::cli::{AdminCommand, Cli, Commands, DeviceCommand, DnsCommand};
 use crate::set_dns::set_dns;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use clap::Parser;
+use cliclack::log;
 use dns_adblock::config::Config;
-use dns_adblock::context::Context;
 use dns_adblock::database::DB;
-use dns_adblock::firewall::override_dns::{override_default_dns, OverrideDns};
 use dns_adblock::logger::setup_logger;
-use tracing::{error, info, warn};
 use yansi::Paint;
 
 #[derive(Debug)]
@@ -57,10 +56,15 @@ async fn main() -> Result<()> {
       println!("  {} {}", "✓".green().bold(), "DB reset was successful".green().bold());
       Ok(())
     }
+    Commands::Admin { command } => match command {
+      AdminCommand::Create => ctx.create_admin().await,
+      AdminCommand::Delete => ctx.delete_admin().await,
+      AdminCommand::ChangePassword => ctx.change_password().await,
+    },
   };
 
   if let Err(err) = result {
-    error!("{err}");
+    log::error(format!("{err}"))?;
   }
   Ok(())
 }

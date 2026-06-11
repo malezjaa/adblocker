@@ -1,3 +1,4 @@
+pub mod admin;
 pub mod devices;
 pub mod query_logs;
 pub mod schema;
@@ -97,7 +98,6 @@ impl DB {
     let mut tx = self.pool.begin().await?;
 
     sqlx::query("DELETE FROM query_log").execute(&mut *tx).await?;
-
     sqlx::query("DELETE FROM domain_stats").execute(&mut *tx).await?;
 
     tx.commit().await?;

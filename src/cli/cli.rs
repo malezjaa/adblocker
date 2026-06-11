@@ -24,6 +24,11 @@ pub enum Commands {
   },
   #[command(name = "reset-db")]
   ResetDB,
+
+  Admin {
+    #[command(subcommand)]
+    command: AdminCommand,
+  },
 }
 
 #[derive(Subcommand, Debug)]
@@ -51,4 +56,12 @@ pub enum DnsCommand {
     #[arg(long = "no-doh", default_value = "false")]
     no_doh: bool,
   },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum AdminCommand {
+  Create,
+  Delete,
+  #[command(name = "change-password")]
+  ChangePassword,
 }
