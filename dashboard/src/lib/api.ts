@@ -1,6 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect } from "react"
 
+export type StatsChange = {
+  total_queries: number
+  total_blocked: number
+  total_allowed: number
+  block_rate: number
+  avg_response_time: number
+}
+
 export type Stats = {
   total_queries: number
   total_blocked: number
@@ -9,6 +17,7 @@ export type Stats = {
   avg_response_time: number
   top_countries: CountryStat[]
   top_companies: PopularStat[]
+  weekly_change: StatsChange | null
 }
 
 export type CountryStat = {
