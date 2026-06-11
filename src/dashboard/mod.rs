@@ -6,7 +6,7 @@ pub mod ws;
 use crate::application::app::App;
 use crate::context::Context;
 pub use crate::dashboard::app_error::AppError;
-use crate::dashboard::auth::{auth_login, auth_logout, auth_status};
+use crate::dashboard::auth::{AuthGuard, auth_login, auth_logout, auth_status};
 use crate::dashboard::frontend::serve_file;
 use crate::dashboard::ws::ws_handler;
 use crate::database::devices::Device;
@@ -67,6 +67,7 @@ struct Limit {
 }
 
 async fn top_handler(
+  _guard: AuthGuard,
   AxumState(ctx): AxumState<Context>,
   Query(limit): Query<Limit>,
 ) -> Result<Json<Vec<TopDomain>>, AppError> {
@@ -81,6 +82,7 @@ struct StatsQuery {
 }
 
 async fn stats(
+  _guard: AuthGuard,
   AxumState(ctx): AxumState<Context>,
   Query(query): Query<StatsQuery>,
 ) -> Result<Json<Stats>, AppError> {
@@ -96,6 +98,7 @@ pub struct ChartData {
 }
 
 async fn chart_data(
+  _guard: AuthGuard,
   AxumState(ctx): AxumState<Context>,
 ) -> Result<Json<Vec<ChartData>>, AppError> {
   let rows = ctx.db().stats_by_hour_today().await?;
@@ -107,6 +110,7 @@ async fn chart_data(
 }
 
 async fn get_devices_handler(
+  _guard: AuthGuard,
   AxumState(ctx): AxumState<Context>,
 ) -> Result<Json<Vec<Device>>, AppError> {
   let devices = ctx.db().get_devices().await?;
@@ -120,6 +124,7 @@ struct CreateDevice {
 }
 
 async fn create_device_handler(
+  _guard: AuthGuard,
   AxumState(ctx): AxumState<Context>,
   Json(body): Json<CreateDevice>,
 ) -> Result<Json<Value>, AppError> {
@@ -128,6 +133,7 @@ async fn create_device_handler(
 }
 
 async fn get_device_handler(
+  _guard: AuthGuard,
   AxumState(ctx): AxumState<Context>,
   Path(id): Path<String>,
 ) -> Result<Json<Device>, AppError> {
@@ -136,6 +142,7 @@ async fn get_device_handler(
 }
 
 async fn delete_device_handler(
+  _guard: AuthGuard,
   AxumState(ctx): AxumState<Context>,
   Path(id): Path<String>,
 ) -> Result<Json<Value>, AppError> {

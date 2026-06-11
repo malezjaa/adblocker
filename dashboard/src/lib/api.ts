@@ -34,37 +34,56 @@ export type PopularStat = {
 
 const BASE_URL = "http://127.0.0.64"
 
+const fetchWithCreds = (input: string, init?: RequestInit) => {
+  return fetch(`${BASE_URL}/${input}`, {
+    ...init,
+    credentials: "include",
+  })
+}
+
 export async function api<T>(url: string): Promise<T> {
-  const res = await fetch(`${BASE_URL}/${url}`)
+  const res = await fetchWithCreds(url, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
 
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`)
   }
 
-  return (await res.json()) as Promise<T>
+  return res.json()
 }
 
 export async function del<T>(url: string): Promise<T> {
-  const res = await fetch(`${BASE_URL}/${url}`, {
+  const res = await fetchWithCreds(url, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
     },
   })
 
-  return (await res.json()) as Promise<T>
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`)
+  }
+
+  return res.json()
 }
 
-export async function post<T>(url: string, data: unknown): Promise<T> {
-  const res = await fetch(`${BASE_URL}/${url}`, {
+export async function post<T>(url: string, data?: unknown): Promise<T> {
+  const res = await fetchWithCreds(url, {
     method: "POST",
-    body: JSON.stringify(data),
     headers: {
       "Content-Type": "application/json",
     },
+    body: data !== undefined ? JSON.stringify(data) : undefined,
   })
 
-  return (await res.json()) as Promise<T>
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`)
+  }
+
+  return res.json()
 }
 
 export const useStats = () => {

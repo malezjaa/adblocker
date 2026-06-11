@@ -1,4 +1,5 @@
 use crate::context::Context;
+use crate::dashboard::auth::AuthGuard;
 use crate::database::stats::{HourStat, Stats, TopDomain};
 use axum::body::Bytes;
 use axum::extract::ConnectInfo;
@@ -18,6 +19,7 @@ pub enum WsEvent {
 }
 
 pub(super) async fn ws_handler(
+  _guard: AuthGuard,
   ws: WebSocketUpgrade,
   AxumState(ctx): AxumState<Context>,
   ConnectInfo(addr): ConnectInfo<SocketAddr>,

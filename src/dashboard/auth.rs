@@ -5,11 +5,12 @@ use crate::password::verify_password;
 use anyhow::anyhow;
 use axum::Json;
 use axum::extract::{ConnectInfo, FromRef, FromRequestParts, State as AxumState};
+use axum::http::header::SET_COOKIE;
 use axum::http::request::Parts;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::json;
 use std::net::SocketAddr;
 
 pub struct AuthGuard;
@@ -27,7 +28,7 @@ where
   ) -> Result<Self, Self::Rejection> {
     let ctx = Context::from_ref(state);
 
-    let token = extract_bearer(&parts.headers)
+    let token = extract_session_cookie(&parts.headers)
       .ok_or_else(|| AppError::with_code("Unauthorized", StatusCode::UNAUTHORIZED))?;
 
     let valid = ctx.db().validate_session(token.to_owned()).await.unwrap_or(false);
@@ -40,11 +41,14 @@ where
   }
 }
 
-pub fn extract_bearer(headers: &HeaderMap) -> Option<&str> {
+pub fn extract_session_cookie(headers: &HeaderMap) -> Option<&str> {
   headers
-    .get("Authorization")
-    .and_then(|v| v.to_str().ok())
-    .and_then(|v| v.strip_prefix("Bearer "))
+    .get("Cookie")?
+    .to_str()
+    .ok()?
+    .split(';')
+    .map(|c| c.trim())
+    .find_map(|c| c.strip_prefix("session="))
 }
 
 #[derive(Deserialize, Serialize)]
@@ -79,7 +83,15 @@ pub async fn auth_login(
   let token = generate_token();
   ctx.db().create_session(token.clone(), addr.ip().to_string(), 86400).await?;
 
-  Ok(Json(json!({ "success": true, "token": token })))
+  let cookie =
+    format!("session={}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=86400", token);
+
+  let response = Json(json!({ "success": true }));
+
+  let mut res = response.into_response();
+  res.headers_mut().insert(SET_COOKIE, HeaderValue::from_str(&cookie)?);
+
+  Ok(res)
 }
 
 pub async fn auth_status(
@@ -88,7 +100,7 @@ pub async fn auth_status(
 ) -> Result<Json<AuthStatus>, AppError> {
   let exists = ctx.db().admin_exists().await?;
 
-  let logged_in = match extract_bearer(&headers) {
+  let logged_in = match extract_session_cookie(&headers) {
     Some(token) => ctx.db().validate_session(token.to_owned()).await.unwrap_or(false),
     None => false,
   };
@@ -99,9 +111,16 @@ pub async fn auth_status(
 pub async fn auth_logout(
   AxumState(ctx): AxumState<Context>,
   headers: HeaderMap,
-) -> Result<Json<Value>, AppError> {
-  if let Some(token) = extract_bearer(&headers) {
+) -> Result<impl IntoResponse, AppError> {
+  let mut res = Json(json!({ "success": true })).into_response();
+
+  if let Some(token) = extract_session_cookie(&headers) {
     ctx.db().delete_session(token.to_owned()).await?;
   }
-  Ok(Json(json!({ "success": true })))
+
+  let cookie = "session=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax";
+
+  res.headers_mut().insert(SET_COOKIE, HeaderValue::from_static(cookie));
+
+  Ok(res)
 }
