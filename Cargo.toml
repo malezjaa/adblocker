@@ -25,8 +25,8 @@ futures = "0.3.32"
 sha2 = "0.11.0"
 chrono = { version = "0.4.44", features = ["serde"] }
 scopeguard = "1.2.0"
-axum = { version = "0.8.9", features = ["ws"] }
-sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite", "chrono"] }
+axum = { version = "0.8.9", features = ["ws", "macros"] }
+sqlx = { version = "0.9.0", features = ["runtime-tokio", "sqlite", "chrono"] }
 serde_json = "1.0.149"
 addr = "0.15.6"
 rcgen = "0.14.7"
@@ -50,6 +50,8 @@ rand = "0.10.1"
 dashmap = "7.0.0-rc2"
 argon2 = "0.6.0-rc.8"
 cliclack = "0.5.4"
+hex = "0.4.3"
+async-trait = "0.1.89"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = [

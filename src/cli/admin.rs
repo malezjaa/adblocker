@@ -1,20 +1,9 @@
 use crate::CliContext;
 use crate::pretty::{print_error, print_warning};
 use anyhow::Result;
-use argon2::{
-  Argon2, PasswordHasher, PasswordVerifier, password_hash::phc::PasswordHash,
-};
 use chrono::Utc;
 use cliclack::{confirm, log, password};
-
-pub fn hash_password(password: &str) -> String {
-  Argon2::default().hash_password(password.as_bytes()).unwrap().to_string()
-}
-
-pub fn verify(password: &str, hash: &str) -> bool {
-  let parsed = PasswordHash::new(hash).unwrap();
-  Argon2::default().verify_password(password.as_bytes(), &parsed).is_ok()
-}
+use dns_adblock::password::hash_password;
 
 impl CliContext {
   pub async fn create_admin(&self) -> Result<()> {
@@ -61,7 +50,6 @@ impl CliContext {
     }
 
     let pass = password("Enter new admin password").mask('▪').interact()?;
-
     let pass2 = password("Confirm new password").mask('▪').interact()?;
 
     if pass != pass2 {

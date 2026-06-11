@@ -110,6 +110,25 @@ impl DB {
     .execute(&self.pool)
     .await?;
 
+    sqlx::query(
+      "
+      CREATE TABLE IF NOT EXISTS session (
+          token      TEXT    PRIMARY KEY,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL,
+          last_used  INTEGER NOT NULL,
+          ip_address TEXT    NOT NULL
+      );",
+    )
+    .execute(&self.pool)
+    .await?;
+
+    sqlx::query(
+      "CREATE INDEX IF NOT EXISTS idx_session_expires_at ON session(expires_at);",
+    )
+    .execute(&self.pool)
+    .await?;
+
     Ok(())
   }
 }

@@ -1,6 +1,7 @@
 use crate::database::DB;
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::AssertSqlSafe;
 
 #[derive(sqlx::FromRow, Serialize, Deserialize)]
 pub struct HourStat {
@@ -122,7 +123,7 @@ impl DB {
 
     let rows = match limit {
       Some(limit) => {
-        sqlx::query_as::<_, TopDomain>(&format!("{base} LIMIT ?"))
+        sqlx::query_as::<_, TopDomain>(AssertSqlSafe(format!("{base} LIMIT ?")))
           .bind(limit)
           .fetch_all(&self.pool)
           .await?

@@ -11,6 +11,7 @@ pub mod engine;
 pub mod firewall;
 pub mod logger;
 pub mod mmdb;
+pub mod password;
 pub mod rewrite;
 pub mod task;
 pub mod windows;

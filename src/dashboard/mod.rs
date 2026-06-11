@@ -1,10 +1,12 @@
 pub mod app_error;
+pub mod auth;
 pub mod frontend;
 pub mod ws;
 
 use crate::application::app::App;
 use crate::context::Context;
 pub use crate::dashboard::app_error::AppError;
+use crate::dashboard::auth::{auth_login, auth_logout, auth_status};
 use crate::dashboard::frontend::serve_file;
 use crate::dashboard::ws::ws_handler;
 use crate::database::devices::Device;
@@ -12,7 +14,7 @@ use crate::database::stats::{Stats, TopDomain};
 use anyhow::{Result, anyhow};
 use axum::extract::{Path, Query, State as AxumState};
 use axum::response::IntoResponse;
-use axum::routing::{any, get};
+use axum::routing::{any, get, post};
 use axum::{Json, Router};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
@@ -20,6 +22,7 @@ use serde_json::{Value, json};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
+use tower_http::trace::TraceLayer;
 use tracing::info;
 
 pub async fn server_root() -> Result<impl IntoResponse, AppError> {
@@ -32,6 +35,9 @@ impl App {
       .route("/", get(server_root))
       .route("/api/devices", get(get_devices_handler).post(create_device_handler))
       .route("/api/devices/{id}", get(get_device_handler).delete(delete_device_handler))
+      .route("/api/auth/login", post(auth_login))
+      .route("/api/auth/logout", post(auth_logout))
+      .route("/api/auth/status", get(auth_status))
       .route("/api/top", get(top_handler))
       .route("/api/stats", get(stats))
       .route("/api/chart-data", get(chart_data))

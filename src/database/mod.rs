@@ -2,6 +2,7 @@ pub mod admin;
 pub mod devices;
 pub mod query_logs;
 pub mod schema;
+pub mod sessions;
 pub mod stats;
 
 use crate::context::{Context, ContextImpl};
