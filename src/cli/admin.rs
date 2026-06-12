@@ -1,6 +1,6 @@
 use crate::CliContext;
 use crate::pretty::{print_error, print_warning};
-use anyhow::Result;
+use anyhow::{Result, anyhow, bail};
 use chrono::Utc;
 use cliclack::{confirm, log, password};
 use dns_adblock::password::hash_password;
@@ -16,10 +16,20 @@ impl CliContext {
 
     let pass = password("Enter admin password").mask('▪').interact()?;
 
+    if pass.len() < 8 {
+      bail!("Password must be at least 8 characters long");
+    }
+    if !pass.chars().any(|c| c.is_uppercase()) {
+      bail!("Password must contain at least one uppercase letter");
+    }
+    if !pass.chars().any(|c| c.is_numeric()) {
+      bail!("Password must contain at least one number");
+    }
+
     let pass2 = password("Confirm password").mask('▪').interact()?;
 
     if pass != pass2 {
-      return Err(anyhow::anyhow!("Passwords do not match"));
+      bail!("Passwords do not match");
     }
 
     let hash = hash_password(&pass);
