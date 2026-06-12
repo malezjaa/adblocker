@@ -7,8 +7,10 @@ import {
 } from "@/components/ui/input-group"
 import { cn } from "@/lib/utils"
 import { EyeIcon, EyeOffIcon, LogInIcon } from "lucide-react"
-import type React from "react"
+import React, { useEffect } from "react"
 import { useState } from "react"
+import { authLogin, useAuthStatus } from "@/lib/auth.ts"
+import { useNavigate } from "react-router"
 
 export function AuthDivider({
   children,
@@ -54,16 +56,19 @@ export function FullWidthDivider({
   )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function handleLogin(_password: string): Promise<void> {
-  // TODO: implement login logic
-}
-
 export function AuthPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const { data } = useAuthStatus()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (data) {
+      navigate("/dashboard")
+    }
+  })
 
   const validate = (): string | null => {
     if (!password) return "Password is required."
@@ -82,7 +87,8 @@ export function AuthPage() {
 
     setIsLoading(true)
     try {
-      await handleLogin(password)
+      await authLogin(password)
+      navigate("/dashboard")
     } catch (err) {
       setError("Incorrect password. Please try again.")
     } finally {
