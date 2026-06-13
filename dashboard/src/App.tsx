@@ -2,6 +2,7 @@ import { Dashboard } from "@/app/dashboard/dashboard.tsx"
 import { createBrowserRouter, RouterProvider } from "react-router"
 import { NotFoundPage } from "@/components/not-found.tsx"
 import { AuthPage } from "@/components/auth.tsx"
+import { QueryLogs } from "@/app/dashboard/query-logs.tsx"
 
 let router = createBrowserRouter([
   {
@@ -11,6 +12,10 @@ let router = createBrowserRouter([
   {
     path: "/dashboard",
     Component: Dashboard,
+  },
+  {
+    path: "/query-logs",
+    Component: QueryLogs,
   },
   {
     path: "/login",

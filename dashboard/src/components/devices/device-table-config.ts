@@ -7,7 +7,7 @@ import {
   Tablet,
   Terminal,
 } from "lucide-react"
-import { DeviceTypes, type DeviceType } from "@/lib/api"
+import { type DeviceType, DeviceTypes } from "@/lib/types.ts"
 
 export const DEVICE_CONFIG: Record<
   DeviceType,

@@ -1,6 +1,6 @@
 "use client"
 
-import {Avatar, AvatarFallback} from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,8 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {LogOutIcon,} from "lucide-react"
-import {authLogout} from "@/lib/auth.ts";
+import { LogOutIcon } from "lucide-react"
+import { authLogout } from "@/lib/auth.ts"
 
 export function NavUser() {
   return (

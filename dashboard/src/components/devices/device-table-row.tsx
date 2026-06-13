@@ -27,8 +27,12 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { Device } from "@/lib/api"
-import { DEVICE_CONFIG, formatLastSeen } from "./device-table-config"
+import { DeviceBadge } from "@/components/devices/device-badge.tsx"
+import {
+  DEVICE_CONFIG,
+  formatLastSeen,
+} from "@/components/devices/device-table-config.ts"
+import type { Device } from "@/lib/types.ts"
 
 interface DeviceTableRowProps {
   device: Device
@@ -39,6 +43,7 @@ export function DeviceTableRow({ device, onDelete }: DeviceTableRowProps) {
   const [open, setOpen] = useState(false)
   const config = DEVICE_CONFIG[device.device_type]
   const Icon = config.icon
+
   const { label: lastSeenLabel, isRecent } = formatLastSeen(device.last_seen)
 
   return (
@@ -48,22 +53,7 @@ export function DeviceTableRow({ device, onDelete }: DeviceTableRowProps) {
       </TableCell>
 
       <TableCell className="whitespace-nowrap">
-        <div className="flex items-center gap-2">
-          <div
-            className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-full",
-              config.iconBg
-            )}
-          >
-            <Icon width={18} height={18} className={cn(config.iconColor)} />
-          </div>
-          <div>
-            <h6 className="text-sm font-medium">{device.name}</h6>
-            <p className="font-mono text-xs text-muted-foreground">
-              {device.id}
-            </p>
-          </div>
-        </div>
+        <DeviceBadge device={device} />
       </TableCell>
 
       <TableCell className="whitespace-nowrap">

@@ -14,15 +14,7 @@ import type { ReactNode } from "react"
 import { useLayoutEffect, useRef } from "react"
 import NumberFlow from "@number-flow/react"
 import { DashboardCard } from "@/components/dashboard-card.tsx"
-import { chartColors } from "@/lib/utils.ts"
-
-function countryFlag(countryCode: string) {
-  const code = countryCode.trim().toUpperCase()
-  if (code.length !== 2) return "🏳️"
-  return String.fromCodePoint(
-    ...Array.from(code).map((char) => 127397 + char.charCodeAt(0))
-  )
-}
+import { chartColors, countryFlag } from "@/lib/utils.ts"
 
 function useFlipAnimation(keys: string[]) {
   const prevPositions = useRef<Map<string, number>>(new Map())

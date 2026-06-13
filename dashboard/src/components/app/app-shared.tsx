@@ -1,11 +1,19 @@
-import type {ReactNode} from "react"
-import {BookOpenIcon, BriefcaseIcon, Flag, HelpCircleIcon, LayoutGridIcon, List, Pen, Scroll,} from "lucide-react"
+import type { ReactNode } from "react"
+import {
+  BookOpenIcon,
+  BriefcaseIcon,
+  Flag,
+  HelpCircleIcon,
+  LayoutGridIcon,
+  List,
+  Pen,
+  Scroll,
+} from "lucide-react"
 
 export type SidebarNavItem = {
   title: string
   path?: string
   icon?: ReactNode
-  isActive?: boolean
   subItems?: SidebarNavItem[]
 }
 
@@ -22,7 +30,6 @@ export const navGroups: SidebarNavGroup[] = [
         title: "Dashboard",
         path: "/dashboard",
         icon: <LayoutGridIcon />,
-        isActive: true,
       },
       {
         title: "Countries",

@@ -42,6 +42,7 @@ impl App {
       .route("/api/stats", get(stats))
       .route("/api/chart-data", get(chart_data))
       .route("/api/ws", any(ws_handler))
+      .route("/api/query-logs", get(query_logs_handler))
       .route("/{*file}", get(serve_file))
       .layer(
         CorsLayer::new()
@@ -148,4 +149,46 @@ async fn delete_device_handler(
 ) -> Result<Json<Value>, AppError> {
   ctx.db().delete_device(&id).await?;
   Ok(Json(json!({ "success": true })))
+}
+
+#[derive(Deserialize)]
+struct QueryLogsQuery {
+  page: Option<u32>,
+  per_page: Option<u32>,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct QueryLog {
+  pub id: i64,
+  pub domain: String,
+  pub client_ip: String,
+  pub blocked: bool,
+  pub block_origin: Option<String>,
+  pub timestamp: i64,
+  pub response_time: i64,
+  pub country_code: Option<String>,
+  pub company_name: Option<String>,
+
+  pub device: Option<Device>,
+}
+
+#[derive(Serialize)]
+struct PaginatedQueryLogs {
+  total: i64,
+  page: u32,
+  per_page: u32,
+  items: Vec<QueryLog>,
+}
+
+async fn query_logs_handler(
+  _guard: AuthGuard,
+  AxumState(ctx): AxumState<Context>,
+  Query(query): Query<QueryLogsQuery>,
+) -> Result<Json<PaginatedQueryLogs>, AppError> {
+  let page = query.page.unwrap_or(1).max(1);
+  let per_page = query.per_page.unwrap_or(50).clamp(1, 500);
+
+  let (items, total) = ctx.db().query_logs(page, per_page).await?;
+
+  Ok(Json(PaginatedQueryLogs { total, page, per_page, items }))
 }

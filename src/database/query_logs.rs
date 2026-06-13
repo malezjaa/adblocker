@@ -1,8 +1,12 @@
 use crate::context::Context;
+use crate::dashboard::QueryLog;
 use crate::database::DB;
+use crate::database::devices::{Device, DeviceType};
 use crate::domain::{query_domain, registered_domain};
 use crate::engine::BlockOrigin;
+use anyhow::Result;
 use chrono::Utc;
+use clap::ValueEnum;
 use hickory_proto::op::Message;
 use hickory_proto::rr::RData;
 use serde::{Deserialize, Serialize};
@@ -64,7 +68,7 @@ impl DB {
     });
   }
 
-  pub async fn insert_query(&self, event: &QueryEvent) -> anyhow::Result<()> {
+  pub async fn insert_query(&self, event: &QueryEvent) -> Result<()> {
     let mut tx = self.pool.begin().await?;
 
     let ctx = self.context();
@@ -167,6 +171,88 @@ impl DB {
         .expect("Should always exist when running from a daemon")
         .try_send(event);
     }
+  }
+
+  pub async fn query_logs(
+    &self,
+    page: u32,
+    per_page: u32,
+  ) -> Result<(Vec<QueryLog>, i64)> {
+    let offset = ((page - 1) * per_page) as i64;
+
+    let total: i64 =
+      sqlx::query_scalar("SELECT COUNT(*) FROM query_log").fetch_one(&self.pool).await?;
+
+    #[derive(sqlx::FromRow)]
+    struct QueryLogRow {
+      pub id: i64,
+      pub domain: String,
+      pub client_ip: String,
+      pub blocked: bool,
+      pub block_origin: Option<String>,
+      pub timestamp: i64,
+      pub response_time: i64,
+      pub country_code: Option<String>,
+      pub company_name: Option<String>,
+
+      pub device_id: Option<String>,
+      pub device_name: Option<String>,
+      pub device_type: Option<String>,
+      pub device_last_seen: Option<i64>,
+    }
+
+    let rows = sqlx::query_as::<_, QueryLogRow>(
+      r#"
+          SELECT
+              q.id,
+              q.domain,
+              q.client_ip,
+              q.blocked,
+              q.block_origin,
+              q.timestamp,
+              q.response_time,
+              q.country_code,
+              q.company_name,
+
+              d.id AS device_id,
+              d.name AS device_name,
+              d.type AS device_type,
+              d.last_seen AS device_last_seen
+          FROM query_log q
+          LEFT JOIN device d ON q.device_id = d.id
+          ORDER BY q.timestamp DESC
+          LIMIT ?
+          OFFSET ?
+          "#,
+    )
+    .bind(per_page as i64)
+    .bind(offset)
+    .fetch_all(&self.pool)
+    .await?;
+
+    let logs = rows
+      .into_iter()
+      .map(|row| QueryLog {
+        id: row.id,
+        domain: row.domain,
+        client_ip: row.client_ip,
+        blocked: row.blocked,
+        block_origin: row.block_origin,
+        timestamp: row.timestamp,
+        response_time: row.response_time,
+        country_code: row.country_code,
+        company_name: row.company_name,
+
+        device: row.device_id.map(|id| Device {
+          id,
+          name: row.device_name.unwrap(),
+          device_type: DeviceType::from_str(&row.device_type.unwrap(), true).unwrap(),
+          last_seen: row.device_last_seen.unwrap(),
+        }),
+      })
+      .collect();
+
+    Ok((logs, total))
   }
 }
 

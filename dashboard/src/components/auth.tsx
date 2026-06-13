@@ -7,9 +7,9 @@ import {
 } from "@/components/ui/input-group"
 import { cn } from "@/lib/utils"
 import { EyeIcon, EyeOffIcon, LogInIcon } from "lucide-react"
-import React, { useEffect } from "react"
+import React from "react"
 import { useState } from "react"
-import { authLogin, useAuthStatus } from "@/lib/auth.ts"
+import { authLogin } from "@/lib/auth.ts"
 import { useNavigate } from "react-router"
 
 export function AuthDivider({
@@ -61,14 +61,7 @@ export function AuthPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const { data } = useAuthStatus()
   const navigate = useNavigate()
-
-  useEffect(() => {
-    if (data) {
-      navigate("/dashboard")
-    }
-  })
 
   const validate = (): string | null => {
     if (!password) return "Password is required."

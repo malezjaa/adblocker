@@ -19,10 +19,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { DeviceTypes, type DeviceType, post } from "@/lib/api"
+import { post } from "@/lib/api"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 import { DEVICE_CONFIG } from "./device-table-config"
+import { type DeviceType, DeviceTypes } from "@/lib/types.ts"
 
 export function AddDeviceDialog() {
   const [open, setOpen] = useState(false)

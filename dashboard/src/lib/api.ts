@@ -1,36 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect } from "react"
-
-export type StatsChange = {
-  total_queries: number
-  total_blocked: number
-  total_allowed: number
-  block_rate: number
-  avg_response_time: number
-}
-
-export type Stats = {
-  total_queries: number
-  total_blocked: number
-  total_allowed: number
-  block_rate: number
-  avg_response_time: number
-  top_countries: CountryStat[]
-  top_companies: PopularStat[]
-  weekly_change: StatsChange | null
-}
-
-export type CountryStat = {
-  country_code: string
-  total: number
-  blocked: number
-}
-
-export type PopularStat = {
-  label: string
-  total: number
-  blocked: number
-}
+import type {
+  Device,
+  HourStat,
+  QueryLogsOptions,
+  QueryLogsResponse,
+  Stats,
+  TopBlocked,
+} from "@/lib/types.ts"
 
 const BASE_URL = "http://127.0.0.64"
 
@@ -93,12 +70,6 @@ export const useStats = () => {
   })
 }
 
-export interface HourStat {
-  hour: string
-  total: number
-  blocked: number
-}
-
 export async function fetchChartData(days?: number): Promise<HourStat[]> {
   const params = days !== undefined ? `?days=${days}` : ""
   return api<HourStat[]>(`api/chart-data${params}`)
@@ -110,14 +81,6 @@ export const useChartData = (days?: number) => {
     queryFn: () => fetchChartData(days),
     refetchInterval: 1000 * 30,
   })
-}
-
-export type TopBlocked = {
-  domain: string
-  hits_blocked: number
-  hits_total: number
-  last_seen: number
-  avg_response_time: number
 }
 
 export const useTopBlocked = () =>
@@ -163,6 +126,10 @@ export function useStatsWs() {
           queryKey: ["devices"],
           refetchType: "all",
         })
+        await queryClient.invalidateQueries({
+          queryKey: ["query-logs"],
+          refetchType: "all",
+        })
       } catch (e) {
         console.error("failed to parse ws message", e)
       }
@@ -178,27 +145,18 @@ export function useStatsWs() {
   }, [queryClient])
 }
 
-export const DeviceTypes = {
-  Windows: "windows",
-  Linux: "linux",
-  MacOs: "macos",
-  Android: "android",
-  iOS: "ios",
-  Router: "router",
-  Other: "other",
-} as const
-
-export type DeviceType = (typeof DeviceTypes)[keyof typeof DeviceTypes]
-
-export type Device = {
-  id: string
-  name: string
-  device_type: DeviceType
-  last_seen: number
-}
-
 export const useDevices = () =>
   useQuery<Device[]>({
     queryKey: ["devices"],
     queryFn: () => api<Device[]>("api/devices"),
   })
+
+export const useQueryLogs = (options: QueryLogsOptions = {}) => {
+  const { page = 1, perPage = 50 } = options
+
+  return useQuery<QueryLogsResponse>({
+    queryKey: ["query-logs", page, perPage],
+    queryFn: () =>
+      api<QueryLogsResponse>(`api/query-logs?page=${page}&per_page=${perPage}`),
+  })
+}
