@@ -1,16 +1,5 @@
-import type { ReactNode } from "react"
-import {
-  LayoutGridIcon,
-  BarChart3Icon,
-  BriefcaseIcon,
-  UsersIcon,
-  PlugIcon,
-  KeyRoundIcon,
-  SettingsIcon,
-  CreditCardIcon,
-  HelpCircleIcon,
-  BookOpenIcon,
-} from "lucide-react"
+import type {ReactNode} from "react"
+import {BookOpenIcon, BriefcaseIcon, Flag, HelpCircleIcon, LayoutGridIcon, List, Pen, Scroll,} from "lucide-react"
 
 export type SidebarNavItem = {
   title: string
@@ -27,58 +16,43 @@ export type SidebarNavGroup = {
 
 export const navGroups: SidebarNavGroup[] = [
   {
-    label: "Product",
+    label: "Dashboard",
     items: [
       {
         title: "Dashboard",
-        path: "#/dashboard",
+        path: "/dashboard",
         icon: <LayoutGridIcon />,
         isActive: true,
       },
       {
-        title: "Analytics",
-        path: "#/analytics",
-        icon: <BarChart3Icon />,
+        title: "Countries",
+        path: "/countries",
+        icon: <Flag />,
       },
       {
-        title: "Projects",
-        path: "#/projects",
+        title: "Companies",
+        path: "/companies",
         icon: <BriefcaseIcon />,
       },
-    ],
-  },
-  {
-    label: "Workspace",
-    items: [
       {
-        title: "Team",
-        path: "#/team",
-        icon: <UsersIcon />,
-      },
-      {
-        title: "Integrations",
-        path: "#/integrations",
-        icon: <PlugIcon />,
-      },
-      {
-        title: "API Keys",
-        path: "#/api-keys",
-        icon: <KeyRoundIcon />,
+        title: "Query Logs",
+        path: "/query-logs",
+        icon: <Scroll />,
       },
     ],
   },
   {
-    label: "Administration",
+    label: "Config",
     items: [
       {
-        title: "Settings",
-        path: "#/settings",
-        icon: <SettingsIcon />,
+        title: "Lists",
+        path: "/lists",
+        icon: <List />,
       },
       {
-        title: "Billing",
-        path: "#/billing",
-        icon: <CreditCardIcon />,
+        title: "Rewrites",
+        path: "/rewrites",
+        icon: <Pen />,
       },
     ],
   },
