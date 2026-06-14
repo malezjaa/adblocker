@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider } from "react-router"
 import { NotFoundPage } from "@/components/not-found.tsx"
 import { AuthPage } from "@/components/auth.tsx"
 import { QueryLogs } from "@/app/dashboard/query-logs.tsx"
+import Countries from "@/app/dashboard/countries.tsx"
 
 let router = createBrowserRouter([
   {
@@ -20,6 +21,10 @@ let router = createBrowserRouter([
   {
     path: "/login",
     Component: AuthPage,
+  },
+  {
+    path: "/countries",
+    Component: Countries,
   },
 ])
 
