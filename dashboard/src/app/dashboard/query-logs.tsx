@@ -33,7 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useState } from "react"
+import React, { useState } from "react"
 import {
   ChevronLeft,
   ChevronRight,
@@ -41,9 +41,16 @@ import {
   ChevronsRight,
   Lock,
   LockOpen,
+  Search,
 } from "lucide-react"
 import { DeviceBadge } from "@/components/devices/device-badge.tsx"
 import { format } from "date-fns"
+import { useDebounce } from "@/hooks/use-debounce.ts"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group.tsx"
 
 const PER_PAGE_OPTIONS = [10, 30, 50, 100]
 
@@ -59,11 +66,23 @@ export function QueryLogs() {
   useStatsWs()
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(30)
-  const { data, isLoading, error } = useQueryLogs({ page, perPage })
+  const [domainSearch, setDomainSearch] = useState("")
+  const debouncedDomain = useDebounce(domainSearch, 400)
+
+  const { data, isLoading, error } = useQueryLogs({
+    page,
+    perPage,
+    domain: debouncedDomain || undefined,
+  })
   const totalPages = data ? Math.ceil(data.total / perPage) : 1
 
   function handlePerPageChange(value: string | null) {
     setPerPage(Number(value))
+    setPage(1)
+  }
+
+  function handleDomainSearch(e: React.ChangeEvent<HTMLInputElement>) {
+    setDomainSearch(e.target.value)
     setPage(1)
   }
 
@@ -74,9 +93,25 @@ export function QueryLogs() {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col py-4 md:py-6">
               <DashboardCard className="w-full">
-                <CardHeader>
-                  <CardDescription>List of all DNS queries</CardDescription>
-                  <CardTitle>DNS queries</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="flex flex-col space-x-2">
+                    <CardDescription>List of all DNS queries</CardDescription>
+                    <CardTitle>DNS queries</CardTitle>
+                  </div>
+
+                  <div className="relative w-64">
+                    <InputGroup>
+                      <InputGroupInput
+                        placeholder="Search domain..."
+                        value={domainSearch}
+                        onChange={handleDomainSearch}
+                        className="pl-8"
+                      />
+                      <InputGroupAddon>
+                        <Search className="text-muted-foreground" />
+                      </InputGroupAddon>
+                    </InputGroup>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {isLoading && (

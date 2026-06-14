@@ -22,6 +22,7 @@ export interface QueryLogsResponse {
 export interface QueryLogsOptions {
   page?: number
   perPage?: number
+  domain?: string
 }
 
 export const DeviceTypes = {

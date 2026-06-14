@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import type {
   Device,
   HourStat,
@@ -93,6 +93,7 @@ const WS_URL = "ws://127.0.0.64/api/ws"
 
 export function useStatsWs() {
   const queryClient = useQueryClient()
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const ws = new WebSocket(WS_URL)
@@ -122,14 +123,20 @@ export function useStatsWs() {
           )
         }
 
-        await queryClient.invalidateQueries({
-          queryKey: ["devices"],
-          refetchType: "all",
-        })
-        await queryClient.invalidateQueries({
-          queryKey: ["query-logs"],
-          refetchType: "all",
-        })
+        if (debounceTimer.current) {
+          clearTimeout(debounceTimer.current)
+        }
+
+        debounceTimer.current = setTimeout(async () => {
+          await queryClient.invalidateQueries({
+            queryKey: ["devices"],
+            refetchType: "all",
+          })
+          await queryClient.invalidateQueries({
+            queryKey: ["query-logs"],
+            refetchType: "all",
+          })
+        }, 300)
       } catch (e) {
         console.error("failed to parse ws message", e)
       }
@@ -141,6 +148,9 @@ export function useStatsWs() {
 
     return () => {
       ws.close()
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current)
+      }
     }
   }, [queryClient])
 }
@@ -152,11 +162,17 @@ export const useDevices = () =>
   })
 
 export const useQueryLogs = (options: QueryLogsOptions = {}) => {
-  const { page = 1, perPage = 50 } = options
+  const { page = 1, perPage = 50, domain } = options
 
   return useQuery<QueryLogsResponse>({
-    queryKey: ["query-logs", page, perPage],
-    queryFn: () =>
-      api<QueryLogsResponse>(`api/query-logs?page=${page}&per_page=${perPage}`),
+    queryKey: ["query-logs", page, perPage, domain],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: String(perPage),
+        ...(domain ? { domain } : {}),
+      })
+      return api<QueryLogsResponse>(`api/query-logs?${params}`)
+    },
   })
 }

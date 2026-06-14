@@ -151,12 +151,6 @@ async fn delete_device_handler(
   Ok(Json(json!({ "success": true })))
 }
 
-#[derive(Deserialize)]
-struct QueryLogsQuery {
-  page: Option<u32>,
-  per_page: Option<u32>,
-}
-
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct QueryLog {
   pub id: i64,
@@ -180,6 +174,13 @@ struct PaginatedQueryLogs {
   items: Vec<QueryLog>,
 }
 
+#[derive(Deserialize)]
+struct QueryLogsQuery {
+  page: Option<u32>,
+  per_page: Option<u32>,
+  domain: Option<String>,
+}
+
 async fn query_logs_handler(
   _guard: AuthGuard,
   AxumState(ctx): AxumState<Context>,
@@ -188,7 +189,8 @@ async fn query_logs_handler(
   let page = query.page.unwrap_or(1).max(1);
   let per_page = query.per_page.unwrap_or(50).clamp(1, 500);
 
-  let (items, total) = ctx.db().query_logs(page, per_page).await?;
+  let (items, total) =
+    ctx.db().query_logs(page, per_page, query.domain.as_deref()).await?;
 
   Ok(Json(PaginatedQueryLogs { total, page, per_page, items }))
 }

@@ -177,11 +177,22 @@ impl DB {
     &self,
     page: u32,
     per_page: u32,
+    domain_filter: Option<&str>,
   ) -> Result<(Vec<QueryLog>, i64)> {
     let offset = ((page - 1) * per_page) as i64;
 
-    let total: i64 =
-      sqlx::query_scalar("SELECT COUNT(*) FROM query_log").fetch_one(&self.pool).await?;
+    let total: i64 = match domain_filter {
+      Some(domain) => {
+        let pattern = format!("%{}%", domain);
+        sqlx::query_scalar("SELECT COUNT(*) FROM query_log WHERE domain LIKE ?")
+          .bind(pattern)
+          .fetch_one(&self.pool)
+          .await?
+      }
+      None => {
+        sqlx::query_scalar("SELECT COUNT(*) FROM query_log").fetch_one(&self.pool).await?
+      }
+    };
 
     #[derive(sqlx::FromRow)]
     struct QueryLogRow {
@@ -201,34 +212,71 @@ impl DB {
       pub device_last_seen: Option<i64>,
     }
 
-    let rows = sqlx::query_as::<_, QueryLogRow>(
-      r#"
-          SELECT
-              q.id,
-              q.domain,
-              q.client_ip,
-              q.blocked,
-              q.block_origin,
-              q.timestamp,
-              q.response_time,
-              q.country_code,
-              q.company_name,
+    let rows = match domain_filter {
+      Some(domain) => {
+        let pattern = format!("%{}%", domain);
+        sqlx::query_as::<_, QueryLogRow>(
+          r#"
+                SELECT
+                    q.id,
+                    q.domain,
+                    q.client_ip,
+                    q.blocked,
+                    q.block_origin,
+                    q.timestamp,
+                    q.response_time,
+                    q.country_code,
+                    q.company_name,
 
-              d.id AS device_id,
-              d.name AS device_name,
-              d.type AS device_type,
-              d.last_seen AS device_last_seen
-          FROM query_log q
-          LEFT JOIN device d ON q.device_id = d.id
-          ORDER BY q.timestamp DESC
-          LIMIT ?
-          OFFSET ?
-          "#,
-    )
-    .bind(per_page as i64)
-    .bind(offset)
-    .fetch_all(&self.pool)
-    .await?;
+                    d.id AS device_id,
+                    d.name AS device_name,
+                    d.type AS device_type,
+                    d.last_seen AS device_last_seen
+                FROM query_log q
+                LEFT JOIN device d ON q.device_id = d.id
+                WHERE q.domain LIKE ?
+                ORDER BY q.timestamp DESC
+                LIMIT ?
+                OFFSET ?
+                "#,
+        )
+        .bind(pattern)
+        .bind(per_page as i64)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?
+      }
+      None => {
+        sqlx::query_as::<_, QueryLogRow>(
+          r#"
+                SELECT
+                    q.id,
+                    q.domain,
+                    q.client_ip,
+                    q.blocked,
+                    q.block_origin,
+                    q.timestamp,
+                    q.response_time,
+                    q.country_code,
+                    q.company_name,
+
+                    d.id AS device_id,
+                    d.name AS device_name,
+                    d.type AS device_type,
+                    d.last_seen AS device_last_seen
+                FROM query_log q
+                LEFT JOIN device d ON q.device_id = d.id
+                ORDER BY q.timestamp DESC
+                LIMIT ?
+                OFFSET ?
+                "#,
+        )
+        .bind(per_page as i64)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?
+      }
+    };
 
     let logs = rows
       .into_iter()
