@@ -21,7 +21,7 @@ pub struct Config {
 impl Config {
   pub fn default_values() -> Result<Self> {
     Ok(Self {
-      blocklists: vec!["https://big.oisd.nl".into()],
+      blocklists: vec!["oisd-big".into()],
       secondary_name_server: None,
       block_rules: None,
       doh: Some(true),

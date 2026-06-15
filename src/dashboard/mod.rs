@@ -1,27 +1,32 @@
 pub mod app_error;
 pub mod auth;
+pub mod endpoints;
 pub mod frontend;
 pub mod ws;
-pub mod endpoints;
 
+pub use self::endpoints::stats::QueryLog;
 use crate::application::app::App;
 use crate::context::Context;
 pub use crate::dashboard::app_error::AppError;
-use crate::dashboard::auth::{auth_login, auth_logout, auth_status, AuthGuard};
-use crate::dashboard::endpoints::devices::{create_device_handler, delete_device_handler, get_device_handler, get_devices_handler};
-use crate::dashboard::endpoints::stats::{chart_data, query_logs_handler, stats, top_handler};
+use crate::dashboard::auth::{AuthGuard, auth_login, auth_logout, auth_status};
+use crate::dashboard::endpoints::devices::{
+  create_device_handler, delete_device_handler, get_device_handler, get_devices_handler,
+};
+use crate::dashboard::endpoints::stats::{
+  chart_data, query_logs_handler, stats, top_handler,
+};
 use crate::dashboard::frontend::serve_file;
 use crate::dashboard::ws::ws_handler;
 use crate::database::devices::Device;
 use crate::database::stats::{Stats, TopDomain};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use axum::extract::{Path, Query, State as AxumState};
 use axum::response::IntoResponse;
 use axum::routing::{any, get, post};
 use axum::{Json, Router};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};

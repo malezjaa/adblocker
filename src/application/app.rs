@@ -1,10 +1,10 @@
-use crate::blocklists::load_blocklists;
 use crate::config::Config;
 use crate::context::Context;
 use crate::database::DB;
 use crate::engine::{BlockLookup, run_engine};
 use crate::firewall::open_port::open_ports;
 use crate::firewall::override_dns::override_default_dns;
+use crate::lists::downloader::load_blocklists;
 use crate::task::named_task;
 #[cfg(windows)]
 use crate::windows::wfp_session::WfpSession;
@@ -43,7 +43,7 @@ impl App {
 
   pub async fn start_all(&self, rx: Receiver<BlockLookup>) -> Result<()> {
     let start = Instant::now();
-    let rules = load_blocklists(self.ctx.clone()).await?;
+    let rules = load_blocklists(&self.ctx).await?;
     info!("loaded lists in {:.2?}", start.elapsed());
 
     let engine = Engine::from_filter_set(rules, true);

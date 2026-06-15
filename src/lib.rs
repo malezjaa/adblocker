@@ -1,6 +1,4 @@
 pub mod application;
-pub mod blocklists;
-pub mod cache;
 pub mod cert;
 pub mod config;
 pub mod context;
@@ -9,6 +7,7 @@ pub mod database;
 pub mod domain;
 pub mod engine;
 pub mod firewall;
+pub mod lists;
 pub mod logger;
 pub mod mmdb;
 pub mod password;
