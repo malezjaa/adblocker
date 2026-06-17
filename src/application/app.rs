@@ -47,7 +47,6 @@ impl App {
     info!("loaded lists in {:.2?}", start.elapsed());
 
     let engine = Engine::from_filter_set(rules, true);
-
     let local = LocalSet::new();
 
     local

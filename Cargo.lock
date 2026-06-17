@@ -788,6 +788,7 @@ dependencies = [
  "axum",
  "axum-server",
  "base64",
+ "bitflags",
  "chrono",
  "clap",
  "cliclack",

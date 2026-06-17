@@ -1,9 +1,9 @@
 use crate::context::Context;
-use crate::lists::cache::{load_cache_file, CacheFile};
-use crate::lists::list::{default_lists, List};
-use adblock::lists::ParseOptions;
+use crate::lists::cache::{CacheFile, load_cache_file};
+use crate::lists::list::{LISTS, List};
 use adblock::FilterSet;
-use anyhow::{bail, Result};
+use adblock::lists::ParseOptions;
+use anyhow::{Result, bail};
 use axum::http::StatusCode;
 use chrono::Duration;
 use fs_err::{read, write};
@@ -26,7 +26,7 @@ pub async fn download_blocklist(
   }
 
   let client = Client::new();
-  let mut req = client.get(&list.url);
+  let mut req = client.get(list.url.to_string());
   if let Some(etag) = cached_etag {
     req = req.header("If-None-Match", etag);
   }
@@ -50,7 +50,7 @@ pub async fn download_blocklist(
   info!(name = %list.name, "downloaded blocklist");
 
   let rules = body.lines().map(|l| l.to_string()).collect::<Vec<_>>();
-  Ok((list.id.clone(), rules, new_etag))
+  Ok((list.id.to_string(), rules, new_etag))
 }
 
 pub async fn load_blocklists(ctx: &Context) -> Result<FilterSet> {
@@ -69,9 +69,7 @@ pub async fn load_blocklists(ctx: &Context) -> Result<FilterSet> {
     );
   }
 
-  let all_lists = default_lists();
-
-  let futures = all_lists.iter().map(|list| {
+  let futures = LISTS.iter().map(|list| {
     let is_fresh = cache.is_fresh(&list.id, Duration::hours(24));
     let cached_etag = cache.get_by_id(&list.id).and_then(|e| e.etag.clone());
     async move { download_blocklist(list, cache_dir, cached_etag, is_fresh).await }

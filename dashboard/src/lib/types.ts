@@ -89,12 +89,32 @@ export type PopularStat = {
   blocked: number
 }
 
+export type Compatibility = "Safe" | "Balanced" | "Aggressive"
+
+export type CategoryFlag =
+  | "ADS"
+  | "PRIVACY"
+  | "SECURITY"
+  | "NSFW"
+  | "GAMBLING"
+  | "FAKE_NEWS"
+
+export type Categories = string
+
 export type List = {
   id: string
   name: string
   description: string
   homepage: string
   url: string
+
+  categories: Categories
+  compatibility: Compatibility
+
+  recommended: boolean
+  default_enabled: boolean
+  priority: number
+
   domains?: number
   enabled?: boolean
 }

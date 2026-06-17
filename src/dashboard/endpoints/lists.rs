@@ -2,7 +2,7 @@ use crate::context::Context;
 use crate::dashboard::AppError;
 use crate::dashboard::auth::AuthGuard;
 use crate::lists::cache::load_cache_file;
-use crate::lists::list::{LISTS_IDS, List, default_lists};
+use crate::lists::list::{LIST_IDS, LISTS, List};
 use anyhow::Result;
 use axum::Json;
 use axum::extract::State as AxumState;
@@ -15,13 +15,13 @@ pub async fn get_lists_handler(
 ) -> Result<Json<Vec<List>>, AppError> {
   let cache = load_cache_file(ctx.cache_dir())?;
 
-  let mut lists = default_lists();
+  let mut lists = LISTS.to_vec();
   lists.iter_mut().for_each(|list| {
     if let Some(cached) = cache.get_by_id(&list.id) {
       list.domains = Some(cached.domains.clone());
     }
 
-    list.enabled = Some(ctx.config().blocklists.contains(&list.id));
+    list.enabled = Some(ctx.config().blocklists.contains(&list.id.to_string()));
   });
 
   Ok(Json(lists))
@@ -37,7 +37,7 @@ pub async fn toggle_list(
   AxumState(ctx): AxumState<Context>,
   Json(body): Json<ToggleListBody>,
 ) -> Result<Json<()>, AppError> {
-  if !LISTS_IDS.contains(&body.list_id.as_str()) {
+  if !LIST_IDS.contains(&body.list_id.as_str()) {
     return Err(AppError::new("Can't toggle a list that doesn't exist".into()));
   }
 
