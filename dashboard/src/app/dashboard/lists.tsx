@@ -1,15 +1,20 @@
-import {useMemo, useState} from "react"
-import {AppShell} from "@/components/app/app-shell"
-import {DashboardCard} from "@/components/dashboard-card"
-import {ProtectedRoute} from "@/components/protected-route"
-import {useLists, useStatsWs, useToggleList} from "@/lib/api"
-import {CardContent, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card"
-import {Skeleton} from "@/components/ui/skeleton.tsx"
-import {Alert, AlertDescription} from "@/components/ui/alert.tsx"
-import {Switch} from "@/components/ui/switch.tsx"
-import {Badge} from "@/components/ui/badge"
-import {Input} from "@/components/ui/input"
-import {Button} from "@/components/ui/button"
+import { useMemo, useState } from "react"
+import { AppShell } from "@/components/app/app-shell"
+import { DashboardCard } from "@/components/dashboard-card"
+import { ProtectedRoute } from "@/components/protected-route"
+import { useLists, useStatsWs, useToggleList } from "@/lib/api"
+import {
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton.tsx"
+import { Alert, AlertDescription } from "@/components/ui/alert.tsx"
+import { Switch } from "@/components/ui/switch.tsx"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -19,10 +24,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {ExternalLink, Globe, ListFilter, Search, ShieldCheck, Sparkles, X,} from "lucide-react"
-import type {CategoryFlag, Compatibility, List} from "@/lib/types"
+import {
+  ExternalLink,
+  Globe,
+  ListFilter,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  X,
+} from "lucide-react"
+import type { CategoryFlag, Compatibility, List } from "@/lib/types"
 import NumberFlow from "@number-flow/react"
-import {cn} from "@/lib/utils"
+import { cn } from "@/lib/utils"
 
 const CATEGORY_META: Record<
   CategoryFlag,
@@ -94,9 +107,9 @@ function parseCategories(raw: string | undefined | null): CategoryFlag[] {
 
 function CategoryBadge({ category }: { category: CategoryFlag }) {
   return (
-      <Badge variant="outline" className="font-normal">
-        {CATEGORY_META[category].label}
-      </Badge>
+    <Badge variant="outline" className="font-normal">
+      {CATEGORY_META[category].label}
+    </Badge>
   )
 }
 function CompatibilityBadge({ value }: { value: Compatibility }) {
@@ -275,7 +288,7 @@ export function Lists() {
                                   <NumberFlow value={list.domains || 0} />
                                 </Badge>
                                 <CompatibilityBadge
-                                    value={list.compatibility}
+                                  value={list.compatibility}
                                 />
                                 {list.recommended && (
                                   <Badge

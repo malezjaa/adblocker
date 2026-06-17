@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::context::Context;
 use crate::database::DB;
-use crate::engine::{BlockLookup, run_engine};
+use crate::engine::{BlockLookup, EngineMessage, run_engine};
 use crate::firewall::open_port::open_ports;
 use crate::firewall::override_dns::override_default_dns;
 use crate::lists::downloader::load_blocklists;
@@ -41,12 +41,7 @@ impl App {
     Ok(Self { ctx })
   }
 
-  pub async fn start_all(&self, rx: Receiver<BlockLookup>) -> Result<()> {
-    let start = Instant::now();
-    let rules = load_blocklists(&self.ctx).await?;
-    info!("loaded lists in {:.2?}", start.elapsed());
-
-    let engine = Engine::from_filter_set(rules, true);
+  pub async fn start_all(&self, rx: Receiver<EngineMessage>) -> Result<()> {
     let local = LocalSet::new();
 
     local
@@ -56,7 +51,8 @@ impl App {
 
         let mut tasks = JoinSet::new();
 
-        tasks.spawn_local(named_task("AdBlocking engine", run_engine(engine, rx)));
+        tasks
+          .spawn_local(named_task("AdBlocking engine", run_engine(self.ctx.clone(), rx)));
         tasks.spawn(named_task(
           "DB cleanup",
           DB::spawn_cleanup_task(self.ctx.db().pool.clone(), Duration::days(30)),

@@ -1,8 +1,9 @@
 use crate::context::Context;
 use crate::dashboard::ws::WsEvent;
+use crate::lists::downloader::load_blocklists;
 use crate::rewrite::apply::{apply_rewrites, restore_original_queries};
-use adblock::Engine;
 use adblock::request::Request;
+use adblock::{Engine, FilterSet};
 use anyhow::{Result, bail};
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::{A, AAAA};
@@ -75,7 +76,10 @@ pub async fn process_message(
   let (tx, rx) = oneshot::channel();
 
   let _ = ctx.ws_tx().send(WsEvent::DNSRequest);
-  ctx.tx().send(BlockLookup::new(msg.clone(), tx).origin(origin)).await?;
+  ctx
+    .tx()
+    .send(EngineMessage::Lookup(BlockLookup::new(msg.clone(), tx).origin(origin)))
+    .await?;
 
   match rx.await? {
     BlockResult::Block => Ok((true, handle_blocked_response(&msg)?)),
@@ -145,12 +149,31 @@ pub async fn resolve_msg(msg: &Message, ctx: Context) -> Result<Message> {
   Ok(response)
 }
 
+pub enum EngineMessage {
+  Lookup(BlockLookup),
+  ReloadFilterSet,
+}
+
 pub async fn run_engine(
-  engine: Engine,
-  mut rx: mpsc::Receiver<BlockLookup>,
+  ctx: Context,
+  mut rx: mpsc::Receiver<EngineMessage>,
 ) -> Result<()> {
-  while let Some(lookup) = rx.recv().await {
-    lookup.sender.send(lookup_block(&engine, &lookup.msg, lookup.origin)).ok();
+  let rules = load_blocklists(&ctx).await?;
+  let mut engine = Engine::from_filter_set(rules, true);
+
+  while let Some(message) = rx.recv().await {
+    match message {
+      EngineMessage::Lookup(lookup) => {
+        let result = lookup_block(&engine, &lookup.msg, lookup.origin);
+
+        // we send result back using oneshot channel from block lookup
+        lookup.sender.send(result).ok();
+      }
+      EngineMessage::ReloadFilterSet => {
+        let rules = load_blocklists(&ctx).await?;
+        engine = Engine::from_filter_set(rules, true);
+      }
+    }
   }
   Ok(())
 }

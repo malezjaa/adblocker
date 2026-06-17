@@ -2,7 +2,7 @@ use crate::cert::{Certs, get_certs};
 use crate::config::Config;
 use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
-use crate::engine::BlockLookup;
+use crate::engine::{BlockLookup, EngineMessage};
 use crate::mmdb::downloader::{MMDBSPaths, download_mmdbs_files};
 use crate::mmdb::mmdbs::MMDBS;
 use anyhow::Result;
@@ -23,7 +23,7 @@ pub struct Context(pub Arc<ContextImpl>);
 
 #[derive(Debug)]
 pub struct ContextImpl {
-  pub tx: Sender<BlockLookup>,
+  pub tx: Sender<EngineMessage>,
   pub ws_tx: broadcast::Sender<WsEvent>,
   pub config: RwLock<Config>,
   pub resolver: TokioResolver,
@@ -36,7 +36,7 @@ pub struct ContextImpl {
 }
 
 impl Context {
-  pub async fn new(tx: Sender<BlockLookup>) -> Result<Self> {
+  pub async fn new(tx: Sender<EngineMessage>) -> Result<Self> {
     let Certs { key, certs } = get_certs()?;
     let home_path = dirs::home_dir().unwrap().join("adb");
     let cache_dir = home_path.join("cache");
@@ -114,7 +114,7 @@ impl Context {
     self.0.cache_dir.as_ref()
   }
 
-  pub fn tx(&self) -> Sender<BlockLookup> {
+  pub fn tx(&self) -> Sender<EngineMessage> {
     self.0.tx.clone()
   }
 

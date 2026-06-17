@@ -11,6 +11,7 @@ use futures::future::join_all;
 use reqwest::Client;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 use tracing::{debug, info, warn};
 
 pub async fn download_blocklist(
@@ -54,6 +55,7 @@ pub async fn download_blocklist(
 }
 
 pub async fn load_blocklists(ctx: &Context) -> Result<FilterSet> {
+  let start = Instant::now();
   let cache_dir = ctx.cache_dir();
   let mut filterset = FilterSet::new(false);
   let mut cache = load_cache_file(cache_dir)?;
@@ -98,6 +100,7 @@ pub async fn load_blocklists(ctx: &Context) -> Result<FilterSet> {
   }
 
   debug!("loaded {} rules in total", total);
+  info!("loaded lists in {:.2?}", start.elapsed());
 
   Ok(filterset)
 }
