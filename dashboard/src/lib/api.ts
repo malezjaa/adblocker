@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef } from "react"
 import type {
   Device,
@@ -7,6 +7,7 @@ import type {
   QueryLogsResponse,
   Stats,
   TopBlocked,
+  List,
 } from "@/lib/types.ts"
 
 const BASE_URL = "http://127.0.0.64"
@@ -173,6 +174,30 @@ export const useQueryLogs = (options: QueryLogsOptions = {}) => {
         ...(domain ? { domain } : {}),
       })
       return api<QueryLogsResponse>(`api/query-logs?${params}`)
+    },
+  })
+}
+
+export const useLists = () =>
+  useQuery<List[]>({
+    queryKey: ["lists"],
+    queryFn: () => api<List[]>("api/lists"),
+  })
+
+type ToggleListBody = {
+  list_id: string
+}
+
+export const useToggleList = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (body: ToggleListBody) => post<void>("api/lists/toggle", body),
+
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["lists"],
+      })
     },
   })
 }

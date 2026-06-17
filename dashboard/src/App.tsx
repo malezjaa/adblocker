@@ -4,6 +4,7 @@ import { NotFoundPage } from "@/components/not-found.tsx"
 import { AuthPage } from "@/components/auth.tsx"
 import { QueryLogs } from "@/app/dashboard/query-logs.tsx"
 import Countries from "@/app/dashboard/countries.tsx"
+import { Lists } from "@/app/dashboard/lists.tsx"
 
 let router = createBrowserRouter([
   {
@@ -25,6 +26,10 @@ let router = createBrowserRouter([
   {
     path: "/countries",
     Component: Countries,
+  },
+  {
+    path: "/lists",
+    Component: Lists,
   },
 ])
 

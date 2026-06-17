@@ -88,3 +88,13 @@ export type PopularStat = {
   total: number
   blocked: number
 }
+
+export type List = {
+  id: string
+  name: string
+  description: string
+  homepage: string
+  url: string
+  domains?: number
+  enabled?: boolean
+}

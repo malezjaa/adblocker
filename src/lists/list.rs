@@ -8,6 +8,7 @@ pub struct List {
   pub homepage: String,
   pub url: String,
   pub domains: Option<usize>,
+  pub enabled: Option<bool>,
 }
 
 #[macro_export]
@@ -25,19 +26,22 @@ macro_rules! define_lists {
           homepage: $home.to_string(),
           url: $url.to_string(),
           domains: None,
+          enabled: None
         },
       )*]
     }
+
+    pub const LISTS_IDS: &'static [&'static str] = &[$($id,)*];
   };
 }
 
 define_lists! {
-    "OISD Big": "oisd-big" => "Blocks Ads, (Mobile) App Ads, Phishing, Malvertising, Malware, Spyware, Ransomware, CryptoJacking, Telemetry/Analytics/Tracking" {
-        home => "https://oisd.nl",
-        url => "https://big.oisd.nl"
-    }
-    "OISD Small": "oisd-small" => "Mainly focuses on blocking ads." {
-        home => "https://oisd.nl",
-        url => "https://small.oisd.nl"
-    }
+  "OISD Big": "oisd-big" => "Blocks Ads, (Mobile) App Ads, Phishing, Malvertising, Malware, Spyware, Ransomware, CryptoJacking, Telemetry/Analytics/Tracking" {
+    home => "https://oisd.nl",
+    url => "https://big.oisd.nl"
+  }
+  "OISD Small": "oisd-small" => "Mainly focuses on blocking ads." {
+    home => "https://oisd.nl",
+    url => "https://small.oisd.nl"
+  }
 }

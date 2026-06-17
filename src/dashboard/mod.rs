@@ -12,6 +12,7 @@ use crate::dashboard::auth::{AuthGuard, auth_login, auth_logout, auth_status};
 use crate::dashboard::endpoints::devices::{
   create_device_handler, delete_device_handler, get_device_handler, get_devices_handler,
 };
+use crate::dashboard::endpoints::lists::{get_lists_handler, toggle_list};
 use crate::dashboard::endpoints::stats::{
   chart_data, query_logs_handler, stats, top_handler,
 };
@@ -46,6 +47,8 @@ impl App {
       .route("/api/auth/login", post(auth_login))
       .route("/api/auth/logout", post(auth_logout))
       .route("/api/auth/status", get(auth_status))
+      .route("/api/lists", get(get_lists_handler))
+      .route("/api/lists/toggle", post(toggle_list))
       .route("/api/top", get(top_handler))
       .route("/api/stats", get(stats))
       .route("/api/chart-data", get(chart_data))

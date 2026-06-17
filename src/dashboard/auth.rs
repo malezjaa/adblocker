@@ -12,6 +12,7 @@ use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::net::SocketAddr;
+use tracing::debug;
 
 pub struct AuthGuard;
 
@@ -31,13 +32,14 @@ where
     let token = extract_session_cookie(&parts.headers)
       .ok_or_else(|| AppError::with_code("Unauthorized", StatusCode::UNAUTHORIZED))?;
 
-    let valid = ctx.db().validate_session(token.to_owned()).await.unwrap_or(false);
+    let valid = ctx.db().validate_session(token.to_owned()).await.unwrap_or(None);
 
-    if !valid {
-      return Err(AppError::with_code("Unauthorized", StatusCode::UNAUTHORIZED));
+    if let Some(time) = valid {
+      debug!("valid session token until {}", time.format("%Y-%m-%d %H:%M:%S UTC"));
+      Ok(AuthGuard)
+    } else {
+      Err(AppError::with_code("Unauthorized", StatusCode::UNAUTHORIZED))
     }
-
-    Ok(AuthGuard)
   }
 }
 
@@ -101,11 +103,11 @@ pub async fn auth_status(
   let exists = ctx.db().admin_exists().await?;
 
   let logged_in = match extract_session_cookie(&headers) {
-    Some(token) => ctx.db().validate_session(token.to_owned()).await.unwrap_or(false),
-    None => false,
+    Some(token) => ctx.db().validate_session(token.to_owned()).await.unwrap_or(None),
+    None => None,
   };
 
-  Ok(Json(AuthStatus { admin_exists: exists, logged_in }))
+  Ok(Json(AuthStatus { admin_exists: exists, logged_in: logged_in.is_some() }))
 }
 
 pub async fn auth_logout(
