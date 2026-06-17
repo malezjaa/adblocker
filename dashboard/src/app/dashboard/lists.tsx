@@ -1,19 +1,15 @@
-import { AppShell } from "@/components/app/app-shell"
-import { DashboardCard } from "@/components/dashboard-card"
-import { ProtectedRoute } from "@/components/protected-route"
-import { useLists, useStatsWs, useToggleList } from "@/lib/api"
-import {
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton.tsx"
-import { Alert, AlertDescription } from "@/components/ui/alert.tsx"
-import { Switch } from "@/components/ui/switch.tsx"
-import { Badge } from "@/components/ui/badge"
-import { Globe, ExternalLink } from "lucide-react"
-import type { List } from "@/lib/types"
+import {AppShell} from "@/components/app/app-shell"
+import {DashboardCard} from "@/components/dashboard-card"
+import {ProtectedRoute} from "@/components/protected-route"
+import {useLists, useStatsWs, useToggleList} from "@/lib/api"
+import {CardContent, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card"
+import {Skeleton} from "@/components/ui/skeleton.tsx"
+import {Alert, AlertDescription} from "@/components/ui/alert.tsx"
+import {Switch} from "@/components/ui/switch.tsx"
+import {Badge} from "@/components/ui/badge"
+import {ExternalLink, Globe} from "lucide-react"
+import type {List} from "@/lib/types"
+import NumberFlow from "@number-flow/react";
 
 export function Lists() {
   useStatsWs()
@@ -73,7 +69,7 @@ export function Lists() {
                                 >
                                   {list.name}
                                 </p>
-                                <Badge>{list.domains || "unknown"}</Badge>
+                                <Badge><NumberFlow value={list.domains || 0}/></Badge>
                               </div>
                               <p className={"text-sm text-muted-foreground"}>
                                 {list.description}

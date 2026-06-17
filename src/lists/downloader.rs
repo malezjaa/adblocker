@@ -1,9 +1,9 @@
 use crate::context::Context;
-use crate::lists::cache::{CacheFile, load_cache_file};
-use crate::lists::list::{List, default_lists};
-use adblock::FilterSet;
+use crate::lists::cache::{load_cache_file, CacheFile};
+use crate::lists::list::{default_lists, List};
 use adblock::lists::ParseOptions;
-use anyhow::Result;
+use adblock::FilterSet;
+use anyhow::{bail, Result};
 use axum::http::StatusCode;
 use chrono::Duration;
 use fs_err::{read, write};
@@ -11,7 +11,7 @@ use futures::future::join_all;
 use reqwest::Client;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 pub async fn download_blocklist(
   list: &List,
@@ -39,11 +39,15 @@ pub async fn download_blocklist(
     return read_rules(&list.id, &cache_file, new_etag);
   }
 
+  if resp.status() == StatusCode::NOT_FOUND {
+    warn!("Couldn't download {} list, because it doesn't exist", list.id)
+  }
+
   let body = resp.text().await?;
   let tmp = cache_file.with_extension("tmp");
   write(&tmp, &body)?;
   fs_err::rename(&tmp, &cache_file)?;
-  info!(url = %list.url, name = %list.name, "downloaded blocklist");
+  info!(name = %list.name, "downloaded blocklist");
 
   let rules = body.lines().map(|l| l.to_string()).collect::<Vec<_>>();
   Ok((list.id.clone(), rules, new_etag))
