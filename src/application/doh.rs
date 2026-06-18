@@ -1,7 +1,8 @@
 use crate::application::app::App;
 use crate::context::Context;
 use crate::dashboard::AppError;
-use crate::engine::{BlockOrigin, process_message};
+use crate::dns::process::process_message;
+use crate::engine::message::BlockOrigin;
 use anyhow::Result;
 use axum::body::Bytes;
 use axum::extract::{ConnectInfo, Path, Query, State as AxumState};

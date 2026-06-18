@@ -2,7 +2,7 @@ use crate::cert::{Certs, get_certs};
 use crate::config::Config;
 use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
-use crate::engine::{BlockLookup, EngineMessage};
+use crate::engine::EngineMessage;
 use crate::mmdb::downloader::{MMDBSPaths, download_mmdbs_files};
 use crate::mmdb::mmdbs::MMDBS;
 use anyhow::Result;
@@ -18,10 +18,9 @@ use std::time::Duration;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Context(pub Arc<ContextImpl>);
 
-#[derive(Debug)]
 pub struct ContextImpl {
   pub tx: Sender<EngineMessage>,
   pub ws_tx: broadcast::Sender<WsEvent>,

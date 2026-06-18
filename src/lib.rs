@@ -4,6 +4,7 @@ pub mod config;
 pub mod context;
 pub mod dashboard;
 pub mod database;
+mod dns;
 pub mod domain;
 pub mod engine;
 pub mod firewall;

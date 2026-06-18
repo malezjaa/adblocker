@@ -38,7 +38,6 @@ parking_lot = "0.12.5"
 rustls = "0.23.40"
 time = "0.3.47"
 rustls-pemfile = "2.2.0"
-tokio-rustls = "0.26.4"
 regex = "1.12.3"
 notify = "9.0.0-rc.4"
 notify-debouncer-full = "0.8.0-rc.2"
@@ -51,8 +50,9 @@ dashmap = "7.0.0-rc2"
 argon2 = "0.6.0-rc.8"
 cliclack = "0.5.4"
 hex = "0.4.3"
-async-trait = "0.1.89"
 bitflags = "2.11.1"
+rayon = "1.12.0"
+moka = "0.12.15"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = [

@@ -3,7 +3,7 @@ use crate::dashboard::QueryLog;
 use crate::database::DB;
 use crate::database::devices::{Device, DeviceType};
 use crate::domain::{query_domain, registered_domain};
-use crate::engine::BlockOrigin;
+use crate::engine::message::BlockOrigin;
 use anyhow::Result;
 use chrono::Utc;
 use clap::ValueEnum;
