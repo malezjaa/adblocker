@@ -36,6 +36,8 @@ pub enum CacheLookup {
   Miss,
 }
 
+pub const MAX_NEGATIVE_TTL: u32 = 3600;
+
 pub struct DnsCache(Cache<CacheKey, CacheEntry>);
 
 impl DnsCache {

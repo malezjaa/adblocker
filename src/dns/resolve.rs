@@ -2,9 +2,10 @@
 
 use crate::context::Context;
 use crate::engine::EngineActor;
-use crate::engine::cache::CacheLookup;
+use crate::engine::cache::{CacheLookup, MAX_NEGATIVE_TTL};
 use anyhow::bail;
 use hickory_proto::op::{Message, ResponseCode};
+use hickory_proto::rr::{RData, RecordType};
 use hickory_resolver::net::{DnsError, NetError};
 use std::time::Duration;
 use tracing::{debug, warn};
@@ -62,13 +63,27 @@ impl Context {
       Err(e) => match e {
         NetError::Dns(DnsError::NoRecordsFound(no)) => {
           response.metadata.response_code = no.response_code;
+          let duration = if let Some(authorities) = no.authorities {
+            let secs = authorities
+              .iter()
+              .filter_map(
+                |r| if let RData::SOA(soa) = &r.data { Some(soa) } else { None },
+              )
+              .map(|soa| soa.minimum)
+              .min()
+              .unwrap_or(60);
+            Duration::from_secs(secs.min(MAX_NEGATIVE_TTL) as u64)
+          } else {
+            Duration::from_secs(60)
+          };
 
+          debug!(name = %query_name, ttl = ?duration, "no records found");
           self.cache().insert_resolved(
             query_name.clone(),
             query.query_type,
             Vec::new(),
             no.response_code,
-            Duration::from_secs(60),
+            duration,
           );
         }
         NetError::Timeout => {
