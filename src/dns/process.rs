@@ -84,14 +84,17 @@ impl Context {
     let start = Instant::now();
     let (blocked, response) = self.process_message(bytes, origin).await?;
 
-    self.db().record_query(
-      &response,
-      addr,
-      blocked,
-      origin,
-      start.elapsed().as_millis() as i64,
-      device,
-    );
+    self
+      .db()
+      .record_query(
+        &response,
+        addr,
+        blocked,
+        origin,
+        start.elapsed().as_millis() as i64,
+        device,
+      )
+      .await;
 
     Ok(response)
   }

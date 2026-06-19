@@ -135,6 +135,7 @@ export function QueryLogs() {
                           <TableHeader>
                             <TableRow>
                               <TableHead>Domain</TableHead>
+                              <TableHead>Type</TableHead>
                               <TableHead>Status</TableHead>
                               <TableHead>Device</TableHead>
                               <TableHead>Country</TableHead>
@@ -165,6 +166,11 @@ export function QueryLogs() {
                                     </TooltipProvider>
                                     {log.domain}
                                   </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={"secondary"}>
+                                    {log.record_type}
+                                  </Badge>
                                 </TableCell>
                                 <TableCell>
                                   <Badge

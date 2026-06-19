@@ -61,9 +61,11 @@ pub async fn chart_data(
 pub struct QueryLog {
   pub id: i64,
   pub domain: String,
+  pub record_type: String,
   pub client_ip: String,
   pub blocked: bool,
   pub block_origin: Option<String>,
+  pub response_code: String,
   pub timestamp: i64,
   pub response_time: i64,
   pub country_code: Option<String>,

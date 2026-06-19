@@ -15,116 +15,145 @@ impl DB {
 
   pub async fn init_schema(&self) -> anyhow::Result<()> {
     sqlx::query(
-      "
-        CREATE TABLE IF NOT EXISTS query_log (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            domain        TEXT    NOT NULL,
-            client_ip     TEXT    NOT NULL,
-            blocked       INTEGER NOT NULL,
-            block_origin  TEXT,
-            timestamp     INTEGER NOT NULL,
-            response_time INTEGER NOT NULL,
-            country_code  TEXT,
-            company_name  TEXT,
+      r#"
+      CREATE TABLE IF NOT EXISTS query_log (
+          id            INTEGER PRIMARY KEY AUTOINCREMENT,
+          domain        TEXT    NOT NULL,
+          record_type   TEXT    NOT NULL,
+          client_ip     TEXT    NOT NULL,
+          blocked       INTEGER NOT NULL,
+          block_origin  TEXT,
+          response_code TEXT    NOT NULL,
+          timestamp     INTEGER NOT NULL,
+          response_time INTEGER NOT NULL,
+          country_code  TEXT,
+          company_name  TEXT,
+          device_id     TEXT,
 
-            device_id     TEXT,
-
-            FOREIGN KEY (device_id)
-                REFERENCES device(id)
-                ON DELETE SET NULL
-                ON UPDATE CASCADE
-        );",
+          FOREIGN KEY (device_id)
+              REFERENCES device(id)
+              ON DELETE SET NULL
+              ON UPDATE CASCADE
+      );
+      "#,
     )
     .execute(&self.pool)
     .await?;
 
     sqlx::query(
-      "CREATE INDEX IF NOT EXISTS idx_query_log_blocked_timestamp
-             ON query_log(blocked, timestamp)",
+      r#"
+      CREATE INDEX IF NOT EXISTS idx_query_log_blocked_timestamp
+          ON query_log(blocked, timestamp);
+      "#,
     )
     .execute(&self.pool)
     .await?;
 
     sqlx::query(
-      "CREATE INDEX IF NOT EXISTS idx_query_log_domain
-             ON query_log(domain)",
+      r#"
+      CREATE INDEX IF NOT EXISTS idx_query_log_domain
+          ON query_log(domain);
+      "#,
     )
     .execute(&self.pool)
     .await?;
 
     sqlx::query(
-      "CREATE TABLE IF NOT EXISTS domain_stats (
-              domain             TEXT    PRIMARY KEY,
-              registered_domain  TEXT    NOT NULL,
-              hits_total         INTEGER NOT NULL,
-              hits_blocked       INTEGER NOT NULL,
-              last_seen          INTEGER NOT NULL
-            );",
+      r#"
+      CREATE INDEX IF NOT EXISTS idx_query_log_record_type
+          ON query_log(record_type);
+      "#,
     )
     .execute(&self.pool)
     .await?;
 
     sqlx::query(
-      "CREATE INDEX IF NOT EXISTS idx_domain_stats_registered
-                ON domain_stats(registered_domain);",
+      r#"
+      CREATE TABLE IF NOT EXISTS domain_stats (
+          domain            TEXT    PRIMARY KEY,
+          registered_domain TEXT    NOT NULL,
+          hits_total        INTEGER NOT NULL,
+          hits_blocked      INTEGER NOT NULL,
+          last_seen         INTEGER NOT NULL
+      );
+      "#,
     )
     .execute(&self.pool)
     .await?;
 
     sqlx::query(
-      "CREATE TABLE IF NOT EXISTS device (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      type TEXT NOT NULL CHECK (
-        type IN (
-          'windows',
-          'linux',
-          'macos',
-          'ios',
-          'android',
-          'router',
-          'other'
-        )
-      ),
-      last_seen INTEGER
-    );",
+      r#"
+      CREATE INDEX IF NOT EXISTS idx_domain_stats_registered
+          ON domain_stats(registered_domain);
+      "#,
     )
     .execute(&self.pool)
     .await?;
 
     sqlx::query(
-      "CREATE INDEX IF NOT EXISTS idx_domain_stats_last_seen
-             ON domain_stats(last_seen)",
+      r#"
+      CREATE TABLE IF NOT EXISTS device (
+          id        TEXT PRIMARY KEY,
+          name      TEXT NOT NULL,
+          type      TEXT NOT NULL CHECK (
+              type IN (
+                  'windows',
+                  'linux',
+                  'macos',
+                  'ios',
+                  'android',
+                  'router',
+                  'other'
+              )
+          ),
+          last_seen INTEGER
+      );
+      "#,
     )
     .execute(&self.pool)
     .await?;
 
     sqlx::query(
-      "CREATE TABLE IF NOT EXISTS admin (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
-            password_hash TEXT NOT NULL,
-            created_at INTEGER NOT NULL,
-            last_login INTEGER
-          );",
+      r#"
+      CREATE INDEX IF NOT EXISTS idx_domain_stats_last_seen
+          ON domain_stats(last_seen);
+      "#,
     )
     .execute(&self.pool)
     .await?;
 
     sqlx::query(
-      "
+      r#"
+      CREATE TABLE IF NOT EXISTS admin (
+          id            INTEGER PRIMARY KEY CHECK (id = 1),
+          password_hash TEXT    NOT NULL,
+          created_at    INTEGER NOT NULL,
+          last_login    INTEGER
+      );
+      "#,
+    )
+    .execute(&self.pool)
+    .await?;
+
+    sqlx::query(
+      r#"
       CREATE TABLE IF NOT EXISTS session (
           token      TEXT    PRIMARY KEY,
           created_at INTEGER NOT NULL,
           expires_at INTEGER NOT NULL,
           last_used  INTEGER NOT NULL,
           ip_address TEXT    NOT NULL
-      );",
+      );
+      "#,
     )
     .execute(&self.pool)
     .await?;
 
     sqlx::query(
-      "CREATE INDEX IF NOT EXISTS idx_session_expires_at ON session(expires_at);",
+      r#"
+      CREATE INDEX IF NOT EXISTS idx_session_expires_at
+          ON session(expires_at);
+      "#,
     )
     .execute(&self.pool)
     .await?;

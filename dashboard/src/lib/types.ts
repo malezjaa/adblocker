@@ -10,6 +10,7 @@ export interface QueryLog {
   country_code: string | null
   company_name: string | null
   device: Device | null
+  record_type: string
 }
 
 export interface QueryLogsResponse {

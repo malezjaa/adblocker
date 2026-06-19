@@ -111,8 +111,6 @@ fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), ()> {
     Message::Close(c) => {
       if let Some(cf) = c {
         info!("{who} sent close with code {} and reason `{}`", cf.code, cf.reason);
-      } else {
-        warn!("{who} somehow sent close message without CloseFrame");
       }
       return ControlFlow::Break(());
     }
