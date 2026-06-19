@@ -1,40 +1,65 @@
 use crate::context::Context;
 use crate::engine::EngineActor;
-use crate::engine::cache::{CacheLookup, MAX_NEGATIVE_TTL};
-use anyhow::bail;
+use crate::engine::cache::{CacheKey, CacheLookup, InFlightGuard, MAX_NEGATIVE_TTL};
+use anyhow::{anyhow, bail};
+use dashmap::Entry;
+use dashmap::mapref::entry_ref::EntryRef;
 use hickory_proto::op::{Message, Query, ResponseCode};
 use hickory_proto::rr::{Name, RData, RecordType};
 use hickory_resolver::lookup::Lookup;
 use hickory_resolver::net::{DnsError, NetError, NoRecords};
 use std::time::Duration;
-use tracing::{debug, warn};
+use tokio::sync::broadcast;
+use tracing::{debug, trace, warn};
 
 impl Context {
   pub async fn resolve_msg(&self, msg: &Message) -> anyhow::Result<Message> {
     let Some(query) = msg.queries.first() else { bail!("No name or record") };
     let query_name = query.name.to_owned();
+    let cache_key = CacheKey { name: query_name, record_type: query.query_type };
 
-    if let Some(response) = self.try_cache(msg, query) {
+    if let Some(response) = self.try_cache(msg, &cache_key) {
       return Ok(response);
     }
 
+    let mut rx_follower = None;
+    let mut _leader_guard = None;
+
+    match self.cache().in_flight().entry(cache_key.clone()) {
+      Entry::Occupied(occ) => {
+        rx_follower = Some(occ.get().subscribe());
+        trace!(name = %cache_key.name, record_type = ?cache_key.record_type, "listening to existing in-flight leader");
+      }
+      Entry::Vacant(vac) => {
+        let (tx, _) = broadcast::channel(100);
+        vac.insert(tx);
+        _leader_guard =
+          Some(InFlightGuard { cache: self.cache(), key: cache_key.clone() });
+        trace!(name = %cache_key.name, record_type = ?cache_key.record_type, "new in-flight leader created");
+      }
+    }
     let mut response = msg.clone().into_response();
-    match self.resolver().lookup(query_name.clone(), query.query_type).await {
-      Ok(lookup) => {
-        self.handle_resolved(&query_name, query.query_type, lookup, &mut response)
+
+    if let Some(mut rx) = rx_follower {
+      let _ = rx.recv().await.map_err(|_| anyhow!("in-flight lookup dropped"))?;
+      if let Some(response) = self.try_cache(msg, &cache_key) {
+        debug!(name = %cache_key.name, record_type = ?cache_key.record_type, "dns cache hit from an in-flight lookup");
+        return Ok(response);
       }
-      Err(e) => {
-        self.handle_resolve_error(&query_name, query.query_type, e, &mut response)?
-      }
+    }
+
+    match self.resolver().lookup(cache_key.name.clone(), query.query_type).await {
+      Ok(lookup) => self.handle_resolved(cache_key, lookup, &mut response),
+      Err(e) => self.handle_resolve_error(cache_key, e, &mut response)?,
     }
 
     Ok(response)
   }
 
-  fn try_cache(&self, msg: &Message, query: &Query) -> Option<Message> {
-    match self.cache().get(query.name(), query.query_type()) {
+  fn try_cache(&self, msg: &Message, key: &CacheKey) -> Option<Message> {
+    match self.cache().get(key) {
       CacheLookup::Resolved(cached) => {
-        debug!(name = %query.name(), record_type = ?query.query_type(), "dns cache hit");
+        debug!(name = %key.name, record_type = ?key.record_type, "dns cache hit");
         let mut response = msg.clone().into_response();
         response.metadata.response_code = cached.response_code;
         for record in cached.records {
@@ -43,26 +68,19 @@ impl Context {
         Some(response)
       }
       CacheLookup::Blocked => {
-        warn!(name = %query.name(), "resolve_msg saw a Blocked cache entry...");
+        warn!(name = %key.name, "resolve_msg saw a Blocked cache entry...");
         None
       }
       CacheLookup::Miss => None,
     }
   }
 
-  fn handle_resolved(
-    &self,
-    query_name: &Name,
-    query_type: RecordType,
-    lookup: Lookup,
-    response: &mut Message,
-  ) {
+  fn handle_resolved(&self, cache_key: CacheKey, lookup: Lookup, response: &mut Message) {
     let records = lookup.answers().to_vec();
     let ttl = lookup.answers().iter().map(|r| r.ttl).min().unwrap_or(60);
 
     self.cache().insert_resolved(
-      query_name.clone(),
-      query_type,
+      cache_key,
       records.clone(),
       ResponseCode::NoError,
       Duration::from_secs(ttl as u64),
@@ -75,8 +93,7 @@ impl Context {
 
   fn handle_resolve_error(
     &self,
-    query_name: &Name,
-    query_type: RecordType,
+    cache_key: CacheKey,
     e: NetError,
     response: &mut Message,
   ) -> anyhow::Result<()> {
@@ -84,23 +101,17 @@ impl Context {
       NetError::Dns(DnsError::NoRecordsFound(no)) => {
         response.metadata.response_code = no.response_code;
         let duration = negative_ttl(&no);
-        debug!(name = %query_name, ttl = ?duration, "no records found");
-        self.cache().insert_resolved(
-          query_name.clone(),
-          query_type,
-          Vec::new(),
-          no.response_code,
-          duration,
-        );
+        debug!(name = %cache_key.name, ttl = ?duration, "no records found");
+        self.cache().insert_resolved(cache_key, Vec::new(), no.response_code, duration);
         Ok(())
       }
       NetError::Timeout => {
-        warn!(name = %query_name, "upstream resolver timed out");
+        warn!(name = %cache_key.name, "upstream resolver timed out");
         response.metadata.response_code = ResponseCode::ServFail;
         Ok(())
       }
       _ => {
-        warn!(error = ?e, name = %query_name, "unhandled resolver error kind");
+        warn!(error = ?e, name = %cache_key.name, "unhandled resolver error kind");
         Err(e.into())
       }
     }

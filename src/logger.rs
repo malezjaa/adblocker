@@ -41,7 +41,7 @@ pub fn setup_logger(verbose: bool) {
     .event_format(CustomFormatter)
     .with_env_filter(EnvFilter::new(format!(
       "dns_adblock={0},cli={0},daemon={0}",
-      if verbose { "debug" } else { "info" }
+      if verbose { "trace" } else { "info" }
     )))
     .init();
 }

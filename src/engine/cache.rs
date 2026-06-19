@@ -1,9 +1,11 @@
 // engine/cache.rs
 
+use dashmap::DashMap;
 use hickory_proto::op::ResponseCode;
 use hickory_proto::rr::{Name, Record, RecordType};
 use moka::sync::Cache;
 use std::time::{Duration, Instant};
+use tokio::sync::broadcast::Sender;
 
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct CacheKey {
@@ -30,6 +32,7 @@ pub enum CacheEntry {
   Blocked,
 }
 
+#[derive(Clone)]
 pub enum CacheLookup {
   Resolved(ResolvedCacheEntry),
   Blocked,
@@ -38,38 +41,54 @@ pub enum CacheLookup {
 
 pub const MAX_NEGATIVE_TTL: u32 = 3600;
 
-pub struct DnsCache(Cache<CacheKey, CacheEntry>);
+pub type InFlight = DashMap<CacheKey, Sender<()>>;
+pub struct InFlightGuard<'a> {
+  pub cache: &'a DnsCache,
+  pub key: CacheKey,
+}
+
+impl Drop for InFlightGuard<'_> {
+  fn drop(&mut self) {
+    if let Some((_, tx)) = self.cache.in_flight().remove(&self.key) {
+      let _ = tx.send(());
+    }
+  }
+}
+
+pub struct DnsCache {
+  cache: Cache<CacheKey, CacheEntry>,
+  in_flight: InFlight,
+}
 
 impl DnsCache {
   pub fn new() -> Self {
-    Self(Cache::builder().max_capacity(10_000).build())
+    Self {
+      cache: Cache::builder().max_capacity(10_000).build(),
+      in_flight: DashMap::new(),
+    }
   }
 
-  pub fn is_cached(&self, name: &Name, record_type: RecordType) -> bool {
-    self.0.contains_key(&CacheKey { name: name.clone(), record_type })
+  pub fn is_cached(&self, key: &CacheKey) -> bool {
+    self.cache.contains_key(key)
   }
 
-  pub fn is_blocked(&self, name: &Name, record_type: RecordType) -> bool {
-    self
-      .0
-      .get(&CacheKey { name: name.clone(), record_type })
-      .is_some_and(|entry| matches!(entry, CacheEntry::Blocked))
+  pub fn is_blocked(&self, key: &CacheKey) -> bool {
+    self.cache.get(key).is_some_and(|entry| matches!(entry, CacheEntry::Blocked))
   }
 
-  pub fn insert_blocked(&self, name: Name, record_type: RecordType) {
-    self.0.insert(CacheKey { name, record_type }, CacheEntry::Blocked);
+  pub fn insert_blocked(&self, key: CacheKey) {
+    self.cache.insert(key, CacheEntry::Blocked);
   }
 
   pub fn insert_resolved(
     &self,
-    name: Name,
-    record_type: RecordType,
+    key: CacheKey,
     records: Vec<Record>,
     response_code: ResponseCode,
     ttl: Duration,
   ) {
-    self.0.insert(
-      CacheKey { name, record_type },
+    self.cache.insert(
+      key,
       CacheEntry::Resolved(ResolvedCacheEntry {
         records,
         response_code,
@@ -78,19 +97,21 @@ impl DnsCache {
     );
   }
 
-  pub fn get(&self, name: &Name, record_type: RecordType) -> CacheLookup {
-    let key = CacheKey { name: name.clone(), record_type };
-
-    match self.0.get(&key) {
+  pub fn get(&self, key: &CacheKey) -> CacheLookup {
+    match self.cache.get(key) {
       Some(CacheEntry::Resolved(entry)) if !entry.is_expired() => {
         CacheLookup::Resolved(entry)
       }
       Some(CacheEntry::Resolved(_)) => {
-        self.0.invalidate(&key);
+        self.cache.invalidate(key);
         CacheLookup::Miss
       }
       Some(CacheEntry::Blocked) => CacheLookup::Blocked,
       None => CacheLookup::Miss,
     }
+  }
+
+  pub fn in_flight(&self) -> &InFlight {
+    &self.in_flight
   }
 }
