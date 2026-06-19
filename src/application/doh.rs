@@ -1,7 +1,6 @@
 use crate::application::app::App;
 use crate::context::Context;
 use crate::dashboard::AppError;
-use crate::dns::process::process_message;
 use crate::engine::message::BlockOrigin;
 use anyhow::Result;
 use axum::body::Bytes;
@@ -55,20 +54,7 @@ impl App {
     bytes: Vec<u8>,
     device: Option<String>,
   ) -> Result<impl IntoResponse, AppError> {
-    let start = Instant::now();
-
-    let (blocked, response) =
-      process_message(ctx.clone(), bytes, BlockOrigin::DoH).await?;
-
-    ctx.db().record_query(
-      &response,
-      addr,
-      blocked,
-      BlockOrigin::DoH,
-      start.elapsed().as_millis() as i64,
-      device,
-    );
-
+    let response = ctx.query_dns(bytes, BlockOrigin::DoH, addr, device).await?;
     Ok((
       StatusCode::OK,
       [("content-type", "application/dns-message")],

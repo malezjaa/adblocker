@@ -3,6 +3,7 @@ use crate::config::Config;
 use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
 use crate::engine::EngineMessage;
+use crate::engine::cache::DnsCache;
 use crate::mmdb::downloader::{MMDBSPaths, download_mmdbs_files};
 use crate::mmdb::mmdbs::MMDBS;
 use anyhow::Result;
@@ -32,6 +33,7 @@ pub struct ContextImpl {
   pub config_path: PathBuf,
   pub mmdbs: RwLock<Option<MMDBS>>,
   pub paths: MMDBSPaths,
+  pub dns_cache: DnsCache,
 }
 
 impl Context {
@@ -94,6 +96,7 @@ impl Context {
       config_path,
       mmdbs: RwLock::new(None),
       paths,
+      dns_cache: DnsCache::new(),
     }));
 
     ctx.db().attach_context(&ctx);
@@ -147,5 +150,9 @@ impl Context {
 
   pub fn config_path(&self) -> &Path {
     self.0.config_path.as_ref()
+  }
+
+  pub fn cache(&self) -> &DnsCache {
+    &self.0.dns_cache
   }
 }

@@ -8,7 +8,7 @@ pub enum BlockResult {
   Block,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum BlockOrigin {
   Plain,
   DoH,

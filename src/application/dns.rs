@@ -1,6 +1,5 @@
 use crate::application::app::App;
 use crate::context::Context;
-use crate::dns::process::process_message;
 use crate::engine::message::BlockOrigin;
 use std::io::ErrorKind;
 use tokio::net::UdpSocket;
@@ -23,20 +22,8 @@ impl App {
 
       let raw = buf[..len].to_vec();
 
-      let start = Instant::now();
-      let (blocked, response) =
-        process_message(ctx.clone(), raw, BlockOrigin::Plain).await?;
-      let elapsed = start.elapsed();
-
+      let response = ctx.query_dns(raw, BlockOrigin::Plain, src, None).await?;
       socket.send_to(&response.to_vec()?, src).await?;
-      ctx.db().record_query(
-        &response,
-        src,
-        blocked,
-        BlockOrigin::Plain,
-        elapsed.as_millis() as i64,
-        None,
-      );
     }
   }
 }
