@@ -78,6 +78,7 @@ impl Context {
     opts.negative_min_ttl = Some(Duration::from_secs(60));
     opts.positive_min_ttl = Some(Duration::from_secs(60));
     opts.num_concurrent_reqs = 3;
+    opts.validate = config.dnssec_enabled();
 
     let server_config = Arc::new(
       ServerConfig::builder().with_no_client_auth().with_single_cert(certs, key)?,

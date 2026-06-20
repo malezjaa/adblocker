@@ -16,6 +16,7 @@ pub struct Config {
   pub doh: Option<bool>,
   pub dashboard: Option<bool>,
   pub rewrites: Option<Vec<Rewrite>>,
+  pub dnssec: Option<bool>,
 }
 
 impl Config {
@@ -27,6 +28,7 @@ impl Config {
       doh: Some(true),
       dashboard: Some(true),
       rewrites: None,
+      dnssec: Some(false),
     })
   }
 
@@ -65,5 +67,9 @@ impl Config {
 
   pub fn dashboard_enabled(&self) -> bool {
     self.dashboard.unwrap_or(true)
+  }
+
+  pub fn dnssec_enabled(&self) -> bool {
+    self.dnssec.unwrap_or(false)
   }
 }

@@ -6,14 +6,15 @@ use hickory_proto::rr::{Name, Record, RecordType};
 use moka::sync::Cache;
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender;
+use tracing::log::trace;
 
-#[derive(Clone, Hash, Eq, PartialEq)]
+#[derive(Clone, Hash, Eq, PartialEq, Debug)]
 pub struct CacheKey {
   pub name: Name,
   pub record_type: RecordType,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ResolvedCacheEntry {
   pub records: Vec<Record>,
   pub response_code: ResponseCode,
@@ -26,7 +27,7 @@ impl ResolvedCacheEntry {
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum CacheEntry {
   Resolved(ResolvedCacheEntry),
   Blocked,
@@ -50,11 +51,13 @@ pub struct InFlightGuard<'a> {
 impl Drop for InFlightGuard<'_> {
   fn drop(&mut self) {
     if let Some((_, tx)) = self.cache.in_flight().remove(&self.key) {
+      trace!("in flight guard dropped");
       let _ = tx.send(());
     }
   }
 }
 
+#[derive(Debug, Clone)]
 pub struct DnsCache {
   cache: Cache<CacheKey, CacheEntry>,
   in_flight: InFlight,

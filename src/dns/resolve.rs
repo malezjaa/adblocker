@@ -8,7 +8,7 @@ use hickory_proto::op::{Message, Query, ResponseCode};
 use hickory_proto::rr::{Name, RData, RecordType};
 use hickory_resolver::lookup::Lookup;
 use hickory_resolver::net::{DnsError, NetError, NoRecords};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::broadcast;
 use tracing::{debug, trace, warn};
 
@@ -48,8 +48,12 @@ impl Context {
       }
     }
 
+    let start = Instant::now();
     match self.resolver().lookup(cache_key.name.clone(), query.query_type).await {
-      Ok(lookup) => self.handle_resolved(cache_key, lookup, &mut response),
+      Ok(lookup) => {
+        trace!(name = %cache_key.name, record_type = ?cache_key.record_type, "upstream took {:.2?} to resolve", start.elapsed());
+        self.handle_resolved(cache_key, lookup, &mut response)
+      }
       Err(e) => self.handle_resolve_error(cache_key, e, &mut response)?,
     }
 
