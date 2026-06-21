@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 import {
   BookOpenIcon,
-  BriefcaseIcon,
   Flag,
   HelpCircleIcon,
   LayoutGridIcon,
@@ -35,11 +34,6 @@ export const navGroups: SidebarNavGroup[] = [
         title: "Countries",
         path: "/countries",
         icon: <Flag />,
-      },
-      {
-        title: "Companies",
-        path: "/companies",
-        icon: <BriefcaseIcon />,
       },
       {
         title: "Query Logs",
