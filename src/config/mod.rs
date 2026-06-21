@@ -2,16 +2,28 @@ pub mod watcher;
 
 use crate::rewrite::Rewrite;
 use anyhow::Result;
-use fs_err::{create_dir, read, write};
+use fs_err::{create_dir, create_dir_all, read, write};
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::path::Path;
 use tracing::debug;
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct UpstreamServer {
+  pub name: String,
+  pub addr: IpAddr,
+}
+
+impl UpstreamServer {
+  pub fn new(name: impl Into<String>, addr: IpAddr) -> Self {
+    Self { name: name.into(), addr }
+  }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
   pub blocklists: Vec<String>,
-  pub secondary_name_server: Option<SocketAddr>,
+  pub upstreams: Option<Vec<UpstreamServer>>,
   pub block_rules: Option<Vec<String>>,
   pub doh: Option<bool>,
   pub dashboard: Option<bool>,
@@ -23,7 +35,10 @@ impl Config {
   pub fn default_values() -> Result<Self> {
     Ok(Self {
       blocklists: vec!["oisd-big".into()],
-      secondary_name_server: None,
+      upstreams: Some(vec![
+        UpstreamServer::new("cloudflare-dns.com", IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1))),
+        UpstreamServer::new("cloudflare-dns.com", IpAddr::V4(Ipv4Addr::new(1, 0, 0, 1))),
+      ]),
       block_rules: None,
       doh: Some(true),
       dashboard: Some(true),
@@ -50,7 +65,7 @@ impl Config {
     if !path.exists() {
       let config = Self::default_values()?;
       if let Some(parent) = path.parent() {
-        create_dir(parent)?;
+        create_dir_all(parent)?;
       }
 
       write(path, toml::to_string(&config)?)?;

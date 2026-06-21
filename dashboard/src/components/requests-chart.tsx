@@ -1,13 +1,23 @@
 "use client"
 
-import {type CSSProperties, useMemo} from "react"
-import {Bar, BarChart, Rectangle, ReferenceLine, XAxis} from "recharts"
+import { type CSSProperties, useMemo } from "react"
+import { Bar, BarChart, Rectangle, ReferenceLine, XAxis } from "recharts"
 
-import {CardContent, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card"
-import {type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent,} from "@/components/ui/chart"
-import {useChartData} from "@/lib/api.ts"
-import {Skeleton} from "@/components/ui/skeleton.tsx"
-import {DashboardCard} from "@/components/dashboard-card.tsx"
+import {
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import { useChartData } from "@/lib/api.ts"
+import { Skeleton } from "@/components/ui/skeleton.tsx"
+import { DashboardCard } from "@/components/dashboard-card.tsx"
 
 const chartConfig = {
   total: {
@@ -58,9 +68,9 @@ export function RequestsChart() {
       </CardHeader>
       <CardContent>
         {refLines.length === 0 ? (
-            <p className="py-2 text-lg text-center text-muted-foreground">
-              No chart data yet.
-            </p>
+          <p className="py-2 text-center text-lg text-muted-foreground">
+            No chart data yet.
+          </p>
         ) : (
           <ChartContainer config={chartConfig} className="h-40 w-full">
             <BarChart

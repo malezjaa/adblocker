@@ -7,6 +7,7 @@ import {
   List,
   Pen,
   Scroll,
+  Settings,
 } from "lucide-react"
 
 export type SidebarNavItem = {
@@ -45,6 +46,11 @@ export const navGroups: SidebarNavGroup[] = [
   {
     label: "Config",
     items: [
+      {
+        title: "Settings",
+        path: "/settings",
+        icon: <Settings />,
+      },
       {
         title: "Lists",
         path: "/lists",

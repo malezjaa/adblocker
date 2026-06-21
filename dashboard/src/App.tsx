@@ -5,6 +5,9 @@ import { AuthPage } from "@/components/auth.tsx"
 import { QueryLogs } from "@/app/dashboard/query-logs.tsx"
 import Countries from "@/app/dashboard/countries.tsx"
 import { Lists } from "@/app/dashboard/lists.tsx"
+import Settings from "@/app/dashboard/settings/settings.tsx"
+import { HTML5Backend } from "react-dnd-html5-backend"
+import { DndProvider } from "react-dnd"
 
 let router = createBrowserRouter([
   {
@@ -31,10 +34,20 @@ let router = createBrowserRouter([
     path: "/lists",
     Component: Lists,
   },
+  {
+    path: "/settings",
+    Component: Settings,
+  },
 ])
 
 export function App() {
-  return <RouterProvider router={router} />
+  return (
+    <>
+      <DndProvider backend={HTML5Backend}>
+        <RouterProvider router={router} />
+      </DndProvider>
+    </>
+  )
 }
 
 export default App

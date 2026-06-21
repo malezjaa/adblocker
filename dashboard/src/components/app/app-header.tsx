@@ -2,13 +2,9 @@ import { cn } from "@/lib/utils.ts"
 import { Button } from "@/components/ui/button.tsx"
 import { Separator } from "@/components/ui/separator.tsx"
 import { DecorIcon } from "../ui/decor-icon.tsx"
-import { AppBreadcrumbs } from "@/components/app/app-breadcrumbs.tsx"
-import { navLinks } from "@/components/app/app-shared.tsx"
 import { CustomSidebarTrigger } from "@/components/custom-sidebar-trigger"
 import { NavUser } from "../nav/nav-user.tsx"
 import { BellIcon, SendIcon } from "lucide-react"
-
-const activeItem = navLinks.find((item) => item.isActive)
 
 export function AppHeader() {
   return (
@@ -25,7 +21,6 @@ export function AppHeader() {
           className="mr-2 h-4 data-[orientation=vertical]:self-center"
           orientation="vertical"
         />
-        <AppBreadcrumbs page={activeItem} />
       </div>
       <div className="flex items-center gap-3">
         <Button size="icon-sm" variant="outline">

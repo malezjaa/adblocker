@@ -12,12 +12,13 @@ use hickory_resolver::config::{NameServerConfig, ResolverConfig};
 use hickory_resolver::{TokioResolver, net::runtime::TokioRuntimeProvider};
 use parking_lot::{RwLock, RwLockReadGuard};
 use rustls::ServerConfig;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
+use tracing::warn;
 
 #[derive(Clone)]
 pub struct Context(pub Arc<ContextImpl>);
@@ -53,23 +54,17 @@ impl Context {
 
     let mut r_config = ResolverConfig::default();
 
-    r_config.add_name_server(NameServerConfig::https(
-      IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1)),
-      Arc::from("cloudflare-dns.com"),
-      None,
-    ));
-
-    r_config.add_name_server(NameServerConfig::https(
-      IpAddr::V4(Ipv4Addr::new(1, 0, 0, 1)),
-      Arc::from("cloudflare-dns.com"),
-      None,
-    ));
-
-    r_config.add_name_server(NameServerConfig::https(
-      IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)),
-      Arc::from("dns.google"),
-      None,
-    ));
+    if let Some(upstreams) = &config.upstreams {
+      for upstream in upstreams {
+        r_config.add_name_server(NameServerConfig::https(
+          upstream.addr,
+          Arc::from(upstream.name.as_str()),
+          None,
+        ))
+      }
+    } else {
+      warn!("no upstream servers specified. is this desired?")
+    }
 
     let mut resolver_builder =
       TokioResolver::builder_with_config(r_config, TokioRuntimeProvider::default());
@@ -139,10 +134,6 @@ impl Context {
 
   pub fn config(&self) -> RwLockReadGuard<'_, Config> {
     self.0.config.read()
-  }
-
-  pub fn secondary_name_server(&self) -> Option<SocketAddr> {
-    self.0.config.read().secondary_name_server
   }
 
   pub fn ws_tx(&self) -> broadcast::Sender<WsEvent> {
