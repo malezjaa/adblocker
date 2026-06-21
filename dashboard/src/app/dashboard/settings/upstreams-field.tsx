@@ -244,6 +244,7 @@ export function UpstreamsField({
               aria-label="Add server"
             >
               <Plus className="size-4" />
+              Add provider
             </Button>
           </div>
         )}

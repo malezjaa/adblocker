@@ -105,10 +105,17 @@ async fn reload_config(config_path: &PathBuf, ctx: &Context) {
     Err(err) => error!("failed to create new hickory resolver: {:?}", err),
   }
 
+  let mut blocklists = ctx.blocklists();
+  let mut new_blocklists = config.blocklists.clone();
+  blocklists.sort();
+  new_blocklists.sort();
+
   *ctx.0.config.write() = config;
   info!("reloaded config");
 
-  if let Err(err) = ctx.tx().send(EngineMessage::ReloadFilterSet).await {
-    error!("failed to notify engine of config reload: {err}");
+  if blocklists != new_blocklists {
+    if let Err(err) = ctx.tx().send(EngineMessage::ReloadFilterSet).await {
+      error!("failed to notify engine of config reload: {err}");
+    }
   }
 }

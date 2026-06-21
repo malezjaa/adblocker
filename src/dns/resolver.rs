@@ -6,7 +6,7 @@ use hickory_resolver::net::runtime::TokioRuntimeProvider;
 use hickory_resolver::{Resolver, TokioResolver};
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::warn;
+use tracing::{trace, warn};
 
 pub fn create_hickory_resolver(
   config: &Config,
@@ -19,7 +19,8 @@ pub fn create_hickory_resolver(
         upstream.addr,
         Arc::from(upstream.name.as_str()),
         None,
-      ))
+      ));
+      trace!(addr = %upstream.addr, name = %upstream.name, "added upstream server");
     }
   } else {
     warn!("no upstream servers specified. is this desired?")
