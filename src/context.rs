@@ -2,23 +2,22 @@ use crate::cert::{Certs, get_certs};
 use crate::config::Config;
 use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
+use crate::dns::resolver::create_hickory_resolver;
 use crate::engine::EngineMessage;
 use crate::engine::cache::DnsCache;
 use crate::mmdb::downloader::{MMDBSPaths, download_mmdbs_files};
 use crate::mmdb::mmdbs::MMDBS;
 use anyhow::Result;
 use fs_err::create_dir_all;
-use hickory_resolver::config::{NameServerConfig, ResolverConfig};
-use hickory_resolver::{TokioResolver, net::runtime::TokioRuntimeProvider};
+use hickory_resolver::TokioResolver;
 use parking_lot::{RwLock, RwLockReadGuard};
 use rustls::ServerConfig;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
-use tracing::warn;
+use tracing::log::trace;
 
 #[derive(Clone)]
 pub struct Context(pub Arc<ContextImpl>);
@@ -27,7 +26,7 @@ pub struct ContextImpl {
   pub tx: Sender<EngineMessage>,
   pub ws_tx: broadcast::Sender<WsEvent>,
   pub config: RwLock<Config>,
-  pub resolver: TokioResolver,
+  pub resolver: RwLock<TokioResolver>,
   pub db: DB,
   pub cache_dir: PathBuf,
   pub server_config: Arc<ServerConfig>,
@@ -52,40 +51,17 @@ impl Context {
     let mut config = Config::from_file(&config_path)?;
     config.compile_regexes()?;
 
-    let mut r_config = ResolverConfig::default();
-
-    if let Some(upstreams) = &config.upstreams {
-      for upstream in upstreams {
-        r_config.add_name_server(NameServerConfig::https(
-          upstream.addr,
-          Arc::from(upstream.name.as_str()),
-          None,
-        ))
-      }
-    } else {
-      warn!("no upstream servers specified. is this desired?")
-    }
-
-    let mut resolver_builder =
-      TokioResolver::builder_with_config(r_config, TokioRuntimeProvider::default());
-
-    let opts = resolver_builder.options_mut();
-    opts.negative_min_ttl = Some(Duration::from_secs(60));
-    opts.positive_min_ttl = Some(Duration::from_secs(60));
-    opts.num_concurrent_reqs = 3;
-    opts.validate = config.dnssec_enabled();
-
     let server_config = Arc::new(
       ServerConfig::builder().with_no_client_auth().with_single_cert(certs, key)?,
     );
-
     let paths = download_mmdbs_files();
 
+    let resolver = create_hickory_resolver(&config)?;
     let ctx = Self(Arc::new(ContextImpl {
       tx,
       config: RwLock::new(config),
       db,
-      resolver: resolver_builder.build()?,
+      resolver: RwLock::new(resolver),
       ws_tx: broadcast::channel(100).0,
       cache_dir,
       server_config,
@@ -116,10 +92,6 @@ impl Context {
     self.0.tx.clone()
   }
 
-  pub fn resolver(&self) -> &TokioResolver {
-    &self.0.resolver
-  }
-
   pub fn blocklists(&self) -> Vec<String> {
     self.0.config.read().blocklists.clone()
   }
@@ -146,5 +118,14 @@ impl Context {
 
   pub fn cache(&self) -> &DnsCache {
     &self.0.dns_cache
+  }
+
+  pub fn resolver(&self) -> TokioResolver {
+    self.0.resolver.read().clone()
+  }
+
+  pub fn update_resolver(&self, new_resolver: TokioResolver) {
+    *self.0.resolver.write() = new_resolver;
+    trace!("updated hickory resolver");
   }
 }

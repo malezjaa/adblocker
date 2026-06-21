@@ -1,3 +1,4 @@
+pub mod settings;
 pub mod watcher;
 
 use crate::rewrite::Rewrite;
@@ -8,7 +9,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::path::Path;
 use tracing::debug;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UpstreamServer {
   pub name: String,
   pub addr: IpAddr,
@@ -20,7 +21,7 @@ impl UpstreamServer {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
   pub blocklists: Vec<String>,
   pub upstreams: Option<Vec<UpstreamServer>>,

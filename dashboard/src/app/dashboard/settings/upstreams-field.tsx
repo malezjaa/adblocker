@@ -14,18 +14,18 @@ import type { UpstreamServer } from "@/app/dashboard/settings/user-settings.ts"
 import { cn } from "@/lib/utils.ts"
 
 export const AVAILABLE_UPSTREAMS: UpstreamServer[] = [
-  { name: "cloudflare-dns.com", ip: "1.1.1.1" },
-  { name: "cloudflare-dns.com", ip: "1.0.0.1" },
-  { name: "dns.google", ip: "8.8.8.8" },
-  { name: "dns.google", ip: "8.8.4.4" },
-  { name: "dns.quad9.net", ip: "9.9.9.9" },
-  { name: "dns.quad9.net", ip: "149.112.112.112" },
-  { name: "doh.opendns.com", ip: "208.67.222.222" },
-  { name: "doh.opendns.com", ip: "208.67.220.220" },
+  { name: "cloudflare-dns.com", addr: "1.1.1.1" },
+  { name: "cloudflare-dns.com", addr: "1.0.0.1" },
+  { name: "dns.google", addr: "8.8.8.8" },
+  { name: "dns.google", addr: "8.8.4.4" },
+  { name: "dns.quad9.net", addr: "9.9.9.9" },
+  { name: "dns.quad9.net", addr: "149.112.112.112" },
+  { name: "doh.opendns.com", addr: "208.67.222.222" },
+  { name: "doh.opendns.com", addr: "208.67.220.220" },
 ]
 
 function upstreamKey(server: UpstreamServer) {
-  return server.ip
+  return server.addr
 }
 
 const ITEM_TYPE = "upstream-server"
@@ -118,12 +118,12 @@ function UpstreamRow({
         <GripVertical className="size-4" />
       </span>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-row items-center gap-2">
         <span className="truncate text-sm leading-tight font-medium">
           {server.name}
         </span>
         <span className="truncate text-xs text-muted-foreground">
-          {server.ip}
+          {server.addr}
         </span>
       </div>
 
@@ -178,7 +178,7 @@ export function UpstreamsField({
   }
 
   function add(ip: string) {
-    const server = AVAILABLE_UPSTREAMS.find((s) => s.ip === ip)
+    const server = AVAILABLE_UPSTREAMS.find((s) => s.addr === ip)
     if (!server) return
     onChange([...value, server])
     setPendingValue("")
@@ -228,8 +228,8 @@ export function UpstreamsField({
               </SelectTrigger>
               <SelectContent>
                 {availableToAdd.map((server) => (
-                  <SelectItem key={server.ip} value={server.ip}>
-                    {server.name} ({server.ip})
+                  <SelectItem key={server.addr} value={server.addr}>
+                    {server.name} ({server.addr})
                   </SelectItem>
                 ))}
               </SelectContent>

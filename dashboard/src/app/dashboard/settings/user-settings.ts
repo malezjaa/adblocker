@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { api, post } from "@/lib/api.ts"
 
 export interface UpstreamServer {
   name: string
-  ip: string
+  addr: string
 }
 
 export interface UserSettings {
@@ -12,22 +13,10 @@ export interface UserSettings {
 
 const SETTINGS_QUERY_KEY = ["user-settings"] as const
 
-const mockUserSettings: UserSettings = {
-  upstreams: [
-    { name: "cloudflare-dns.com", ip: "1.1.1.1" },
-    { name: "cloudflare-dns.com", ip: "1.0.0.1" },
-  ],
-  dnssec: false,
-}
-
-function delay<T>(value: T, ms = 400): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(value), ms))
-}
-
 export function useUserSettings() {
   return useQuery({
     queryKey: SETTINGS_QUERY_KEY,
-    queryFn: () => delay(mockUserSettings),
+    queryFn: () => api<UserSettings>("api/settings"),
   })
 }
 
@@ -35,7 +24,7 @@ export function useUpdateUserSettings() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (next: UserSettings) => delay(next, 600),
+    mutationFn: (next: UserSettings) => post("api/settings", next),
     onSuccess: (next) => {
       queryClient.setQueryData(SETTINGS_QUERY_KEY, next)
     },

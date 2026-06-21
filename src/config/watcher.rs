@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::context::Context;
+use crate::dns::resolver::create_hickory_resolver;
 use crate::engine::EngineMessage;
 use anyhow::Result;
 use futures::future::pending;
@@ -97,6 +98,11 @@ async fn reload_config(config_path: &PathBuf, ctx: &Context) {
   if let Err(err) = config.compile_regexes() {
     error!("failed to compile regexes in reloaded config: {err}");
     return;
+  }
+
+  match create_hickory_resolver(&config) {
+    Ok(resolver) => ctx.update_resolver(resolver),
+    Err(err) => error!("failed to create new hickory resolver: {:?}", err),
   }
 
   *ctx.0.config.write() = config;

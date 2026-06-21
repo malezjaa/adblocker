@@ -6,6 +6,7 @@ pub mod ws;
 
 pub use self::endpoints::stats::QueryLog;
 use crate::application::app::App;
+use crate::config::settings::{settings_handler, update_settings};
 use crate::context::Context;
 pub use crate::dashboard::app_error::AppError;
 use crate::dashboard::auth::{AuthGuard, auth_login, auth_logout, auth_status};
@@ -49,6 +50,7 @@ impl App {
       .route("/api/auth/status", get(auth_status))
       .route("/api/lists", get(get_lists_handler))
       .route("/api/lists/toggle", post(toggle_list))
+      .route("/api/settings", get(settings_handler).post(update_settings))
       .route("/api/top", get(top_handler))
       .route("/api/stats", get(stats))
       .route("/api/chart-data", get(chart_data))
