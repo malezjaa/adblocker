@@ -1,16 +1,12 @@
-import { LogoIcon } from "@/components/logo"
-import { Button } from "@/components/ui/button"
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group"
-import { cn } from "@/lib/utils"
-import { EyeIcon, EyeOffIcon, LogInIcon } from "lucide-react"
-import React from "react"
-import { useState } from "react"
-import { authLogin } from "@/lib/auth.ts"
-import { useNavigate } from "react-router"
+import {LogoIcon} from "@/components/logo"
+import {Button} from "@/components/ui/button"
+import {InputGroup, InputGroupAddon, InputGroupInput,} from "@/components/ui/input-group"
+import {cn} from "@/lib/utils"
+import {EyeIcon, EyeOffIcon, LogInIcon} from "lucide-react"
+import React, {useState} from "react"
+import {authLogin} from "@/lib/auth.ts"
+import {useNavigate} from "react-router"
+import {useQueryClient} from "@tanstack/react-query";
 
 export function AuthDivider({
   children,
@@ -62,6 +58,7 @@ export function AuthPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const validate = (): string | null => {
     if (!password) return "Password is required."
@@ -81,6 +78,10 @@ export function AuthPage() {
     setIsLoading(true)
     try {
       await authLogin(password)
+      await queryClient.refetchQueries({
+        queryKey: ["auth-status"],
+      })
+
       navigate("/dashboard")
     } catch (err) {
       setError("Incorrect password. Please try again.")
