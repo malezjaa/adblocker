@@ -1,6 +1,8 @@
+pub mod rules;
 pub mod settings;
 pub mod watcher;
 
+use crate::config::rules::Rule;
 use crate::rewrite::Rewrite;
 use anyhow::Result;
 use fs_err::{create_dir, create_dir_all, read, write};
@@ -25,7 +27,7 @@ impl UpstreamServer {
 pub struct Config {
   pub blocklists: Vec<String>,
   pub upstreams: Option<Vec<UpstreamServer>>,
-  pub block_rules: Option<Vec<String>>,
+  pub rules: Option<Vec<Rule>>,
   pub doh: Option<bool>,
   pub dashboard: Option<bool>,
   pub rewrites: Option<Vec<Rewrite>>,
@@ -40,7 +42,7 @@ impl Config {
         UpstreamServer::new("cloudflare-dns.com", IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1))),
         UpstreamServer::new("cloudflare-dns.com", IpAddr::V4(Ipv4Addr::new(1, 0, 0, 1))),
       ]),
-      block_rules: None,
+      rules: None,
       doh: Some(true),
       dashboard: Some(true),
       rewrites: None,
@@ -73,8 +75,11 @@ impl Config {
       return Ok(config);
     }
 
-    let content = read(path)?;
-    Ok(toml::from_slice(&content)?)
+    let mut config: Config = toml::from_slice(&read(path)?)?;
+    config.compile_regexes()?;
+    config.validate_rules();
+
+    Ok(config)
   }
 
   pub fn doh_enabled(&self) -> bool {

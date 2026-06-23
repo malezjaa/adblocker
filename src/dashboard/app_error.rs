@@ -27,3 +27,10 @@ impl<E: Into<anyhow::Error>> From<E> for AppError {
     Self(e.into().to_string(), None)
   }
 }
+
+#[macro_export]
+macro_rules! app_error {
+    ($($arg:tt)*) => {
+      return Err(AppError::new(format!($($arg)*,)))
+    };
+}

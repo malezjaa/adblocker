@@ -1,11 +1,11 @@
-use crate::cert::{Certs, get_certs};
+use crate::cert::{get_certs, Certs};
 use crate::config::Config;
 use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
 use crate::dns::resolver::create_hickory_resolver;
-use crate::engine::EngineMessage;
 use crate::engine::cache::DnsCache;
-use crate::mmdb::downloader::{MMDBSPaths, download_mmdbs_files};
+use crate::engine::EngineMessage;
+use crate::mmdb::downloader::{download_mmdbs_files, MMDBSPaths};
 use crate::mmdb::mmdbs::MMDBS;
 use anyhow::Result;
 use fs_err::create_dir_all;
@@ -48,8 +48,7 @@ impl Context {
     let db = DB::init(db_path).await?;
 
     let config_path = home_path.join("config.toml");
-    let mut config = Config::from_file(&config_path)?;
-    config.compile_regexes()?;
+    let config = Config::from_file(&config_path)?;
 
     let server_config = Arc::new(
       ServerConfig::builder().with_no_client_auth().with_single_cert(certs, key)?,
@@ -96,10 +95,6 @@ impl Context {
     self.0.config.read().blocklists.clone()
   }
 
-  pub fn block_rules(&self) -> Option<Vec<String>> {
-    self.0.config.read().block_rules.clone()
-  }
-
   pub fn socket() -> SocketAddr {
     SocketAddr::from(([127, 0, 0, 1], 53))
   }
@@ -127,5 +122,10 @@ impl Context {
   pub fn update_resolver(&self, new_resolver: TokioResolver) {
     *self.0.resolver.write() = new_resolver;
     trace!("updated hickory resolver");
+  }
+
+  pub fn update_config(&self, config: Config) {
+    *self.0.config.write() = config;
+    trace!("updated in-memory config");
   }
 }

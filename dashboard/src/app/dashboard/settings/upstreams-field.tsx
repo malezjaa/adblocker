@@ -223,7 +223,7 @@ export function UpstreamsField({
               onValueChange={(val) => setPendingValue(val ?? "")}
               disabled={disabled}
             >
-              <SelectTrigger className="w-full flex-1">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Add upstream server" />
               </SelectTrigger>
               <SelectContent>
@@ -238,7 +238,6 @@ export function UpstreamsField({
               type="button"
               variant="outline"
               size="icon"
-              className="shrink-0"
               disabled={disabled || !pendingValue}
               onClick={() => add(pendingValue)}
               aria-label="Add server"

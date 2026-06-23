@@ -3,11 +3,14 @@ import { useEffect, useRef } from "react"
 import type {
   Device,
   HourStat,
+  List,
+  PaginatedRules,
   QueryLogsOptions,
   QueryLogsResponse,
+  Rule,
+  RulesQuery,
   Stats,
   TopBlocked,
-  List,
 } from "@/lib/types.ts"
 
 const BASE_URL = "http://127.0.0.64"
@@ -51,6 +54,22 @@ export async function del<T>(url: string): Promise<T> {
 export async function post<T>(url: string, data?: unknown): Promise<T> {
   const res = await fetchWithCreds(url, {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: data !== undefined ? JSON.stringify(data) : undefined,
+  })
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`)
+  }
+
+  return res.json()
+}
+
+export async function patch<T>(url: string, data?: unknown): Promise<T> {
+  const res = await fetchWithCreds(url, {
+    method: "PATCH",
     headers: {
       "Content-Type": "application/json",
     },
@@ -199,5 +218,45 @@ export const useToggleList = () => {
         queryKey: ["lists"],
       })
     },
+  })
+}
+
+export const useRules = (query: RulesQuery = {}) => {
+  const { page = 1, perPage = 50, domain } = query
+
+  const params = new URLSearchParams()
+  params.set("page", String(page))
+  params.set("per_page", String(perPage))
+  if (domain) params.set("domain", domain)
+
+  return useQuery<PaginatedRules>({
+    queryKey: ["rules", page, perPage, domain],
+    queryFn: () => api<PaginatedRules>(`api/rules?${params.toString()}`),
+  })
+}
+
+export const useCreateRule = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (rule: Rule) => post<Rule>("api/rules", rule),
+    onSuccess: () => queryClient.refetchQueries({ queryKey: ["rules"] }),
+  })
+}
+
+export const useUpdateRule = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ domain, action }: Rule) =>
+      patch<Rule>(`api/rules/${encodeURIComponent(domain)}`, { action }),
+    onSuccess: () => queryClient.refetchQueries({ queryKey: ["rules"] }),
+  })
+}
+
+export const useDeleteRule = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (domain: string) =>
+      del<void>(`api/rules/${encodeURIComponent(domain)}`),
+    onSuccess: () => queryClient.refetchQueries({ queryKey: ["rules"] }),
   })
 }

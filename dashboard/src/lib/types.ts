@@ -119,3 +119,21 @@ export type List = {
   domains?: number
   enabled?: boolean
 }
+
+export type Rule = {
+  domain: string
+  action: "allow" | "block"
+}
+
+export type PaginatedRules = {
+  total: number
+  page: number
+  per_page: number
+  items: Rule[]
+}
+
+export type RulesQuery = {
+  page?: number
+  perPage?: number
+  domain?: string
+}

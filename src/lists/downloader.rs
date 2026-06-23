@@ -61,13 +61,14 @@ pub async fn load_blocklists(ctx: &Context) -> Result<FilterSet> {
   let mut cache = load_cache_file(cache_dir)?;
 
   let mut total = 0;
-  if let Some(block_rules) = ctx.block_rules() {
-    total += block_rules.len();
-    filterset.add_filters(&block_rules, Default::default());
+  if let Some(rules) = &ctx.config().rules {
+    total += rules.len();
+    let rules = rules.iter().map(|rule| rule.adblock_rule()).collect::<Vec<_>>();
+    filterset.add_filters(&rules, Default::default());
     info!(
       "loaded {} custom block {}",
-      block_rules.len(),
-      if block_rules.len() == 1 { "rule" } else { "rules" }
+      rules.len(),
+      if rules.len() == 1 { "rule" } else { "rules" }
     );
   }
 

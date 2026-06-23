@@ -5,7 +5,7 @@ import {
   HelpCircleIcon,
   LayoutGridIcon,
   List,
-  Pen,
+  Ruler,
   Scroll,
   Settings,
 } from "lucide-react"
@@ -57,9 +57,9 @@ export const navGroups: SidebarNavGroup[] = [
         icon: <List />,
       },
       {
-        title: "Rewrites",
-        path: "/rewrites",
-        icon: <Pen />,
+        title: "Rules",
+        path: "/rules",
+        icon: <Ruler />,
       },
     ],
   },

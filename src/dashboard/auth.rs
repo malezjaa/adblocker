@@ -12,7 +12,6 @@ use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::net::SocketAddr;
-use tracing::debug;
 
 pub struct AuthGuard;
 
@@ -35,7 +34,6 @@ where
     let valid = ctx.db().validate_session(token.to_owned()).await.unwrap_or(None);
 
     if let Some(time) = valid {
-      debug!("valid session token until {}", time.format("%Y-%m-%d %H:%M:%S UTC"));
       Ok(AuthGuard)
     } else {
       Err(AppError::with_code("Unauthorized", StatusCode::UNAUTHORIZED))

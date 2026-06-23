@@ -9,7 +9,7 @@ export function DashboardCard({
   return (
     <Card
       className={cn(
-        "rounded-none [border-style:none] bg-background shadow-none outline outline-1 outline-border",
+        "rounded-none border-none bg-background shadow-none outline outline-border",
         className
       )}
       {...props}

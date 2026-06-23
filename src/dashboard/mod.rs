@@ -6,6 +6,7 @@ pub mod ws;
 
 pub use self::endpoints::stats::QueryLog;
 use crate::application::app::App;
+use crate::config::rules::{create_rule, delete_rule, rule_handler, update_rule};
 use crate::config::settings::{settings_handler, update_settings};
 use crate::context::Context;
 pub use crate::dashboard::app_error::AppError;
@@ -24,7 +25,7 @@ use crate::database::stats::{Stats, TopDomain};
 use anyhow::{Result, anyhow};
 use axum::extract::{Path, Query, State as AxumState};
 use axum::response::IntoResponse;
-use axum::routing::{any, get, post};
+use axum::routing::{any, get, patch, post};
 use axum::{Json, Router};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
@@ -51,6 +52,8 @@ impl App {
       .route("/api/lists", get(get_lists_handler))
       .route("/api/lists/toggle", post(toggle_list))
       .route("/api/settings", get(settings_handler).post(update_settings))
+      .route("/api/rules", get(rule_handler).post(create_rule))
+      .route("/api/rules/{domain}", patch(update_rule).delete(delete_rule))
       .route("/api/top", get(top_handler))
       .route("/api/stats", get(stats))
       .route("/api/chart-data", get(chart_data))

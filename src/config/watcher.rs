@@ -87,7 +87,7 @@ async fn handle_debounce_result(
 }
 
 async fn reload_config(config_path: &PathBuf, ctx: &Context) {
-  let mut config = match Config::from_file(config_path.clone()) {
+  let config = match Config::from_file(config_path.clone()) {
     Ok(config) => config,
     Err(err) => {
       error!("failed to reload config: {err}");
@@ -95,27 +95,43 @@ async fn reload_config(config_path: &PathBuf, ctx: &Context) {
     }
   };
 
-  if let Err(err) = config.compile_regexes() {
-    error!("failed to compile regexes in reloaded config: {err}");
-    return;
-  }
-
   match create_hickory_resolver(&config) {
     Ok(resolver) => ctx.update_resolver(resolver),
     Err(err) => error!("failed to create new hickory resolver: {:?}", err),
   }
 
-  let mut blocklists = ctx.blocklists();
-  let mut new_blocklists = config.blocklists.clone();
-  blocklists.sort();
-  new_blocklists.sort();
+  let old_config = ctx.config().clone();
+  if let Err(err) = ctx.apply_config_change(old_config, config).await {
+    error!("failed to update config: {err:?}")
+  };
+}
 
-  *ctx.0.config.write() = config;
-  info!("reloaded config");
+impl Context {
+  pub async fn apply_config_change(
+    &self,
+    old_config: Config,
+    new_config: Config,
+  ) -> Result<()> {
+    let mut blocklists = old_config.blocklists.clone();
+    let mut new_blocklists = new_config.blocklists.clone();
+    blocklists.sort();
+    new_blocklists.sort();
 
-  if blocklists != new_blocklists {
-    if let Err(err) = ctx.tx().send(EngineMessage::ReloadFilterSet).await {
-      error!("failed to notify engine of config reload: {err}");
+    let mut rules = old_config.rules.clone().unwrap_or_default();
+    let mut new_rules = new_config.rules.clone().unwrap_or_default();
+
+    rules.sort_by(|a, b| a.domain.cmp(&b.domain));
+    new_rules.sort_by(|a, b| a.domain.cmp(&b.domain));
+
+    let filters_changed = blocklists != new_blocklists;
+    let rules_changed = rules != new_rules;
+
+    self.update_config(new_config.clone());
+
+    if filters_changed || rules_changed {
+      self.tx().send(EngineMessage::ReloadFilterSet).await?;
     }
+
+    Ok(())
   }
 }

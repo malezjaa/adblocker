@@ -1,12 +1,16 @@
-import {LogoIcon} from "@/components/logo"
-import {Button} from "@/components/ui/button"
-import {InputGroup, InputGroupAddon, InputGroupInput,} from "@/components/ui/input-group"
-import {cn} from "@/lib/utils"
-import {EyeIcon, EyeOffIcon, LogInIcon} from "lucide-react"
-import React, {useState} from "react"
-import {authLogin} from "@/lib/auth.ts"
-import {useNavigate} from "react-router"
-import {useQueryClient} from "@tanstack/react-query";
+import { LogoIcon } from "@/components/logo"
+import { Button } from "@/components/ui/button"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import { cn } from "@/lib/utils"
+import { EyeIcon, EyeOffIcon, LogInIcon } from "lucide-react"
+import React, { useState } from "react"
+import { authLogin } from "@/lib/auth.ts"
+import { useNavigate } from "react-router"
+import { useQueryClient } from "@tanstack/react-query"
 
 export function AuthDivider({
   children,
@@ -120,7 +124,7 @@ export function AuthPage() {
                   aria-label="Password"
                   className={cn(
                     !showPassword &&
-                      "[letter-spacing:0.2em] placeholder:[letter-spacing:normal]",
+                      "tracking-[0.2em] placeholder:tracking-[normal]",
                     error && "border-destructive focus-visible:ring-destructive"
                   )}
                   disabled={isLoading}
