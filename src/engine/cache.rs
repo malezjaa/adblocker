@@ -1,5 +1,4 @@
-// engine/cache.rs
-
+use crate::context::Context;
 use dashmap::DashMap;
 use hickory_proto::op::ResponseCode;
 use hickory_proto::rr::{Name, Record, RecordType};
@@ -19,6 +18,7 @@ pub struct ResolvedCacheEntry {
   pub records: Vec<Record>,
   pub response_code: ResponseCode,
   pub expires_at: Instant,
+  pub rules_version: u64,
 }
 
 impl ResolvedCacheEntry {
@@ -30,7 +30,7 @@ impl ResolvedCacheEntry {
 #[derive(Clone, Debug)]
 pub enum CacheEntry {
   Resolved(ResolvedCacheEntry),
-  Blocked,
+  Blocked(u64),
 }
 
 #[derive(Clone)]
@@ -75,12 +75,20 @@ impl DnsCache {
     self.cache.contains_key(key)
   }
 
-  pub fn is_blocked(&self, key: &CacheKey) -> bool {
-    self.cache.get(key).is_some_and(|entry| matches!(entry, CacheEntry::Blocked))
+  pub fn is_blocked(&self, key: &CacheKey, current_rules_version: u64) -> bool {
+    self.cache.get(key).is_some_and(|entry| match entry {
+      CacheEntry::Blocked(rules_version) => if rules_version == current_rules_version {
+        true
+      }  else {
+        self.cache.invalidate(key);
+        false
+      }
+      _ => false
+    })
   }
 
-  pub fn insert_blocked(&self, key: CacheKey) {
-    self.cache.insert(key, CacheEntry::Blocked);
+  pub fn insert_blocked(&self, key: CacheKey, version: u64) {
+    self.cache.insert(key, CacheEntry::Blocked(version));
   }
 
   pub fn insert_resolved(
@@ -89,6 +97,7 @@ impl DnsCache {
     records: Vec<Record>,
     response_code: ResponseCode,
     ttl: Duration,
+    rules_version: u64,
   ) {
     self.cache.insert(
       key,
@@ -96,20 +105,25 @@ impl DnsCache {
         records,
         response_code,
         expires_at: Instant::now() + ttl,
+        rules_version,
       }),
     );
   }
 
-  pub fn get(&self, key: &CacheKey) -> CacheLookup {
+  pub fn get(&self, key: &CacheKey, current_rules_version: u64) -> CacheLookup {
     match self.cache.get(key) {
-      Some(CacheEntry::Resolved(entry)) if !entry.is_expired() => {
-        CacheLookup::Resolved(entry)
+      Some(CacheEntry::Resolved(entry)) => {
+        if !entry.is_expired() && entry.rules_version == current_rules_version {
+          CacheLookup::Resolved(entry)
+        } else {
+          self.cache.invalidate(key);
+          CacheLookup::Miss
+        }
       }
-      Some(CacheEntry::Resolved(_)) => {
+      Some(CacheEntry::Blocked(rules_version)) => if rules_version == current_rules_version { CacheLookup::Blocked } else {
         self.cache.invalidate(key);
         CacheLookup::Miss
-      }
-      Some(CacheEntry::Blocked) => CacheLookup::Blocked,
+      },
       None => CacheLookup::Miss,
     }
   }

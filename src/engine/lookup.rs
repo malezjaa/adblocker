@@ -1,9 +1,9 @@
 use crate::context::Context;
-use crate::engine::EngineActor;
 use crate::engine::cache::{CacheKey, DnsCache};
 use crate::engine::message::{BlockOrigin, BlockResult};
-use adblock::Engine;
+use crate::engine::EngineActor;
 use adblock::request::Request;
+use adblock::Engine;
 use hickory_proto::op::Message;
 use tracing::info;
 
@@ -18,7 +18,7 @@ impl Context {
       let key = CacheKey { name: query.name.clone(), record_type: query.query_type };
       let host = query.name().to_string();
       let host = host.trim_end_matches('.');
-      if self.cache().is_blocked(&key) {
+      if self.cache().is_blocked(&key, self.rules_version()) {
         info!(?host, ?origin, "blocked from cache");
         return BlockResult::Block;
       }
@@ -28,7 +28,7 @@ impl Context {
         let res = engine.check_network_request(&req);
         if res.matched && res.exception.is_none() {
           info!(?host, ?origin, "blocked");
-          self.cache().insert_blocked(key);
+          self.cache().insert_blocked(key, self.rules_version());
           return BlockResult::Block;
         }
       }

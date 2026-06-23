@@ -1,7 +1,7 @@
 use crate::context::Context;
 use crate::dashboard::ws::WsEvent;
-use crate::engine::EngineMessage;
 use crate::engine::message::{BlockLookup, BlockOrigin, BlockResult};
+use crate::engine::EngineMessage;
 use crate::rewrite::apply::{apply_rewrites, restore_original_queries};
 use anyhow::Result;
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
@@ -24,7 +24,7 @@ pub fn handle_blocked_response(msg: &Message) -> anyhow::Result<Message> {
     };
 
     if let Some(rdata) = rdata {
-      let record = Record::from_rdata(query.name().clone(), 300, rdata);
+      let record = Record::from_rdata(query.name().clone(), 5, rdata);
       response.add_answer(record);
     }
   }

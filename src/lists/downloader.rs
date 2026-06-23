@@ -1,9 +1,9 @@
 use crate::context::Context;
-use crate::lists::cache::{CacheFile, load_cache_file};
-use crate::lists::list::{LISTS, List};
-use adblock::FilterSet;
+use crate::lists::cache::{load_cache_file, CacheFile};
+use crate::lists::list::{List, LISTS};
 use adblock::lists::ParseOptions;
-use anyhow::{Result, bail};
+use adblock::FilterSet;
+use anyhow::{bail, Result};
 use axum::http::StatusCode;
 use chrono::Duration;
 use fs_err::{read, write};
@@ -102,6 +102,7 @@ pub async fn load_blocklists(ctx: &Context) -> Result<FilterSet> {
 
   debug!("loaded {} rules in total", total);
   info!("loaded lists in {:.2?}", start.elapsed());
+  ctx.increment_rules_version();
 
   Ok(filterset)
 }

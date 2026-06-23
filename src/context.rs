@@ -14,6 +14,7 @@ use parking_lot::{RwLock, RwLockReadGuard};
 use rustls::ServerConfig;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
@@ -34,6 +35,7 @@ pub struct ContextImpl {
   pub mmdbs: RwLock<Option<MMDBS>>,
   pub paths: MMDBSPaths,
   pub dns_cache: DnsCache,
+  pub rules_version: AtomicU64,
 }
 
 impl Context {
@@ -68,6 +70,7 @@ impl Context {
       mmdbs: RwLock::new(None),
       paths,
       dns_cache: DnsCache::new(),
+      rules_version: AtomicU64::new(0)
     }));
 
     ctx.db().attach_context(&ctx);
@@ -127,5 +130,13 @@ impl Context {
   pub fn update_config(&self, config: Config) {
     *self.0.config.write() = config;
     trace!("updated in-memory config");
+  }
+  
+  pub fn increment_rules_version(&self) {
+    self.0.rules_version.fetch_add(1, Ordering::Relaxed);
+  }
+  
+  pub fn rules_version(&self) -> u64 {
+    self.0.rules_version.load(Ordering::Relaxed)
   }
 }
