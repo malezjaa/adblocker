@@ -3,7 +3,6 @@ use crate::context::Context;
 use crate::engine::message::BlockOrigin;
 use std::io::ErrorKind;
 use tokio::net::UdpSocket;
-use tokio::time::Instant;
 use tracing::info;
 
 impl App {

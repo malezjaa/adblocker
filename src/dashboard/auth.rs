@@ -33,7 +33,7 @@ where
 
     let valid = ctx.db().validate_session(token.to_owned()).await.unwrap_or(None);
 
-    if let Some(time) = valid {
+    if let Some(_time) = valid {
       Ok(AuthGuard)
     } else {
       Err(AppError::with_code("Unauthorized", StatusCode::UNAUTHORIZED))

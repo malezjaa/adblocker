@@ -38,7 +38,7 @@ async fn download_mmdbs_inner(mmdbs_path: PathBuf, files: MMDBSPaths) -> Result<
   let client = reqwest::Client::new();
 
   for (name, path) in &[&files.asn, &files.country] {
-    if !should_download(&path).await? {
+    if !should_download(path).await? {
       continue;
     }
 

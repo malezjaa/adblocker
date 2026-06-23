@@ -1,10 +1,10 @@
 use crate::config::{Config, UpstreamServer};
 use crate::context::Context;
-use crate::dashboard::auth::AuthGuard;
 use crate::dashboard::AppError;
+use crate::dashboard::auth::AuthGuard;
 use anyhow::Result;
-use axum::extract::State;
 use axum::Json;
+use axum::extract::State;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -33,7 +33,7 @@ pub async fn update_settings(
   Json(body): Json<Settings>,
 ) -> Result<Json<Settings>, AppError> {
   let old_config = ctx.config().clone();
-  let mut new_config = old_config.clone();  
+  let mut new_config = old_config.clone();
   new_config.dnssec = body.dnssec;
   new_config.upstreams = body.upstreams;
 

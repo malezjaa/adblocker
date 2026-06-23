@@ -17,8 +17,8 @@ pub async fn get_lists_handler(
 
   let mut lists = LISTS.to_vec();
   lists.iter_mut().for_each(|list| {
-    if let Some(cached) = cache.get_by_id(&list.id) {
-      list.domains = Some(cached.domains.clone());
+    if let Some(cached) = cache.get_by_id(list.id) {
+      list.domains = Some(cached.domains);
     }
 
     list.enabled = Some(ctx.config().blocklists.contains(&list.id.to_string()));

@@ -1,5 +1,4 @@
 use crate::config::Config;
-use crate::context::Context;
 use anyhow::Result;
 use hickory_resolver::config::{NameServerConfig, ResolverConfig};
 use hickory_resolver::net::runtime::TokioRuntimeProvider;

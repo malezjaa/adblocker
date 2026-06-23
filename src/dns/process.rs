@@ -1,7 +1,7 @@
 use crate::context::Context;
 use crate::dashboard::ws::WsEvent;
-use crate::engine::message::{BlockLookup, BlockOrigin, BlockResult};
 use crate::engine::EngineMessage;
+use crate::engine::message::{BlockLookup, BlockOrigin, BlockResult};
 use crate::rewrite::apply::{apply_rewrites, restore_original_queries};
 use anyhow::Result;
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
@@ -45,7 +45,7 @@ impl Context {
     let mut msg = Message::from_bytes(&raw)?;
     let original_queries = msg.queries.clone();
 
-    let rewrite_result = apply_rewrites(&self, &mut msg)?;
+    let rewrite_result = apply_rewrites(self, &mut msg)?;
 
     let (tx, rx) = oneshot::channel();
 

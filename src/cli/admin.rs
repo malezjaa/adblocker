@@ -1,6 +1,6 @@
 use crate::CliContext;
 use crate::pretty::{print_error, print_warning};
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Result, bail};
 use chrono::Utc;
 use cliclack::{confirm, log, password};
 use dns_adblock::password::hash_password;

@@ -14,7 +14,6 @@ use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use serde::Deserialize;
 use std::net::SocketAddr;
-use std::time::Instant;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 

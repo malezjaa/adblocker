@@ -1,4 +1,3 @@
-use crate::context::Context;
 use dashmap::DashMap;
 use hickory_proto::op::ResponseCode;
 use hickory_proto::rr::{Name, Record, RecordType};
@@ -63,6 +62,12 @@ pub struct DnsCache {
   in_flight: InFlight,
 }
 
+impl Default for DnsCache {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl DnsCache {
   pub fn new() -> Self {
     Self {
@@ -77,13 +82,15 @@ impl DnsCache {
 
   pub fn is_blocked(&self, key: &CacheKey, current_rules_version: u64) -> bool {
     self.cache.get(key).is_some_and(|entry| match entry {
-      CacheEntry::Blocked(rules_version) => if rules_version == current_rules_version {
-        true
-      }  else {
-        self.cache.invalidate(key);
-        false
+      CacheEntry::Blocked(rules_version) => {
+        if rules_version == current_rules_version {
+          true
+        } else {
+          self.cache.invalidate(key);
+          false
+        }
       }
-      _ => false
+      _ => false,
     })
   }
 
@@ -120,10 +127,14 @@ impl DnsCache {
           CacheLookup::Miss
         }
       }
-      Some(CacheEntry::Blocked(rules_version)) => if rules_version == current_rules_version { CacheLookup::Blocked } else {
-        self.cache.invalidate(key);
-        CacheLookup::Miss
-      },
+      Some(CacheEntry::Blocked(rules_version)) => {
+        if rules_version == current_rules_version {
+          CacheLookup::Blocked
+        } else {
+          self.cache.invalidate(key);
+          CacheLookup::Miss
+        }
+      }
       None => CacheLookup::Miss,
     }
   }

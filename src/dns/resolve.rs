@@ -1,11 +1,9 @@
 use crate::context::Context;
 use crate::engine::cache::{CacheKey, CacheLookup, InFlightGuard, MAX_NEGATIVE_TTL};
-use crate::engine::EngineActor;
 use anyhow::{anyhow, bail};
-use dashmap::mapref::entry_ref::EntryRef;
 use dashmap::Entry;
-use hickory_proto::op::{Message, Query, ResponseCode};
-use hickory_proto::rr::{Name, RData, RecordType};
+use hickory_proto::op::{Message, ResponseCode};
+use hickory_proto::rr::RData;
 use hickory_resolver::lookup::Lookup;
 use hickory_resolver::net::{DnsError, NetError, NoRecords};
 use std::time::{Duration, Instant};
@@ -41,7 +39,7 @@ impl Context {
     let mut response = msg.clone().into_response();
 
     if let Some(mut rx) = rx_follower {
-      let _ = rx.recv().await.map_err(|_| anyhow!("in-flight lookup dropped"))?;
+      rx.recv().await.map_err(|_| anyhow!("in-flight lookup dropped"))?;
       if let Some(response) = self.try_cache(msg, &cache_key) {
         debug!(name = %cache_key.name, record_type = ?cache_key.record_type, "dns cache hit from an in-flight lookup");
         return Ok(response);
@@ -107,7 +105,13 @@ impl Context {
         response.metadata.response_code = no.response_code;
         let duration = negative_ttl(&no);
         debug!(name = %cache_key.name, ttl = ?duration, "no records found");
-        self.cache().insert_resolved(cache_key, Vec::new(), no.response_code, duration, self.rules_version());
+        self.cache().insert_resolved(
+          cache_key,
+          Vec::new(),
+          no.response_code,
+          duration,
+          self.rules_version(),
+        );
         Ok(())
       }
       NetError::Timeout => {

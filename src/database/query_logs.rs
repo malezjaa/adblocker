@@ -2,12 +2,12 @@ use crate::context::Context;
 use crate::dashboard::QueryLog;
 use crate::database::DB;
 use crate::database::devices::{Device, DeviceType};
-use crate::domain::{query_domain, registered_domain};
+use crate::domain::registered_domain;
 use crate::engine::message::BlockOrigin;
 use anyhow::Result;
 use chrono::Utc;
 use clap::ValueEnum;
-use hickory_proto::op::{Message, Query};
+use hickory_proto::op::Message;
 use hickory_proto::rr::{RData, Record};
 use serde::{Deserialize, Serialize};
 use sqlx::AssertSqlSafe;
@@ -268,13 +268,13 @@ impl DB {
         let sql = format!(
           "{BASE_QUERY} WHERE q.domain LIKE ? ORDER BY q.timestamp DESC LIMIT ? OFFSET ?"
         );
-        let vec = sqlx::query_as::<_, QueryLogRow>(AssertSqlSafe(sql))
+
+        sqlx::query_as::<_, QueryLogRow>(AssertSqlSafe(sql))
           .bind(pattern)
           .bind(per_page as i64)
           .bind(offset)
           .fetch_all(&self.pool)
-          .await?;
-        vec
+          .await?
       }
       None => {
         let sql = format!("{BASE_QUERY} ORDER BY q.timestamp DESC LIMIT ? OFFSET ?");

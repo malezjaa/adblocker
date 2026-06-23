@@ -10,7 +10,7 @@ use crate::config::rules::{create_rule, delete_rule, rule_handler, update_rule};
 use crate::config::settings::{settings_handler, update_settings};
 use crate::context::Context;
 pub use crate::dashboard::app_error::AppError;
-use crate::dashboard::auth::{AuthGuard, auth_login, auth_logout, auth_status};
+use crate::dashboard::auth::{auth_login, auth_logout, auth_status};
 use crate::dashboard::endpoints::devices::{
   create_device_handler, delete_device_handler, get_device_handler, get_devices_handler,
 };
@@ -20,20 +20,14 @@ use crate::dashboard::endpoints::stats::{
 };
 use crate::dashboard::frontend::serve_file;
 use crate::dashboard::ws::ws_handler;
-use crate::database::devices::Device;
-use crate::database::stats::{Stats, TopDomain};
-use anyhow::{Result, anyhow};
-use axum::extract::{Path, Query, State as AxumState};
+use anyhow::Result;
+use axum::Router;
+use axum::extract::Path;
 use axum::response::IntoResponse;
 use axum::routing::{any, get, patch, post};
-use axum::{Json, Router};
-use chrono::Duration;
-use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
-use tower_http::trace::TraceLayer;
 use tracing::info;
 
 pub async fn server_root() -> Result<impl IntoResponse, AppError> {

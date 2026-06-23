@@ -1,9 +1,9 @@
 use crate::context::Context;
-use crate::lists::cache::{load_cache_file, CacheFile};
-use crate::lists::list::{List, LISTS};
-use adblock::lists::ParseOptions;
+use crate::lists::cache::{CacheFile, load_cache_file};
+use crate::lists::list::{LISTS, List};
 use adblock::FilterSet;
-use anyhow::{bail, Result};
+use adblock::lists::ParseOptions;
+use anyhow::Result;
 use axum::http::StatusCode;
 use chrono::Duration;
 use fs_err::{read, write};
@@ -20,10 +20,10 @@ pub async fn download_blocklist(
   cached_etag: Option<String>,
   is_fresh: bool,
 ) -> Result<(String, Vec<String>, Option<String>)> {
-  let cache_file = cache_dir.join(CacheFile::id_hash(&list.id));
+  let cache_file = cache_dir.join(CacheFile::id_hash(list.id));
 
   if is_fresh && cache_file.exists() {
-    return read_rules(&list.id, &cache_file, None);
+    return read_rules(list.id, &cache_file, None);
   }
 
   let client = Client::new();
@@ -37,7 +37,7 @@ pub async fn download_blocklist(
     resp.headers().get("etag").and_then(|v| v.to_str().ok()).map(str::to_owned);
 
   if resp.status() == StatusCode::NOT_MODIFIED {
-    return read_rules(&list.id, &cache_file, new_etag);
+    return read_rules(list.id, &cache_file, new_etag);
   }
 
   if resp.status() == StatusCode::NOT_FOUND {
@@ -73,17 +73,15 @@ pub async fn load_blocklists(ctx: &Context) -> Result<FilterSet> {
   }
 
   let futures = LISTS.iter().map(|list| {
-    let is_fresh = cache.is_fresh(&list.id, Duration::hours(24));
-    let cached_etag = cache.get_by_id(&list.id).and_then(|e| e.etag.clone());
+    let is_fresh = cache.is_fresh(list.id, Duration::hours(24));
+    let cached_etag = cache.get_by_id(list.id).and_then(|e| e.etag.clone());
     async move { download_blocklist(list, cache_dir, cached_etag, is_fresh).await }
   });
 
   let results: Vec<Result<_>> = join_all(futures).await;
 
-  for result in &results {
-    if let Ok((id, rules, etag)) = result {
-      cache.insert(id, etag.clone(), rules.len());
-    }
+  for (id, rules, etag) in results.iter().flatten() {
+    cache.insert(id, etag.clone(), rules.len());
   }
 
   write(cache_dir.join("cache.toml"), toml::to_string(&cache)?)?;

@@ -107,14 +107,11 @@ async fn handle_socket(ctx: Context, mut socket: WebSocket, who: SocketAddr) {
 }
 
 fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), ()> {
-  match msg {
-    Message::Close(c) => {
-      if let Some(cf) = c {
-        info!("{who} sent close with code {} and reason `{}`", cf.code, cf.reason);
-      }
-      return ControlFlow::Break(());
+  if let Message::Close(c) = msg {
+    if let Some(cf) = c {
+      info!("{who} sent close with code {} and reason `{}`", cf.code, cf.reason);
     }
-    _ => {}
+    return ControlFlow::Break(());
   }
   ControlFlow::Continue(())
 }

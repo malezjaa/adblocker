@@ -6,11 +6,11 @@ use anyhow::Result;
 use futures::future::pending;
 use notify::{EventKind, RecursiveMode};
 use notify_debouncer_full::{DebounceEventResult, new_debouncer};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::spawn;
 use tokio::sync::mpsc;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, warn};
 
 impl Config {
   pub fn spawn_config_watcher(ctx: Context) -> Result<()> {
@@ -86,7 +86,7 @@ async fn handle_debounce_result(
   }
 }
 
-async fn reload_config(config_path: &PathBuf, ctx: &Context) {
+async fn reload_config(config_path: &Path, ctx: &Context) {
   let config = match Config::from_file(config_path.clone()) {
     Ok(config) => config,
     Err(err) => {

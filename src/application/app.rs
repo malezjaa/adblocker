@@ -1,21 +1,17 @@
 use crate::config::Config;
 use crate::context::Context;
 use crate::database::DB;
-use crate::engine::{BlockLookup, EngineActor, EngineMessage};
+use crate::engine::{EngineActor, EngineMessage};
 use crate::firewall::open_port::open_ports;
-use crate::firewall::override_dns::override_default_dns;
-use crate::lists::downloader::load_blocklists;
 use crate::task::named_task;
 #[cfg(windows)]
 use crate::windows::wfp_session::WfpSession;
-use adblock::Engine;
 use anyhow::Result;
 use chrono::Duration;
-use std::time::Instant;
 use tokio::sync::mpsc::Receiver;
 use tokio::task::{JoinSet, LocalSet};
+use tracing::error;
 use tracing::log::warn;
-use tracing::{error, info};
 use windows::Win32::Foundation::HANDLE;
 
 #[derive(Clone)]

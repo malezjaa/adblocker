@@ -1,9 +1,8 @@
 use crate::context::Context;
-use crate::engine::cache::{CacheKey, DnsCache};
+use crate::engine::cache::CacheKey;
 use crate::engine::message::{BlockOrigin, BlockResult};
-use crate::engine::EngineActor;
-use adblock::request::Request;
 use adblock::Engine;
+use adblock::request::Request;
 use hickory_proto::op::Message;
 use tracing::info;
 

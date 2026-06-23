@@ -68,7 +68,7 @@ pub fn override_default_dns(settings: OverrideDns) -> Result<()> {
         && adapter.IfType != IF_TYPE_SOFTWARE_LOOPBACK
         && adapter.IfType != IF_TYPE_TUNNEL
       {
-        let name = adapter.FriendlyName.to_string()?;
+        let _name = adapter.FriendlyName.to_string()?;
         let existing_dns = dns_servers_to_strings(adapter);
         adapters.push((adapter.Luid, existing_dns));
       }
@@ -118,7 +118,7 @@ pub fn override_default_dns(settings: OverrideDns) -> Result<()> {
         &server_property as *const _ as *mut DNS_SERVER_PROPERTY,
       )
     } else {
-      doh_template = PwstrBuffer::new(&String::new());
+      doh_template = PwstrBuffer::new("");
       doh_settings = DNS_DOH_SERVER_SETTINGS::default();
       server_property = DNS_SERVER_PROPERTY::default();
       (DNS_SETTING_NAMESERVER as u64, 0u32, std::ptr::null_mut())

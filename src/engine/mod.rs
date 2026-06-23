@@ -8,7 +8,6 @@ pub(crate) use crate::engine::message::BlockLookup;
 use crate::lists::downloader::load_blocklists;
 use adblock::Engine;
 use anyhow::Result;
-use serde::Serialize;
 use tokio::sync::mpsc;
 
 pub mod cache;

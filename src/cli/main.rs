@@ -28,7 +28,7 @@ impl CliContext {
     let db = DB::init(db_path).await?;
 
     let config_path = home_path.join("config.toml");
-    let mut config = Config::from_file(&config_path)?;
+    let config = Config::from_file(&config_path)?;
 
     Ok(Self { db, config })
   }

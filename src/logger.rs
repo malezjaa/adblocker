@@ -1,9 +1,9 @@
 use std::fmt;
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{
+  EnvFilter,
   fmt::{FmtContext, FormatEvent, FormatFields},
   registry::LookupSpan,
-  EnvFilter,
 };
 use yansi::Paint;
 

@@ -1,16 +1,15 @@
 use crate::app_error;
 use crate::config::Config;
-use crate::config::settings::Settings;
 use crate::context::Context;
 use crate::dashboard::AppError;
 use crate::dashboard::auth::AuthGuard;
-use anyhow::{anyhow, bail};
+use anyhow::anyhow;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use serde::{Deserialize, Serialize};
-use tracing::{error, warn};
+use tracing::error;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct Rule {
