@@ -237,7 +237,6 @@ export function UpstreamsField({
             <Button
               type="button"
               variant="outline"
-              size="icon"
               disabled={disabled || !pendingValue}
               onClick={() => add(pendingValue)}
               aria-label="Add server"

@@ -69,6 +69,7 @@ import {
   SelectValue,
 } from "@/components/ui/select.tsx"
 import { Kbd } from "@/components/ui/kbd.tsx"
+import { toast } from "sonner"
 
 type Action = "allow" | "block"
 
@@ -131,21 +132,45 @@ export default function Rules() {
     const mutation = isEditing ? updateRule : createRule
     mutation.mutate(
       { domain, action },
-      { onSuccess: () => setDialogOpen(false) }
+      {
+        onSuccess: () => {
+          setDialogOpen(false)
+          toast.success("Rule saved", {
+            description:
+              "Changes can take a few minutes to apply. You may need to clear your browser cache to see them take effect.",
+          })
+        },
+      }
     )
   }
 
   function handleInvert(rule: Rule) {
-    updateRule.mutate({
-      domain: rule.domain,
-      action: rule.action === "allow" ? "block" : "allow",
-    })
+    updateRule.mutate(
+      {
+        domain: rule.domain,
+        action: rule.action === "allow" ? "block" : "allow",
+      },
+      {
+        onSuccess: () => {
+          toast.success("Rule updated", {
+            description:
+              "Changes can take a few minutes to apply. You may need to clear your browser cache to see them take effect.",
+          })
+        },
+      }
+    )
   }
 
   function confirmDelete() {
     if (!deleteTarget) return
     deleteRule.mutate(deleteTarget, {
-      onSuccess: () => setDeleteTarget(null),
+      onSuccess: () => {
+        setDeleteTarget(null)
+        toast.success("Rule deleted", {
+          description:
+            "Changes can take a few minutes to apply. You may need to clear your browser cache to see them take effect.",
+        })
+      },
     })
   }
 
@@ -369,7 +394,7 @@ export default function Rules() {
             </DialogHeader>
 
             <div className="flex flex-col gap-2 py-2">
-              <Label htmlFor="domain">Domain</Label>
+              <Label htmlFor="domain">Domain / Rule</Label>
               <Input
                 id="domain"
                 placeholder="example.com"
@@ -378,6 +403,15 @@ export default function Rules() {
                 disabled={isEditing}
                 autoFocus
               />
+              <p className="text-xs text-muted-foreground">
+                For <strong>Block</strong>, enter a valid Adblock Plus / uBlock
+                filter (e.g. <code>||example.com^</code>,{" "}
+                <code>||example.com^$third-party</code>,{" "}
+                <code>||example.com^$important</code>). For{" "}
+                <strong>Allow</strong>, enter a domain name such as{" "}
+                <code>example.com</code>; it will be automatically converted
+                into an exception rule.
+              </p>
             </div>
 
             <DialogFooter className="gap-2 sm:justify-end">

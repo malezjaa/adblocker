@@ -1,4 +1,5 @@
 pub mod adapters;
+pub mod cert_store;
 pub mod filter;
 pub mod pwstr_buf;
 pub mod transaction;

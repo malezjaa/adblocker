@@ -87,7 +87,7 @@ async fn handle_debounce_result(
 }
 
 async fn reload_config(config_path: &Path, ctx: &Context) {
-  let config = match Config::from_file(config_path.clone()) {
+  let config = match Config::from_file(config_path) {
     Ok(config) => config,
     Err(err) => {
       error!("failed to reload config: {err}");

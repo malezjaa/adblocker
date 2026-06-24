@@ -345,11 +345,3 @@ async fn resolve_domain_ip(ctx: Option<&Context>, domain: &str) -> Option<String
   let lookup = ctx.resolver().lookup_ip(domain.trim_end_matches('.')).await.ok()?;
   lookup.iter().next().map(|ip| ip.to_string())
 }
-
-fn query_record_type(response: &Message) -> String {
-  response
-    .queries
-    .first()
-    .map(|q| q.query_type().to_string())
-    .unwrap_or_else(|| "UNKNOWN".to_string())
-}
