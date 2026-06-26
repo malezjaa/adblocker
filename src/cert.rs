@@ -1,78 +1,92 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
+use axum::body::Bytes;
+use axum::extract::State;
+use axum::response::IntoResponse;
+use axum::routing::get;
+use axum::Router;
 use fs_err::File;
-use rcgen::{
-  BasicConstraints, CertificateParams, CertifiedIssuer, DistinguishedName, DnType,
-  ExtendedKeyUsagePurpose, IsCa, KeyPair, KeyUsagePurpose,
-};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls_pemfile::{certs, private_key};
-use std::io::{BufReader, Cursor};
-use time::{Duration, OffsetDateTime};
+use std::io::BufReader;
+use std::path::Path;
+use std::process::Command;
+use tokio::net::TcpListener;
 
 #[derive(Debug)]
 pub struct Certs {
+  pub ca_cert: CertificateDer<'static>,
   pub certs: Vec<CertificateDer<'static>>,
   pub key: PrivateKeyDer<'static>,
-}
-
-impl Clone for Certs {
-  fn clone(&self) -> Self {
-    Self { certs: self.certs.clone(), key: self.key.clone_key() }
-  }
 }
 
 pub fn get_certs() -> Result<Certs> {
   let certs_path = dirs::home_dir().unwrap().join("adb").join("certs");
   let ca_cert_path = certs_path.join("ca.pem");
-  let cert_path = certs_path.join("cert.pem");
-  let key_path = certs_path.join("key.pem");
+  let cert_path = certs_path.join("server.pem");
+  let key_path = certs_path.join("server.key");
+  let crl_path = certs_path.join("crl.pem");
 
-  if cert_path.exists() && key_path.exists() {
-    let certs = certs(&mut BufReader::new(File::open(&cert_path)?))
-      .collect::<Result<Vec<_>, _>>()?;
-    let key = private_key(&mut BufReader::new(File::open(&key_path)?))?
-      .expect("No private key found");
-    return Ok(Certs { certs, key });
+  if ca_cert_path.exists() && cert_path.exists() && key_path.exists() && crl_path.exists() {
+    return load_certs(&ca_cert_path, &cert_path, &key_path);
   }
 
   fs_err::create_dir_all(&certs_path)?;
 
-  // ca cert
-  let ca_key = KeyPair::generate()?;
-  let mut ca_params = CertificateParams::new(vec![])?;
-  ca_params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
-  ca_params.key_usages = vec![KeyUsagePurpose::KeyCertSign, KeyUsagePurpose::CrlSign];
-  ca_params.not_before = OffsetDateTime::now_utc();
-  ca_params.not_after = OffsetDateTime::now_utc() + Duration::days(3650);
-  let mut dn = DistinguishedName::new();
-  dn.push(DnType::CommonName, "ADB Local CA");
-  ca_params.distinguished_name = dn;
+  let gen_script = certs_path.join("gen-certs.ps1");
+  let status = Command::new("powershell")
+    .arg("-ExecutionPolicy").arg("Bypass")
+    .arg("-File").arg(&gen_script)
+    .current_dir(&certs_path)
+    .status()
+    .context("Failed to run cert generation script. is openssl on PATH?")?;
+  if !status.success() {
+    anyhow::bail!("Certificate generation script exited with a non-zero status");
+  }
 
-  let ca = CertifiedIssuer::self_signed(ca_params, ca_key)?;
-  fs_err::write(&ca_cert_path, ca.pem())?;
+  let trust_status = Command::new("certutil")
+    .arg("-addstore")
+    .arg("-f")
+    .arg("Root")
+    .arg(&ca_cert_path)
+    .status()
+    .context("Failed to run certutil -addstore")?;
+  if !trust_status.success() {
+    anyhow::bail!("certutil -addstore failed. try running as Administrator");
+  }
 
-  // leaf cert signed by ca
-  let leaf_key = KeyPair::generate()?;
-  let mut leaf_params =
-    CertificateParams::new(vec!["localhost".to_string(), "127.0.0.1".to_string()])?;
-  leaf_params.is_ca = IsCa::NoCa;
-  leaf_params.key_usages = vec![KeyUsagePurpose::DigitalSignature];
-  leaf_params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
-  leaf_params.not_before = OffsetDateTime::now_utc();
-  leaf_params.not_after = OffsetDateTime::now_utc() + Duration::days(365);
-  let mut dn = DistinguishedName::new();
-  dn.push(DnType::CommonName, "ADB Local");
-  leaf_params.distinguished_name = dn;
+  load_certs(&ca_cert_path, &cert_path, &key_path)
+}
 
-  let leaf_cert = leaf_params.signed_by(&leaf_key, &ca)?;
+fn load_certs(ca_cert_path: &Path, cert_path: &Path, key_path: &Path) -> Result<Certs> {
+  let ca_cert = certs(&mut BufReader::new(File::open(ca_cert_path)?))
+    .next()
+    .ok_or_else(|| anyhow::anyhow!("No CA certificate found in {}", ca_cert_path.display()))??;
+  let certs = certs(&mut BufReader::new(File::open(cert_path)?)).collect::<Result<Vec<_>, _>>()?;
+  let key = private_key(&mut BufReader::new(File::open(key_path)?))?
+    .ok_or_else(|| anyhow::anyhow!("No private key found in {}", key_path.display()))?;
+  Ok(Certs { ca_cert, certs, key })
+}
 
-  fs_err::write(&cert_path, leaf_cert.pem())?;
-  fs_err::write(&key_path, leaf_key.serialize_pem())?;
+#[derive(Clone)]
+pub struct CrlPem(Vec<u8>);
 
-  let certs =
-    certs(&mut Cursor::new(leaf_cert.pem().as_bytes())).collect::<Result<Vec<_>, _>>()?;
-  let key = private_key(&mut Cursor::new(leaf_key.serialize_pem().as_bytes()))?
-    .expect("No private key found");
+async fn crl_pem_get(State(pem): State<CrlPem>) -> impl IntoResponse {
+  (
+    [("Content-Type", "application/pkix-crl")],
+    Bytes::from(pem.0.clone()),
+  )
+}
 
-  Ok(Certs { certs, key })
+pub async fn serve_crl_pem() -> Result<()> {
+  let certs_path = dirs::home_dir().unwrap().join("adb").join("certs");
+  let crl_path = certs_path.join("crl.pem");
+  let bytes = fs_err::read(crl_path)?;
+
+  let app = Router::new()
+    .route("/crl.pem", get(crl_pem_get))
+    .with_state(CrlPem(bytes));
+
+  let listener = TcpListener::bind("127.0.0.1:8080").await?;
+  axum::serve(listener, app).await?;
+  Ok(())
 }

@@ -1,8 +1,8 @@
-use crate::CliContext;
 use crate::pretty::{print_field, print_separator, print_success, print_warning};
+use crate::CliContext;
 use anyhow::Result;
 use dns_adblock::context::Context;
-use dns_adblock::firewall::override_dns::{OverrideDns, override_default_dns};
+use dns_adblock::firewall::override_dns::{override_default_dns, OverrideDns};
 use tracing::warn;
 use yansi::Paint;
 
@@ -17,12 +17,12 @@ pub async fn set_dns(
   } else {
     if let Some(device) = device {
       let device = ctx.db.get_device(&device).await?;
-      Some(format!("https://127.0.0.1:443/dns-query/{}", device.id))
+      Some(format!("https://doh.local/dns-query/{}", device.id))
     } else {
       if ctx.config.dashboard_enabled() {
         warn!("setting no device means losing analytics")
       }
-      Some("https://127.0.0.1:443/dns-query".to_owned())
+      Some("https://doh.local/dns-query".to_owned())
     }
   };
 

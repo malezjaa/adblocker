@@ -1,7 +1,7 @@
 use crate::context::Context;
 use crate::dashboard::QueryLog;
-use crate::database::DB;
 use crate::database::devices::{Device, DeviceType};
+use crate::database::DB;
 use crate::domain::registered_domain;
 use crate::engine::message::BlockOrigin;
 use anyhow::Result;
@@ -65,8 +65,8 @@ impl DB {
     tokio::spawn(async move {
       while let Some(event) = rx.recv().await {
         debug!(
-          "dns request: {}ms blocked={} src={}",
-          event.response_time, event.blocked, event.domain
+          "dns request: {}ms blocked={} src={} origin={:?}",
+          event.response_time, event.blocked, event.domain, event.block_origin
         );
         if let Err(err) = db.insert_query(&event).await {
           warn!(error = ?err, "failed to insert query_log");
@@ -111,22 +111,22 @@ impl DB {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       "#,
     )
-    .bind(&event.domain)
-    .bind(&event.record_type)
-    .bind(&event.client_ip)
-    .bind(event.blocked)
-    .bind(match event.block_origin {
-      BlockOrigin::Plain => "plain",
-      BlockOrigin::DoH => "doh",
-    })
-    .bind(&event.response_code)
-    .bind(event.timestamp)
-    .bind(event.response_time)
-    .bind(&device)
-    .bind(country_code)
-    .bind(company_name)
-    .execute(&mut *tx)
-    .await?;
+      .bind(&event.domain)
+      .bind(&event.record_type)
+      .bind(&event.client_ip)
+      .bind(event.blocked)
+      .bind(match event.block_origin {
+        BlockOrigin::Plain => "plain",
+        BlockOrigin::DoH => "doh",
+      })
+      .bind(&event.response_code)
+      .bind(event.timestamp)
+      .bind(event.response_time)
+      .bind(&device)
+      .bind(country_code)
+      .bind(company_name)
+      .execute(&mut *tx)
+      .await?;
 
     let hits_blocked = i64::from(event.blocked);
 

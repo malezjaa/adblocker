@@ -1,11 +1,11 @@
-use crate::cert::{Certs, get_certs};
+use crate::cert::{get_certs, Certs};
 use crate::config::Config;
 use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
 use crate::dns::resolver::create_hickory_resolver;
-use crate::engine::EngineMessage;
 use crate::engine::cache::DnsCache;
-use crate::mmdb::downloader::{MMDBSPaths, download_mmdbs_files};
+use crate::engine::EngineMessage;
+use crate::mmdb::downloader::{download_mmdbs_files, MMDBSPaths};
 use crate::mmdb::mmdbs::MMDBS;
 use anyhow::Result;
 use fs_err::create_dir_all;
@@ -14,8 +14,8 @@ use parking_lot::{RwLock, RwLockReadGuard};
 use rustls::ServerConfig;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 use tracing::log::trace;
@@ -40,7 +40,7 @@ pub struct ContextImpl {
 
 impl Context {
   pub async fn new(tx: Sender<EngineMessage>) -> Result<Self> {
-    let Certs { key, certs } = get_certs()?;
+    let certs = get_certs()?;
     let home_path = dirs::home_dir().unwrap().join("adb");
     let cache_dir = home_path.join("cache");
 
@@ -52,9 +52,12 @@ impl Context {
     let config_path = home_path.join("config.toml");
     let config = Config::from_file(&config_path)?;
 
-    let server_config = Arc::new(
-      ServerConfig::builder().with_no_client_auth().with_single_cert(certs, key)?,
-    );
+    let mut server_config =
+      ServerConfig::builder().with_no_client_auth().with_single_cert(certs.certs, certs.key)?;
+    server_config.alpn_protocols = vec![
+      b"h2".to_vec(),
+      b"http/1.1".to_vec(),
+    ];
     let paths = download_mmdbs_files();
 
     let resolver = create_hickory_resolver(&config)?;
@@ -65,7 +68,7 @@ impl Context {
       resolver: RwLock::new(resolver),
       ws_tx: broadcast::channel(100).0,
       cache_dir,
-      server_config,
+      server_config: Arc::new(server_config),
       config_path,
       mmdbs: RwLock::new(None),
       paths,

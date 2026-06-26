@@ -1,3 +1,4 @@
+use crate::cert::serve_crl_pem;
 use crate::config::Config;
 use crate::context::Context;
 use crate::database::DB;
@@ -58,6 +59,7 @@ impl App {
         ));
 
         tasks.spawn(named_task("DNS", Self::start_dns(self.ctx.clone())));
+        tasks.spawn(named_task("CRL server", serve_crl_pem()));
         if config.doh_enabled() {
           tasks.spawn(named_task("DoH", Self::start_doh(self.ctx.clone())));
         }
