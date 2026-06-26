@@ -1,5 +1,5 @@
 pub mod application;
-pub mod cert;
+pub mod certs;
 pub mod config;
 pub mod context;
 pub mod dashboard;

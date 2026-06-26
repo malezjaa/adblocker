@@ -1,4 +1,4 @@
-use crate::cert::serve_crl_pem;
+use crate::certs::crl::serve_crl_pem;
 use crate::config::Config;
 use crate::context::Context;
 use crate::database::DB;

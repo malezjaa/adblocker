@@ -1,4 +1,3 @@
-use crate::cert::{get_certs, Certs};
 use crate::config::Config;
 use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
@@ -19,6 +18,7 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 use tracing::log::trace;
+use crate::certs::Certs;
 
 #[derive(Clone)]
 pub struct Context(pub Arc<ContextImpl>);
@@ -40,7 +40,6 @@ pub struct ContextImpl {
 
 impl Context {
   pub async fn new(tx: Sender<EngineMessage>) -> Result<Self> {
-    let certs = get_certs()?;
     let home_path = dirs::home_dir().unwrap().join("adb");
     let cache_dir = home_path.join("cache");
 
@@ -52,12 +51,14 @@ impl Context {
     let config_path = home_path.join("config.toml");
     let config = Config::from_file(&config_path)?;
 
+    let certs = Certs::load_certs()?;
     let mut server_config =
       ServerConfig::builder().with_no_client_auth().with_single_cert(certs.certs, certs.key)?;
     server_config.alpn_protocols = vec![
       b"h2".to_vec(),
       b"http/1.1".to_vec(),
     ];
+
     let paths = download_mmdbs_files();
 
     let resolver = create_hickory_resolver(&config)?;
