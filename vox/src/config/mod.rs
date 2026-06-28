@@ -3,7 +3,7 @@ pub mod settings;
 pub mod watcher;
 
 use crate::config::rules::Rule;
-use crate::rewrite::Rewrite;
+use crate::dns::rewrite::Rewrite;
 use anyhow::Result;
 use fs_err::{create_dir_all, read, write};
 use serde::{Deserialize, Serialize};

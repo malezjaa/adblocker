@@ -1,76 +1,9 @@
-[package]
-name = "dns-adblock"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+members = ["vox", "crates/*"]
+resolver = "3"
 
-[dependencies]
-tokio = { version = "^1", features = [
-    "rt",
-    "rt-multi-thread",
-    "net",
-    "macros",
-] }
-hickory-proto = "0.26.0"
-hickory-resolver = { version = "0.26.1", features = ["tokio", "https-ring", "rustls-platform-verifier", "dnssec-ring"] }
-adblock = { version = "0.12.3" }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-anyhow = "1.0.102"
-reqwest = "0.13.3"
-toml = "1.1.2"
-serde = { version = "1.0.228", features = ["derive"] }
-dirs = "6.0.0"
-fs-err = "3.3.0"
-futures = "0.3.32"
-sha2 = "0.11.0"
-chrono = { version = "0.4.44", features = ["serde"] }
-scopeguard = "1.2.0"
-axum = { version = "0.8.9", features = ["ws", "macros"] }
-sqlx = { version = "0.9.0", features = ["runtime-tokio", "sqlite", "chrono"] }
-serde_json = "1.0.149"
-addr = "0.15.6"
-rcgen = "0.14.7"
-axum-server = { version = "0.8", features = ["tls-rustls"] }
-tower-http = { version = "0.7.0", features = ["trace", "cors"] }
-base64 = "0.22.1"
-yansi = "1.0.1"
-parking_lot = "0.12.5"
-rustls = "0.23.40"
-time = "0.3.47"
-rustls-pemfile = "2.2.0"
-regex = "1.12.3"
-notify = "9.0.0-rc.4"
-notify-debouncer-full = "0.8.0-rc.2"
-clap = { version = "4.6.1", features = ["derive"] }
-include_dir = "0.7.4"
-mime_guess2 = "2.0.5"
-maxminddb = { version = "0.28", features = ["mmap"] }
-rand = "0.10.1"
-dashmap = "7.0.0-rc2"
-argon2 = "0.6.0-rc.8"
-cliclack = "0.5.4"
-hex = "0.4.3"
-bitflags = "2.11.1"
-rayon = "1.12.0"
-moka = "0.12.15"
-windivert = { version = "0.7.0-beta.4", features = ["vendored"] }
-windivert-sys = { version = "0.11.0-beta.2", features = ["vendored"] }
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.62", features = [
-    "Win32_Foundation",
-    "Win32_NetworkManagement_WindowsFilteringPlatform",
-    "Win32_System_Rpc",
-    "Win32_Security",
-    "Win32_Networking_WinSock",
-    "Win32_NetworkManagement_IpHelper",
-    "Win32_NetworkManagement_Ndis", "Win32_Networking_WinInet",
-    "Win32_Security_Cryptography"
-] }
-widestring = "1.2.1"
-
-[build-dependencies]
-winres = "0.1"
+[workspace.dependencies]
+vox_shared = { path = "crates/vox_shared", version = "0.1.0" }
 
 [profile.release]
 debug = true
@@ -87,11 +20,3 @@ opt-level = 3
 lto = "fat"
 codegen-units = 1
 panic = "abort"
-
-[[bin]]
-name = "cli"
-path = "src/cli/main.rs"
-
-[[bin]]
-name = "daemon"
-path = "src/main.rs"

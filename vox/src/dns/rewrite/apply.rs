@@ -1,6 +1,6 @@
 use crate::context::Context;
-use crate::rewrite::record::construct_rewrite_records;
-use crate::rewrite::{Rewrite, RewriteAction, RewriteMatchWhenType};
+use crate::dns::rewrite::record::construct_rewrite_records;
+use crate::dns::rewrite::{Rewrite, RewriteAction, RewriteMatchWhenType};
 use anyhow::Result;
 use hickory_proto::op::{Message, Query, ResponseCode};
 use hickory_proto::rr::{Name, Record};

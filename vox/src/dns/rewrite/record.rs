@@ -1,4 +1,4 @@
-use crate::rewrite::{Rewrite, RewriteAction};
+use crate::dns::rewrite::{Rewrite, RewriteAction};
 use anyhow::Error;
 use hickory_proto::op::Query;
 use hickory_proto::rr::rdata::{A, AAAA};

@@ -12,7 +12,6 @@ pub mod lists;
 pub mod logger;
 pub mod mmdb;
 pub mod password;
-pub mod rewrite;
 pub mod task;
 pub mod win_divert;
 pub mod windows;

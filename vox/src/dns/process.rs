@@ -1,8 +1,8 @@
 use crate::context::Context;
 use crate::dashboard::ws::WsEvent;
-use crate::engine::EngineMessage;
+use crate::dns::rewrite::apply::{apply_rewrites, restore_original_queries};
 use crate::engine::message::{BlockLookup, BlockOrigin, BlockResult};
-use crate::rewrite::apply::{apply_rewrites, restore_original_queries};
+use crate::engine::EngineMessage;
 use anyhow::Result;
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::{A, AAAA};
