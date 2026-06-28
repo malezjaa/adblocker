@@ -14,5 +14,5 @@ pub mod mmdb;
 pub mod password;
 pub mod rewrite;
 pub mod task;
-pub mod windows;
 pub mod win_divert;
+pub mod windows;

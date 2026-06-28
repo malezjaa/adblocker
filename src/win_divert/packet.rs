@@ -1,11 +1,10 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::ptr;
+use windivert_sys::WinDivertHelperParsePacket;
 use windivert_sys::header::{
-  PWINDIVERT_ICMPHDR, PWINDIVERT_ICMPV6HDR,
-  PWINDIVERT_IPHDR, PWINDIVERT_IPV6HDR,
+  PWINDIVERT_ICMPHDR, PWINDIVERT_ICMPV6HDR, PWINDIVERT_IPHDR, PWINDIVERT_IPV6HDR,
   PWINDIVERT_TCPHDR, PWINDIVERT_UDPHDR,
 };
-use windivert_sys::WinDivertHelperParsePacket;
 
 #[derive(Debug, Clone, Copy)]
 pub enum IpHeader<'a> {
@@ -26,7 +25,6 @@ pub struct Packet<'a> {
   pub payload: &'a [u8],
   pub next: Option<&'a [u8]>,
 }
-
 
 impl<'a> Packet<'a> {
   pub fn is_ipv4(&self) -> bool {
@@ -52,7 +50,9 @@ impl<'a> Packet<'a> {
     };
 
     let port = match self.transport_header {
-      Some(TransportHeader::Udp(hdr)) | Some(TransportHeader::Tcp(hdr)) if hdr.len() >= 2 => {
+      Some(TransportHeader::Udp(hdr)) | Some(TransportHeader::Tcp(hdr))
+        if hdr.len() >= 2 =>
+      {
         u16::from_be_bytes([hdr[0], hdr[1]])
       }
       _ => 0,
@@ -108,20 +108,12 @@ impl<'a> Packet<'a> {
       return None;
     };
 
-    let transport_start = [
-      tcp_hdr as usize,
-      udp_hdr as usize,
-      icmp_hdr as usize,
-      icmpv6_hdr as usize,
-    ]
-      .into_iter()
-      .find(|&p| p != 0);
+    let transport_start =
+      [tcp_hdr as usize, udp_hdr as usize, icmp_hdr as usize, icmpv6_hdr as usize]
+        .into_iter()
+        .find(|&p| p != 0);
 
-    let payload_start = if !data_ptr.is_null() {
-      data_ptr as usize
-    } else {
-      buf_end
-    };
+    let payload_start = if !data_ptr.is_null() { data_ptr as usize } else { buf_end };
 
     let transport_end = payload_start;
     let ip_end = transport_start.unwrap_or(payload_start);
@@ -132,11 +124,7 @@ impl<'a> Packet<'a> {
 
     let ip_header = unsafe {
       let slice = std::slice::from_raw_parts(ip_start as *const u8, ip_end - ip_start);
-      if !ip_hdr.is_null() {
-        IpHeader::V4(slice)
-      } else {
-        IpHeader::V6(slice)
-      }
+      if !ip_hdr.is_null() { IpHeader::V4(slice) } else { IpHeader::V6(slice) }
     };
 
     let transport_header = transport_start.map(|t_start| unsafe {
@@ -158,17 +146,14 @@ impl<'a> Packet<'a> {
     };
 
     let next = if !next_ptr.is_null() && next_len > 0 {
-      Some(unsafe { std::slice::from_raw_parts(next_ptr as *const u8, next_len as usize) })
+      Some(unsafe {
+        std::slice::from_raw_parts(next_ptr as *const u8, next_len as usize)
+      })
     } else {
       None
     };
 
-    Some(Packet {
-      ip_header,
-      transport_header,
-      payload,
-      next,
-    })
+    Some(Packet { ip_header, transport_header, payload, next })
   }
 
   pub fn port_offsets(&self, data: &'a [u8]) -> Option<(usize, usize)> {

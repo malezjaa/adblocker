@@ -5,7 +5,7 @@ use crate::engine::EngineMessage;
 use anyhow::Result;
 use futures::future::pending;
 use notify::{EventKind, RecursiveMode};
-use notify_debouncer_full::{new_debouncer, DebounceEventResult};
+use notify_debouncer_full::{DebounceEventResult, new_debouncer};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::spawn;

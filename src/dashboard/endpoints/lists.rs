@@ -1,11 +1,11 @@
 use crate::context::Context;
-use crate::dashboard::auth::AuthGuard;
 use crate::dashboard::AppError;
+use crate::dashboard::auth::AuthGuard;
 use crate::lists::cache::load_cache_file;
-use crate::lists::list::{List, LISTS, LIST_IDS};
+use crate::lists::list::{LIST_IDS, LISTS, List};
 use anyhow::Result;
-use axum::extract::State as AxumState;
 use axum::Json;
+use axum::extract::State as AxumState;
 use fs_err::tokio::write;
 use serde::Deserialize;
 
@@ -52,6 +52,6 @@ pub async fn toggle_list(
 
   write(ctx.config_path(), toml::to_string(&new_config)?).await?;
   ctx.apply_config_change(old_config, new_config).await?;
-  
+
   Ok(Json(()))
 }

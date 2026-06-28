@@ -62,12 +62,9 @@ impl App {
         let divert = WinDivert::new()?;
 
         let win_ctx = self.ctx.clone();
-        tasks.spawn(named_task(
-          "WinDivert",
-          async move {
-            divert.start_redirects(win_ctx).await
-          },
-        ));
+        tasks.spawn(named_task("WinDivert", async move {
+          divert.start_redirects(win_ctx).await
+        }));
         tasks.spawn(named_task("DNS", Self::start_dns(self.ctx.clone())));
         tasks.spawn(named_task("CRL server", serve_crl_pem()));
         if config.doh_enabled() {

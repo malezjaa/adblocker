@@ -1,10 +1,11 @@
+use crate::certs::Certs;
 use crate::config::Config;
 use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
 use crate::dns::resolver::create_hickory_resolver;
-use crate::engine::cache::DnsCache;
 use crate::engine::EngineMessage;
-use crate::mmdb::downloader::{download_mmdbs_files, MMDBSPaths};
+use crate::engine::cache::DnsCache;
+use crate::mmdb::downloader::{MMDBSPaths, download_mmdbs_files};
 use crate::mmdb::mmdbs::MMDBS;
 use anyhow::Result;
 use fs_err::create_dir_all;
@@ -13,12 +14,11 @@ use parking_lot::{RwLock, RwLockReadGuard};
 use rustls::ServerConfig;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 use tracing::log::trace;
-use crate::certs::Certs;
 
 #[derive(Clone)]
 pub struct Context(pub Arc<ContextImpl>);
@@ -52,12 +52,10 @@ impl Context {
     let config = Config::from_file(&config_path)?;
 
     let certs = Certs::load_certs()?;
-    let mut server_config =
-      ServerConfig::builder().with_no_client_auth().with_single_cert(certs.certs, certs.key)?;
-    server_config.alpn_protocols = vec![
-      b"h2".to_vec(),
-      b"http/1.1".to_vec(),
-    ];
+    let mut server_config = ServerConfig::builder()
+      .with_no_client_auth()
+      .with_single_cert(certs.certs, certs.key)?;
+    server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
 
     let paths = download_mmdbs_files();
 

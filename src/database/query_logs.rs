@@ -1,7 +1,7 @@
 use crate::context::Context;
 use crate::dashboard::QueryLog;
-use crate::database::devices::{Device, DeviceType};
 use crate::database::DB;
+use crate::database::devices::{Device, DeviceType};
 use crate::domain::registered_domain;
 use crate::engine::message::BlockOrigin;
 use anyhow::Result;
@@ -111,23 +111,23 @@ impl DB {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       "#,
     )
-      .bind(&event.domain)
-      .bind(&event.record_type)
-      .bind(&event.client_ip)
-      .bind(event.blocked)
-      .bind(match event.block_origin {
-        BlockOrigin::Plain => "plain",
-        BlockOrigin::DoH => "doh",
-        BlockOrigin::PlainWinDivert => "plain-win-divert"
-      })
-      .bind(&event.response_code)
-      .bind(event.timestamp)
-      .bind(event.response_time)
-      .bind(&device)
-      .bind(country_code)
-      .bind(company_name)
-      .execute(&mut *tx)
-      .await?;
+    .bind(&event.domain)
+    .bind(&event.record_type)
+    .bind(&event.client_ip)
+    .bind(event.blocked)
+    .bind(match event.block_origin {
+      BlockOrigin::Plain => "plain",
+      BlockOrigin::DoH => "doh",
+      BlockOrigin::PlainWinDivert => "plain-win-divert",
+    })
+    .bind(&event.response_code)
+    .bind(event.timestamp)
+    .bind(event.response_time)
+    .bind(&device)
+    .bind(country_code)
+    .bind(company_name)
+    .execute(&mut *tx)
+    .await?;
 
     let hits_blocked = i64::from(event.blocked);
 

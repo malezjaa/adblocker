@@ -7,11 +7,11 @@ use anyhow::Result;
 use hickory_proto::serialize::binary::BinDecodable;
 use std::borrow::Cow;
 use tracing::warn;
+use windivert::WinDivert as Divert;
 use windivert::address::WinDivertAddress;
 use windivert::layer::NetworkLayer;
 use windivert::packet::WinDivertPacket;
 use windivert::prelude::WinDivertFlags;
-use windivert::WinDivert as Divert;
 use windivert_sys::ChecksumFlags;
 
 #[derive(Debug)]
@@ -45,8 +45,20 @@ impl WinDivert {
     }
   }
 
-  async fn handle_packet(&self, ctx: Context, win_divert_address: WinDivertAddress<NetworkLayer>, packet: Packet<'_>) -> Result<()> {
-    let response = ctx.query_dns(packet.payload.to_owned(), BlockOrigin::PlainWinDivert, packet.source_addr(), None).await?;
+  async fn handle_packet(
+    &self,
+    ctx: Context,
+    win_divert_address: WinDivertAddress<NetworkLayer>,
+    packet: Packet<'_>,
+  ) -> Result<()> {
+    let response = ctx
+      .query_dns(
+        packet.payload.to_owned(),
+        BlockOrigin::PlainWinDivert,
+        packet.source_addr(),
+        None,
+      )
+      .await?;
     let mut ip_header = match packet.ip_header.to_owned() {
       IpHeader::V4(ip_header) => {
         let mut ip_header = ip_header.to_owned();
