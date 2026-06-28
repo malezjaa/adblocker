@@ -104,7 +104,7 @@ impl Context {
       NetError::Dns(DnsError::NoRecordsFound(no)) => {
         response.metadata.response_code = no.response_code;
         let duration = negative_ttl(&no);
-        debug!(name = %cache_key.name, ttl = ?duration, "no records found");
+        trace!(name = %cache_key.name, ttl = ?duration, "no records found");
         self.cache().insert_resolved(
           cache_key,
           Vec::new(),

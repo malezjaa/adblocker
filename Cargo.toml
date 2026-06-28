@@ -53,6 +53,8 @@ hex = "0.4.3"
 bitflags = "2.11.1"
 rayon = "1.12.0"
 moka = "0.12.15"
+windivert = { version = "0.7.0-beta.4", features = ["vendored"] }
+windivert-sys = { version = "0.11.0-beta.2", features = ["vendored"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = [

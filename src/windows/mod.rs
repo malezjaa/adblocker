@@ -1,3 +1,5 @@
+use std::os::windows::raw::HANDLE;
+
 pub mod adapters;
 pub mod filter;
 pub mod pwstr_buf;
@@ -12,3 +14,5 @@ pub mod wfp_session {
     pub engine: HANDLE,
   }
 }
+
+pub const INVALID_HANDLE_VALUE: HANDLE = -1isize as HANDLE;

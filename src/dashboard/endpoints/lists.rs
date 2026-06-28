@@ -1,11 +1,11 @@
 use crate::context::Context;
-use crate::dashboard::AppError;
 use crate::dashboard::auth::AuthGuard;
+use crate::dashboard::AppError;
 use crate::lists::cache::load_cache_file;
-use crate::lists::list::{LIST_IDS, LISTS, List};
+use crate::lists::list::{List, LISTS, LIST_IDS};
 use anyhow::Result;
-use axum::Json;
 use axum::extract::State as AxumState;
+use axum::Json;
 use fs_err::tokio::write;
 use serde::Deserialize;
 
@@ -41,19 +41,17 @@ pub async fn toggle_list(
     return Err(AppError::new("Can't toggle a list that doesn't exist".into()));
   }
 
-  let toml = {
-    let mut config = ctx.0.config.write();
+  let old_config = ctx.config().clone();
+  let mut new_config = old_config.clone();
 
-    if config.blocklists.contains(&body.list_id) {
-      config.blocklists.retain(|id| id != &body.list_id);
-    } else {
-      config.blocklists.push(body.list_id);
-    }
+  if new_config.blocklists.contains(&body.list_id) {
+    new_config.blocklists.retain(|id| id != &body.list_id);
+  } else {
+    new_config.blocklists.push(body.list_id);
+  }
 
-    toml::to_string(&*config)?
-  };
-
-  write(ctx.config_path(), toml).await?;
-
+  write(ctx.config_path(), toml::to_string(&new_config)?).await?;
+  ctx.apply_config_change(old_config, new_config).await?;
+  
   Ok(Json(()))
 }
