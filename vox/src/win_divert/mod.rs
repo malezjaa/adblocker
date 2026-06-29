@@ -4,7 +4,6 @@ use crate::context::Context;
 use crate::engine::message::BlockOrigin;
 use crate::win_divert::packet::{IpHeader, Packet, TransportHeader};
 use anyhow::Result;
-use hickory_proto::serialize::binary::BinDecodable;
 use std::borrow::Cow;
 use tracing::warn;
 use windivert::WinDivert as Divert;
@@ -101,11 +100,8 @@ impl WinDivert {
     let total_payload_len = transport_header.len() + response_bytes.len();
 
     // update length fields
-    match packet.transport_header {
-      Some(TransportHeader::Udp(_)) => {
-        transport_header[4..6].copy_from_slice(&(total_payload_len as u16).to_be_bytes());
-      }
-      _ => {}
+    if let Some(TransportHeader::Udp(_)) = packet.transport_header {
+      transport_header[4..6].copy_from_slice(&(total_payload_len as u16).to_be_bytes());
     }
 
     match packet.ip_header {

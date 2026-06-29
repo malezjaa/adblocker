@@ -40,7 +40,7 @@ pub fn setup_logger(verbose: bool) {
     .without_time()
     .event_format(CustomFormatter)
     .with_env_filter(EnvFilter::new(format!(
-      "dns_adblock={0},cli={0},daemon={0}",
+      "vox={0},cli={0},daemon={0},vox_shared={0}",
       if verbose { "debug" } else { "info" }
     )))
     .init();

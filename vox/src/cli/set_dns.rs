@@ -1,9 +1,9 @@
 use crate::CliContext;
 use crate::pretty::{print_field, print_separator, print_success, print_warning};
 use anyhow::Result;
-use dns_adblock::context::Context;
-use dns_adblock::firewall::override_dns::{OverrideDns, override_default_dns};
 use tracing::warn;
+use vox::context::Context;
+use vox::firewall::override_dns::{OverrideDns, override_default_dns};
 use yansi::Paint;
 
 pub async fn set_dns(

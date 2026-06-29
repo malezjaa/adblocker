@@ -4,3 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+yansi = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+fs-err = { workspace = true }
+toml = { workspace = true }
+rayon = { workspace = true }

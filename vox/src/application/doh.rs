@@ -3,12 +3,12 @@ use crate::context::Context;
 use crate::dashboard::AppError;
 use crate::engine::message::BlockOrigin;
 use anyhow::Result;
+use axum::Router;
 use axum::body::Bytes;
 use axum::extract::{ConnectInfo, Path, Query, State as AxumState};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::{Router, routing::post};
 use axum_server::tls_rustls::RustlsConfig;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -29,10 +29,11 @@ impl App {
     }
     let app = Router::new()
       .route("/", get(root))
-      .route("/dns-query", get(Self::doh_get_handler))
-      .route("/dns-query", post(Self::doh_handler))
-      .route("/dns-query/{device}", get(Self::doh_get_device_handler))
-      .route("/dns-query/{device}", post(Self::doh_device_handler))
+      .route("/dns-query", get(Self::doh_get_handler).post(Self::doh_handler))
+      .route(
+        "/dns-query/{device}",
+        get(Self::doh_get_device_handler).post(Self::doh_device_handler),
+      )
       .layer(TraceLayer::new_for_http())
       .with_state(ctx.clone());
 

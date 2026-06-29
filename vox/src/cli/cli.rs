@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use dns_adblock::database::devices::DeviceType;
+use vox::database::devices::DeviceType;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]

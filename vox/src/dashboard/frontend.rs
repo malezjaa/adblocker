@@ -1,8 +1,8 @@
 use crate::dashboard::AppError;
 use axum::extract::Path;
-use axum::http::{header, Response};
+use axum::http::{Response, header};
 use axum::response::IntoResponse;
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 use mime_guess2::from_path;
 use reqwest::StatusCode;
 

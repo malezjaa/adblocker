@@ -1,15 +1,13 @@
-pub mod rules;
-pub mod settings;
-pub mod watcher;
-
+use crate::config::rewrite::Rewrite;
 use crate::config::rules::Rule;
-use crate::dns::rewrite::Rewrite;
-use anyhow::Result;
 use fs_err::{create_dir_all, read, write};
 use serde::{Deserialize, Serialize};
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::Path;
 use tracing::debug;
+
+pub mod rewrite;
+pub mod rules;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UpstreamServer {
@@ -35,7 +33,7 @@ pub struct Config {
 }
 
 impl Config {
-  pub fn default_values() -> Result<Self> {
+  pub fn default_values() -> anyhow::Result<Self> {
     Ok(Self {
       blocklists: vec!["oisd-big".into()],
       upstreams: Some(vec![
@@ -50,7 +48,7 @@ impl Config {
     })
   }
 
-  pub fn compile_regexes(&mut self) -> Result<()> {
+  pub fn compile_regexes(&mut self) -> anyhow::Result<()> {
     if let Some(rewrites) = &mut self.rewrites {
       for rewrite in rewrites {
         rewrite.compile()?;
@@ -61,7 +59,7 @@ impl Config {
     Ok(())
   }
 
-  pub fn from_file<P: AsRef<Path>>(file: P) -> Result<Self> {
+  pub fn from_file<P: AsRef<Path>>(file: P) -> anyhow::Result<Self> {
     let path = file.as_ref();
     debug!(path = path.display().to_string(), "loading config");
 

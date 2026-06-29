@@ -1,4 +1,3 @@
-use crate::config::Config;
 use crate::context::Context;
 use crate::dns::resolver::create_hickory_resolver;
 use crate::engine::EngineMessage;
@@ -11,44 +10,46 @@ use std::time::Duration;
 use tokio::spawn;
 use tokio::sync::mpsc;
 use tracing::{debug, error, warn};
+use vox_shared::config::Config;
 
-impl Config {
-  pub fn spawn_config_watcher(ctx: Context) -> Result<()> {
+impl Context {
+  pub fn spawn_config_watcher(&self) -> Result<()> {
+    let ctx = self.clone();
     spawn(async move {
-      if let Err(err) = run_watcher(ctx).await {
+      if let Err(err) = ctx.run_watcher().await {
         error!("config watcher failed: {err}");
       }
     });
 
     Ok(())
   }
-}
 
-async fn run_watcher(ctx: Context) -> Result<()> {
-  let config_path = ctx.0.config_path.clone();
+  async fn run_watcher(&self) -> Result<()> {
+    let config_path = self.0.config_path.clone();
 
-  let (tx, mut rx) = mpsc::channel::<DebounceEventResult>(64);
+    let (tx, mut rx) = mpsc::channel::<DebounceEventResult>(64);
 
-  let mut debouncer =
-    new_debouncer(Duration::from_secs(1), None, move |result: DebounceEventResult| {
-      let _ = tx.blocking_send(result);
-    })?;
+    let mut debouncer =
+      new_debouncer(Duration::from_secs(1), None, move |result: DebounceEventResult| {
+        let _ = tx.blocking_send(result);
+      })?;
 
-  debouncer.watch(&config_path, RecursiveMode::NonRecursive)?;
-  debug!("started config watcher");
+    debouncer.watch(&config_path, RecursiveMode::NonRecursive)?;
+    debug!("started config watcher");
 
-  let ctx_clone = ctx.clone();
-  let config_path_clone = config_path.clone();
+    let ctx_clone = self.clone();
+    let config_path_clone = config_path.clone();
 
-  let processor = spawn(async move {
-    while let Some(result) = rx.recv().await {
-      handle_debounce_result(result, &config_path_clone, &ctx_clone).await;
-    }
-  });
+    let processor = spawn(async move {
+      while let Some(result) = rx.recv().await {
+        handle_debounce_result(result, &config_path_clone, &ctx_clone).await;
+      }
+    });
 
-  let _ = tokio::join!(pending::<()>(), processor);
+    let _ = tokio::join!(pending::<()>(), processor);
 
-  Ok(())
+    Ok(())
+  }
 }
 
 async fn handle_debounce_result(

@@ -1,8 +1,18 @@
 [workspace]
-members = ["vox", "crates/*"]
+members = ["vox", "crates/*", "clients/*"]
 resolver = "3"
 
 [workspace.dependencies]
+anyhow = "1.0.103"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+yansi = "1.0.1"
+regex = "1.12.4"
+serde = { version = "1.0.228", features = ["derive"] }
+fs-err = "3.3.0"
+toml = "1.1.2"
+rayon = "1.12.0"
+
 vox_shared = { path = "crates/vox_shared", version = "0.1.0" }
 
 [profile.release]

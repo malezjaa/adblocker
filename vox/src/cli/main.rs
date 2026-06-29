@@ -9,9 +9,9 @@ use crate::set_dns::set_dns;
 use anyhow::{Result, bail};
 use clap::Parser;
 use cliclack::log;
-use dns_adblock::config::Config;
-use dns_adblock::database::DB;
-use dns_adblock::logger::setup_logger;
+use vox::database::DB;
+use vox_shared::config::Config;
+use vox_shared::logger::setup_logger;
 use yansi::Paint;
 
 #[derive(Debug)]

@@ -1,8 +1,8 @@
-use crate::dns::rewrite::{Rewrite, RewriteAction};
 use anyhow::Error;
 use hickory_proto::op::Query;
 use hickory_proto::rr::rdata::{A, AAAA};
 use hickory_proto::rr::{RData, RecordType};
+use vox_shared::config::rewrite::Rewrite;
 
 pub fn construct_rewrite_records(
   query: &Query,
@@ -10,6 +10,7 @@ pub fn construct_rewrite_records(
 ) -> anyhow::Result<Vec<RData>, Error> {
   use hickory_proto::rr::Name;
   use hickory_proto::rr::rdata::{CNAME, MX, PTR, SRV, TXT};
+  use vox_shared::config::rewrite::RewriteAction;
 
   let mut rdatas = vec![];
 

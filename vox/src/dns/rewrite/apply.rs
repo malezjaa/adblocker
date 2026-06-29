@@ -1,10 +1,10 @@
 use crate::context::Context;
 use crate::dns::rewrite::record::construct_rewrite_records;
-use crate::dns::rewrite::{Rewrite, RewriteAction, RewriteMatchWhenType};
 use anyhow::Result;
 use hickory_proto::op::{Message, Query, ResponseCode};
 use hickory_proto::rr::{Name, Record};
 use std::str::FromStr;
+use vox_shared::config::rewrite::{Rewrite, RewriteAction, RewriteMatchWhenType};
 
 pub struct RewriteResult {
   pub synthetic_response: bool,

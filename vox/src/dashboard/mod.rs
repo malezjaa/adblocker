@@ -6,8 +6,6 @@ pub mod ws;
 
 pub use self::endpoints::stats::QueryLog;
 use crate::application::app::App;
-use crate::config::rules::{create_rule, delete_rule, rule_handler, update_rule};
-use crate::config::settings::{settings_handler, update_settings};
 use crate::context::Context;
 pub use crate::dashboard::app_error::AppError;
 use crate::dashboard::auth::{auth_login, auth_logout, auth_status};
@@ -25,6 +23,8 @@ use axum::Router;
 use axum::extract::Path;
 use axum::response::IntoResponse;
 use axum::routing::{any, get, patch, post};
+use endpoints::rules::{create_rule, delete_rule, rule_handler, update_rule};
+use endpoints::settings::{settings_handler, update_settings};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};

@@ -3,7 +3,7 @@ use crate::pretty::{print_error, print_warning};
 use anyhow::{Result, bail};
 use chrono::Utc;
 use cliclack::{confirm, log, password};
-use dns_adblock::password::hash_password;
+use vox::password::hash_password;
 
 impl CliContext {
   pub async fn create_admin(&self) -> Result<()> {

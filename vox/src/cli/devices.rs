@@ -1,7 +1,7 @@
 use crate::CliContext;
 use crate::pretty::{print_field, print_separator, print_success};
 use anyhow::{Result, anyhow};
-use dns_adblock::database::devices::DeviceType;
+use vox::database::devices::DeviceType;
 use yansi::Paint;
 
 pub fn pretty_device_type(ty: DeviceType) -> String {

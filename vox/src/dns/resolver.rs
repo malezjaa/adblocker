@@ -1,4 +1,3 @@
-use crate::config::Config;
 use anyhow::Result;
 use hickory_resolver::config::{NameServerConfig, ResolverConfig};
 use hickory_resolver::net::runtime::TokioRuntimeProvider;
@@ -6,6 +5,7 @@ use hickory_resolver::{Resolver, TokioResolver};
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{trace, warn};
+use vox_shared::config::Config;
 
 pub fn create_hickory_resolver(
   config: &Config,

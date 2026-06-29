@@ -1,7 +1,6 @@
 pub mod crl;
 
 use anyhow::{Context, Result, anyhow, bail};
-use axum::response::IntoResponse;
 use base64::Engine;
 use base64::engine::general_purpose;
 use fs_err::File;
@@ -65,7 +64,7 @@ impl Certs {
       .arg("Bypass")
       .arg("-EncodedCommand")
       .arg(encoded)
-      .current_dir(&certs_path)
+      .current_dir(certs_path)
       .status()?;
     if !status.success() {
       bail!("Certificate generation script exited with a non-zero status");
@@ -79,7 +78,7 @@ impl Certs {
       .arg("-addstore")
       .arg("-f")
       .arg("Root")
-      .arg(&ca_cert_path)
+      .arg(ca_cert_path)
       .status()
       .context("Failed to run certutil -addstore")?;
 

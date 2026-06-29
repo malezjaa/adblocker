@@ -1,11 +1,12 @@
-use crate::config::{Config, UpstreamServer};
 use crate::context::Context;
 use crate::dashboard::AppError;
 use crate::dashboard::auth::AuthGuard;
 use anyhow::Result;
 use axum::Json;
 use axum::extract::State;
+use parking_lot::RwLockReadGuard;
 use serde::{Deserialize, Serialize};
+use vox_shared::config::{Config, UpstreamServer};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Settings {
@@ -13,10 +14,8 @@ pub struct Settings {
   pub dnssec: Option<bool>,
 }
 
-impl Config {
-  fn as_settings(&self) -> Settings {
-    Settings { upstreams: self.upstreams.clone(), dnssec: self.dnssec }
-  }
+fn to_settings(val: RwLockReadGuard<Config>) -> Settings {
+  Settings { upstreams: val.upstreams.clone(), dnssec: val.dnssec }
 }
 
 pub async fn settings_handler(
@@ -24,7 +23,7 @@ pub async fn settings_handler(
   State(ctx): State<Context>,
 ) -> Result<Json<Settings>, AppError> {
   let config = ctx.config();
-  Ok(Json(config.as_settings()))
+  Ok(Json(to_settings(config)))
 }
 
 pub async fn update_settings(
@@ -39,5 +38,8 @@ pub async fn update_settings(
 
   fs_err::write(ctx.config_path(), toml::to_string(&new_config)?)?;
   ctx.apply_config_change(old_config, new_config.clone()).await?;
-  Ok(Json(new_config.as_settings()))
+  Ok(Json(Settings {
+    upstreams: new_config.upstreams.clone(),
+    dnssec: new_config.dnssec,
+  }))
 }

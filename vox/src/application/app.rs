@@ -1,10 +1,8 @@
 use crate::certs::crl::serve_crl_pem;
-use crate::config::Config;
 use crate::context::Context;
 use crate::database::DB;
 use crate::engine::{EngineActor, EngineMessage};
 use crate::firewall::open_port::open_ports;
-use crate::task::named_task;
 use crate::win_divert::WinDivert;
 #[cfg(windows)]
 use crate::windows::wfp_session::WfpSession;
@@ -14,6 +12,7 @@ use tokio::sync::mpsc::Receiver;
 use tokio::task::{JoinSet, LocalSet};
 use tracing::error;
 use tracing::log::warn;
+use vox_shared::task::named_task;
 use windows::Win32::Foundation::HANDLE;
 
 #[derive(Clone)]
@@ -45,7 +44,7 @@ impl App {
     local
       .run_until(async {
         let config = self.ctx.config();
-        Config::spawn_config_watcher(self.ctx.clone())?;
+        self.ctx.spawn_config_watcher()?;
 
         let mut tasks = JoinSet::new();
         let engine = EngineActor::new(self.ctx.clone()).await?;

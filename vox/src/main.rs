@@ -1,13 +1,12 @@
-use ::windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0;
 use anyhow::Result;
 use clap::Parser;
-use dns_adblock::application::app::App;
-use dns_adblock::context::Context;
-use dns_adblock::logger::setup_logger;
 use rustls::crypto::ring;
 use scopeguard::defer;
 use std::sync::Arc;
 use tokio::sync::mpsc::channel;
+use vox::application::app::App;
+use vox::context::Context;
+use vox_shared::logger::setup_logger;
 
 #[derive(Parser, Debug)]
 struct Cli {
@@ -30,9 +29,11 @@ async fn main() -> Result<()> {
   let app = Arc::new(App::init(ctx).await?);
   defer! {
     #[cfg(windows)] unsafe {
+      use ::windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0;
       FwpmEngineClose0(app.wfp_sess.engine);
     }
   }
+
   app.start_all(rx).await?;
 
   Ok(())

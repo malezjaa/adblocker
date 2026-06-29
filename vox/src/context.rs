@@ -1,5 +1,4 @@
 use crate::certs::Certs;
-use crate::config::Config;
 use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
 use crate::dns::resolver::create_hickory_resolver;
@@ -19,6 +18,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 use tracing::log::trace;
+use vox_shared::config::Config;
 
 #[derive(Clone)]
 pub struct Context(pub Arc<ContextImpl>);

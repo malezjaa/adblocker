@@ -1,3 +1,4 @@
 pub mod app;
 pub mod dns;
 pub mod doh;
+pub mod watcher;
