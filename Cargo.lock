@@ -3561,6 +3561,7 @@ name = "vox_shared"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "dirs",
  "fs-err",
  "rayon",
  "regex",

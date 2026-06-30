@@ -19,6 +19,7 @@ use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 use tracing::log::trace;
 use vox_shared::config::Config;
+use vox_shared::home_dir;
 
 #[derive(Clone)]
 pub struct Context(pub Arc<ContextImpl>);
@@ -40,7 +41,7 @@ pub struct ContextImpl {
 
 impl Context {
   pub async fn new(tx: Sender<EngineMessage>) -> Result<Self> {
-    let home_path = dirs::home_dir().unwrap().join("adb");
+    let home_path = home_dir();
     let cache_dir = home_path.join("cache");
 
     create_dir_all(&cache_dir)?;

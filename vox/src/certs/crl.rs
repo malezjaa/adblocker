@@ -1,9 +1,10 @@
-use axum::Router;
 use axum::body::Bytes;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::routing::get;
+use axum::Router;
 use tokio::net::TcpListener;
+use vox_shared::home_dir;
 
 #[derive(Clone)]
 pub struct CrlPem(Vec<u8>);
@@ -13,7 +14,7 @@ async fn crl_pem_get(State(pem): State<CrlPem>) -> impl IntoResponse {
 }
 
 pub async fn serve_crl_pem() -> anyhow::Result<()> {
-  let certs_path = dirs::home_dir().unwrap().join("adb").join("certs");
+  let certs_path = home_dir().join("certs");
   let crl_path = certs_path.join("crl.pem");
   let bytes = fs_err::read(crl_path)?;
 

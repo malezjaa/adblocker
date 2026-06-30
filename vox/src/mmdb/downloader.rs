@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use time::Duration;
 use tokio::fs::{metadata, write};
 use tracing::{debug, error};
+use vox_shared::home_dir;
 
 pub static DOWNLOADED_MMDBS: AtomicBool = AtomicBool::new(false);
 
@@ -15,7 +16,7 @@ pub struct MMDBSPaths {
 }
 
 pub fn download_mmdbs_files() -> MMDBSPaths {
-  let mmdbs_path = dirs::home_dir().unwrap().join("adb").join("mmdbs");
+  let mmdbs_path = home_dir().join("mmdbs");
 
   let paths = MMDBSPaths {
     asn: ("GeoLite2-ASN".to_string(), mmdbs_path.join("GeoLite2-ASN.mmdb")),

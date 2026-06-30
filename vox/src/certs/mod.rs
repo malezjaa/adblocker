@@ -1,14 +1,15 @@
 pub mod crl;
 
-use anyhow::{Context, Result, anyhow, bail};
-use base64::Engine;
+use anyhow::{anyhow, bail, Context, Result};
 use base64::engine::general_purpose;
+use base64::Engine;
 use fs_err::File;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls_pemfile::{certs, private_key};
 use std::io::BufReader;
 use std::path::Path;
 use std::process::Command;
+use vox_shared::home_dir;
 
 #[derive(Debug)]
 pub struct Certs {
@@ -19,7 +20,7 @@ pub struct Certs {
 
 impl Certs {
   pub fn load_certs() -> Result<Certs> {
-    let certs_path = dirs::home_dir().unwrap().join("adb").join("certs");
+    let certs_path = home_dir().join("certs");
     Self::create_open_ssl_config(&certs_path)?;
 
     let ca_cert_path = certs_path.join("ca.pem");

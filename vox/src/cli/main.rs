@@ -13,6 +13,7 @@ use vox::database::DB;
 use vox_shared::config::Config;
 use vox_shared::logger::setup_logger;
 use yansi::Paint;
+use vox_shared::home_dir;
 
 #[derive(Debug)]
 pub struct CliContext {
@@ -22,7 +23,7 @@ pub struct CliContext {
 
 impl CliContext {
   pub async fn new() -> Result<Self> {
-    let home_path = dirs::home_dir().unwrap().join("adb");
+    let home_path = home_dir();
 
     let db_path = home_path.join("dns-adblock.sqlite");
     let db = DB::init(db_path).await?;
