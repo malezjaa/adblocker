@@ -11,9 +11,9 @@ use clap::Parser;
 use cliclack::log;
 use vox::database::DB;
 use vox_shared::config::Config;
+use vox_shared::home_dir;
 use vox_shared::logger::setup_logger;
 use yansi::Paint;
-use vox_shared::home_dir;
 
 #[derive(Debug)]
 pub struct CliContext {

@@ -1,8 +1,6 @@
 pub mod packet;
 
-use crate::context::Context;
-use crate::engine::message::BlockOrigin;
-use crate::win_divert::packet::{IpHeader, Packet, TransportHeader};
+use self::packet::{IpHeader, Packet, TransportHeader};
 use anyhow::Result;
 use std::borrow::Cow;
 use tracing::warn;
@@ -28,7 +26,7 @@ impl WinDivert {
     Ok(WinDivert { divert })
   }
 
-  pub async fn start_redirects(&self, ctx: Context) -> Result<()> {
+  pub async fn start_redirects(&self) -> Result<()> {
     let mut buf = vec![0u8; 65535];
     loop {
       let og_packet = self.divert.recv(&mut buf)?;
@@ -37,7 +35,7 @@ impl WinDivert {
       if packet.payload.is_empty() || packet.payload.len() < 12 {
         continue;
       }
-      if let Err(e) = self.handle_packet(ctx.clone(), og_packet.address, packet).await {
+      if let Err(e) = self.handle_packet(og_packet.address, packet).await {
         warn!("failed to process packet: {e:?}");
         continue;
       }
@@ -46,18 +44,17 @@ impl WinDivert {
 
   async fn handle_packet(
     &self,
-    ctx: Context,
     win_divert_address: WinDivertAddress<NetworkLayer>,
     packet: Packet<'_>,
   ) -> Result<()> {
-    let response = ctx
-      .query_dns(
-        packet.payload.to_owned(),
-        BlockOrigin::PlainWinDivert,
-        packet.source_addr(),
-        None,
-      )
-      .await?;
+    // let response = ctx
+    //   .query_dns(
+    //     packet.payload.to_owned(),
+    //     BlockOrigin::PlainWinDivert,
+    //     packet.source_addr(),
+    //     None,
+    //   )
+    //   .await?;
     let mut ip_header = match packet.ip_header.to_owned() {
       IpHeader::V4(ip_header) => {
         let mut ip_header = ip_header.to_owned();
@@ -95,7 +92,8 @@ impl WinDivert {
       None => vec![],
     };
 
-    let response_bytes = response.to_vec()?;
+    // let response_bytes = response.to_vec()?;
+    let response_bytes: Vec<u8> = vec![];
 
     let total_payload_len = transport_header.len() + response_bytes.len();
 

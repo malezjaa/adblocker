@@ -1,8 +1,8 @@
 pub mod crl;
 
-use anyhow::{anyhow, bail, Context, Result};
-use base64::engine::general_purpose;
+use anyhow::{Context, Result, anyhow, bail};
 use base64::Engine;
+use base64::engine::general_purpose;
 use fs_err::File;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls_pemfile::{certs, private_key};
@@ -46,6 +46,7 @@ impl Certs {
     let cfg = certs_path.join("openssl.cnf");
 
     if !cfg.exists() {
+      fs_err::create_dir_all(cfg.parent().unwrap())?;
       fs_err::write(cfg, include_str!("openssl.cnf"))?;
     }
     Ok(())

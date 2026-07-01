@@ -3,7 +3,6 @@ use crate::context::Context;
 use crate::database::DB;
 use crate::engine::{EngineActor, EngineMessage};
 use crate::firewall::open_port::open_ports;
-use crate::win_divert::WinDivert;
 #[cfg(windows)]
 use crate::windows::wfp_session::WfpSession;
 use anyhow::Result;
@@ -58,12 +57,6 @@ impl App {
           DB::spawn_cleanup_task(self.ctx.db().pool.clone(), Duration::days(30)),
         ));
 
-        let divert = WinDivert::new()?;
-
-        let win_ctx = self.ctx.clone();
-        tasks.spawn(named_task("WinDivert", async move {
-          divert.start_redirects(win_ctx).await
-        }));
         tasks.spawn(named_task("DNS", Self::start_dns(self.ctx.clone())));
         tasks.spawn(named_task("CRL server", serve_crl_pem()));
         if config.doh_enabled() {

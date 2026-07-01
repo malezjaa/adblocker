@@ -10,5 +10,4 @@ pub mod firewall;
 pub mod lists;
 pub mod mmdb;
 pub mod password;
-pub mod win_divert;
 pub mod windows;

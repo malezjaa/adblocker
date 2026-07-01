@@ -13,6 +13,17 @@ fs-err = "3.3.0"
 toml = "1.1.2"
 rayon = "1.12.0"
 dirs = "6.0.0"
+tokio = { version = "^1", features = [
+    "rt",
+    "rt-multi-thread",
+    "net",
+    "macros",
+] }
+hickory-proto = "0.26.1"
+hickory-resolver = { version = "0.26.1", features = ["tokio", "https-ring", "rustls-platform-verifier", "dnssec-ring"] }
+rand = "0.10.1"
+futures = "0.3.32"
+hickory-client = "0.25.2"
 
 vox_shared = { path = "crates/vox_shared", version = "0.1.0" }
 
