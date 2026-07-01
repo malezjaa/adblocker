@@ -10,7 +10,6 @@ use adblock::Engine;
 use anyhow::Result;
 use tokio::sync::mpsc;
 
-pub mod cache;
 pub mod lookup;
 pub mod message;
 

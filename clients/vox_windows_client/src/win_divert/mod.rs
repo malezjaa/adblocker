@@ -1,6 +1,7 @@
 pub mod packet;
 
 use self::packet::{IpHeader, Packet, TransportHeader};
+use crate::config::WinClientConfig;
 use anyhow::Result;
 use std::borrow::Cow;
 use tracing::warn;
@@ -17,7 +18,7 @@ pub struct WinDivert {
 }
 
 impl WinDivert {
-  pub fn new() -> Result<Self> {
+  pub fn new(config: &WinClientConfig) -> Result<Self> {
     let divert = Divert::network(
       "outbound and (udp.DstPort == 53 or tcp.DstPort == 53) and ip.DstAddr != 127.0.0.1",
       0,

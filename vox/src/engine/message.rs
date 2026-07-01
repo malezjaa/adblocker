@@ -11,7 +11,7 @@ pub enum BlockResult {
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum BlockOrigin {
   Plain,
-  PlainWinDivert,
+  WindowsClient,
   DoH,
 }
 

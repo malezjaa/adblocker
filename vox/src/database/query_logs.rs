@@ -118,7 +118,7 @@ impl DB {
     .bind(match event.block_origin {
       BlockOrigin::Plain => "plain",
       BlockOrigin::DoH => "doh",
-      BlockOrigin::PlainWinDivert => "plain-win-divert",
+      BlockOrigin::WindowsClient => "plain-win-divert",
     })
     .bind(&event.response_code)
     .bind(event.timestamp)

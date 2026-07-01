@@ -3,7 +3,6 @@ use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
 use crate::dns::resolver::create_hickory_resolver;
 use crate::engine::EngineMessage;
-use crate::engine::cache::DnsCache;
 use crate::mmdb::downloader::{MMDBSPaths, download_mmdbs_files};
 use crate::mmdb::mmdbs::MMDBS;
 use anyhow::Result;
@@ -18,6 +17,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 use tracing::log::trace;
+use vox_dns::cache::DnsCache;
 use vox_shared::config::Config;
 use vox_shared::home_dir;
 

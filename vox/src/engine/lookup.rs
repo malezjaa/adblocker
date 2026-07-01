@@ -1,10 +1,10 @@
 use crate::context::Context;
-use crate::engine::cache::CacheKey;
 use crate::engine::message::{BlockOrigin, BlockResult};
 use adblock::Engine;
 use adblock::request::Request;
 use hickory_proto::op::Message;
 use tracing::info;
+use vox_dns::cache::CacheKey;
 
 impl Context {
   pub fn lookup_block(

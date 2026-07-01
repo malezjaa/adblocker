@@ -24,8 +24,11 @@ hickory-resolver = { version = "0.26.1", features = ["tokio", "https-ring", "rus
 rand = "0.10.1"
 futures = "0.3.32"
 hickory-client = "0.25.2"
+dashmap = "7.0.0-rc2"
+moka = "0.12.15"
 
 vox_shared = { path = "crates/vox_shared", version = "0.1.0" }
+vox_dns = { path = "crates/vox_dns", version = "0.1.0" }
 
 [profile.release]
 debug = true

@@ -1,5 +1,4 @@
 use crate::context::Context;
-use crate::engine::cache::{CacheKey, CacheLookup, InFlightGuard, MAX_NEGATIVE_TTL};
 use anyhow::{anyhow, bail};
 use dashmap::Entry;
 use hickory_proto::op::{Message, ResponseCode};
@@ -9,6 +8,8 @@ use hickory_resolver::net::{DnsError, NetError, NoRecords};
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast;
 use tracing::{debug, trace, warn};
+use vox_dns::cache::{CacheKey, CacheLookup, InFlightGuard, MAX_NEGATIVE_TTL};
+use vox_dns::ttl::negative_ttl;
 
 impl Context {
   pub async fn resolve_msg(&self, msg: &Message) -> anyhow::Result<Message> {
@@ -125,21 +126,4 @@ impl Context {
       }
     }
   }
-}
-
-fn negative_ttl(no: &NoRecords) -> Duration {
-  let secs = no
-    .authorities
-    .as_ref()
-    .map(|auths| {
-      auths
-        .iter()
-        .filter_map(
-          |r| if let RData::SOA(soa) = &r.data { Some(soa.minimum) } else { None },
-        )
-        .min()
-        .unwrap_or(60)
-    })
-    .unwrap_or(60);
-  Duration::from_secs(secs.min(MAX_NEGATIVE_TTL) as u64)
 }

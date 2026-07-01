@@ -1,8 +1,6 @@
 use std::path::PathBuf;
 
 pub mod config;
-pub mod dns_query;
-pub mod edns;
 pub mod logger;
 pub mod task;
 

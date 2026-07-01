@@ -3598,7 +3598,6 @@ dependencies = [
  "clap",
  "cliclack",
  "dashmap",
- "dirs",
  "fs-err",
  "futures",
  "hex",
@@ -3607,12 +3606,10 @@ dependencies = [
  "include_dir",
  "maxminddb",
  "mime_guess2",
- "moka",
  "notify",
  "notify-debouncer-full",
  "parking_lot",
  "rand 0.10.1",
- "rayon",
  "regex",
  "reqwest",
  "rustls",
@@ -3627,12 +3624,29 @@ dependencies = [
  "toml 1.1.2+spec-1.1.0",
  "tower-http 0.7.0",
  "tracing",
- "tracing-subscriber",
+ "vox_dns",
  "vox_shared",
  "widestring",
  "windows",
  "winres",
  "yansi",
+]
+
+[[package]]
+name = "vox_dns"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dashmap",
+ "futures",
+ "hickory-client",
+ "hickory-proto 0.26.1",
+ "hickory-resolver",
+ "moka",
+ "rand 0.10.1",
+ "tokio",
+ "tracing",
+ "vox_shared",
 ]
 
 [[package]]
@@ -3642,9 +3656,6 @@ dependencies = [
  "anyhow",
  "dirs",
  "fs-err",
- "futures",
- "hickory-client",
- "rand 0.10.1",
  "rayon",
  "regex",
  "serde",
@@ -3666,6 +3677,7 @@ dependencies = [
  "tokio",
  "toml 1.1.2+spec-1.1.0",
  "tracing",
+ "vox_dns",
  "vox_shared",
  "windivert",
  "windivert-sys",

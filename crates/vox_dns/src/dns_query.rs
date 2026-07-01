@@ -1,6 +1,6 @@
 use crate::edns::EDNSCode;
 use anyhow::{Result, anyhow};
-use futures::{StreamExt, TryStreamExt};
+use futures::StreamExt;
 use hickory_client::client::Client;
 use hickory_client::proto::DnsHandle;
 use hickory_client::proto::op::{Edns, Message, MessageType, OpCode, Query};

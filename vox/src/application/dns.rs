@@ -18,8 +18,12 @@ impl App {
         Err(e) if e.kind() == ErrorKind::ConnectionReset => continue,
         Err(e) => return Err(e.into()),
       };
-
       let raw = buf[..len].to_vec();
+
+      if raw.starts_with(b"health") {
+        socket.send_to(b"ok", src).await?;
+        continue;
+      }
 
       let response = ctx.query_dns(raw, BlockOrigin::Plain, src, None).await?;
       socket.send_to(&response.to_vec()?, src).await?;
