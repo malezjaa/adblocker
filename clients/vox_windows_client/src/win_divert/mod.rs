@@ -3,8 +3,12 @@ pub mod packet;
 use self::packet::{IpHeader, Packet, TransportHeader};
 use crate::config::WinClientConfig;
 use anyhow::Result;
+use hickory_client::client::Client;
+use hickory_client::proto::op::Message;
 use std::borrow::Cow;
-use tracing::warn;
+use std::time::Instant;
+use tracing::{debug, info, warn};
+use vox_dns::dns_query::DnsQuery;
 use windivert::WinDivert as Divert;
 use windivert::address::WinDivertAddress;
 use windivert::layer::NetworkLayer;
@@ -19,15 +23,15 @@ pub struct WinDivert {
 
 impl WinDivert {
   pub fn new(config: &WinClientConfig) -> Result<Self> {
-    let divert = Divert::network(
-      "outbound and (udp.DstPort == 53 or tcp.DstPort == 53) and ip.DstAddr != 127.0.0.1",
-      0,
-      WinDivertFlags::new(),
-    )?;
+    let filter = format!(
+      "outbound and (udp.DstPort == 53 or tcp.DstPort == 53) and ip.DstAddr != 127.0.0.1 and ip.DstAddr != {}",
+      config.dns_server.ip()
+    );
+    let divert = Divert::network(&filter, 0, WinDivertFlags::new())?;
     Ok(WinDivert { divert })
   }
 
-  pub async fn start_redirects(&self) -> Result<()> {
+  pub async fn start_redirects(self, client: Client) -> Result<()> {
     let mut buf = vec![0u8; 65535];
     loop {
       let og_packet = self.divert.recv(&mut buf)?;
@@ -36,7 +40,7 @@ impl WinDivert {
       if packet.payload.is_empty() || packet.payload.len() < 12 {
         continue;
       }
-      if let Err(e) = self.handle_packet(og_packet.address, packet).await {
+      if let Err(e) = self.handle_packet(&client, og_packet.address, packet).await {
         warn!("failed to process packet: {e:?}");
         continue;
       }
@@ -45,17 +49,17 @@ impl WinDivert {
 
   async fn handle_packet(
     &self,
+    client: &Client,
     win_divert_address: WinDivertAddress<NetworkLayer>,
     packet: Packet<'_>,
   ) -> Result<()> {
-    // let response = ctx
-    //   .query_dns(
-    //     packet.payload.to_owned(),
-    //     BlockOrigin::PlainWinDivert,
-    //     packet.source_addr(),
-    //     None,
-    //   )
-    //   .await?;
+    let start = Instant::now();
+    let msg = Message::from_vec(&packet.payload)?;
+    let query_domain =
+      msg.queries()[0].name().to_string().trim_end_matches('.').to_string();
+    let response_bytes = DnsQuery::from_message(msg).send(client).await?.to_vec()?;
+    debug!("dns request: {}ms src={query_domain}", start.elapsed().as_millis());
+
     let mut ip_header = match packet.ip_header.to_owned() {
       IpHeader::V4(ip_header) => {
         let mut ip_header = ip_header.to_owned();
@@ -92,9 +96,6 @@ impl WinDivert {
       }
       None => vec![],
     };
-
-    // let response_bytes = response.to_vec()?;
-    let response_bytes: Vec<u8> = vec![];
 
     let total_payload_len = transport_header.len() + response_bytes.len();
 

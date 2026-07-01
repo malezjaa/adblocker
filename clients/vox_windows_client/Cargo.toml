@@ -16,3 +16,4 @@ tokio = { workspace = true }
 rand = { workspace = true, rand = "0.9.4" }
 hickory-client = { workspace = true }
 vox_dns = { workspace = true }
+clap = { workspace = true }

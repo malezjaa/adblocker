@@ -18,6 +18,7 @@ tokio = { version = "^1", features = [
     "rt-multi-thread",
     "net",
     "macros",
+    "signal"
 ] }
 hickory-proto = "0.26.1"
 hickory-resolver = { version = "0.26.1", features = ["tokio", "https-ring", "rustls-platform-verifier", "dnssec-ring"] }
@@ -26,6 +27,7 @@ futures = "0.3.32"
 hickory-client = "0.25.2"
 dashmap = "7.0.0-rc2"
 moka = "0.12.15"
+clap = { version = "4.6.1", features = ["derive"] }
 
 vox_shared = { path = "crates/vox_shared", version = "0.1.0" }
 vox_dns = { path = "crates/vox_dns", version = "0.1.0" }

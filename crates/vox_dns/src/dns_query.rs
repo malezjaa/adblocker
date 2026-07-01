@@ -13,7 +13,7 @@ pub struct DnsQuery {
 }
 
 impl DnsQuery {
-  pub fn new(query: Query) -> Result<Self> {
+  pub fn from_query(query: Query) -> Self {
     let mut msg = Message::new();
 
     msg.set_id(rand::random());
@@ -26,7 +26,15 @@ impl DnsQuery {
     edns.set_max_payload(1234);
     msg.set_edns(edns);
 
-    Ok(Self { msg })
+    Self { msg }
+  }
+
+  pub fn from_message(mut msg: Message) -> Self {
+    let mut edns = Edns::new();
+    edns.set_max_payload(1234);
+    msg.set_edns(edns);
+
+    Self { msg }
   }
 
   pub fn add_edns_option(mut self, code: EDNSCode, data: &[u8]) -> Self {
