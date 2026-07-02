@@ -1,18 +1,11 @@
 use hickory_proto::op::Message;
-use serde::{Deserialize, Serialize};
 use tokio::sync::oneshot::Sender;
+use vox_dns::block_origin::BlockOrigin;
 
 #[derive(Debug)]
 pub enum BlockResult {
   Ok,
   Block,
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum BlockOrigin {
-  Plain,
-  WindowsClient,
-  DoH,
 }
 
 pub struct BlockLookup {
@@ -23,7 +16,7 @@ pub struct BlockLookup {
 
 impl BlockLookup {
   pub fn new(msg: Message, sender: Sender<BlockResult>) -> Self {
-    Self { msg, sender, origin: BlockOrigin::Plain }
+    Self { msg, sender, origin: BlockOrigin::plain() }
   }
 
   pub fn origin(mut self, origin: BlockOrigin) -> Self {

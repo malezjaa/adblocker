@@ -6,7 +6,6 @@ use hickory_client::proto::DnsHandle;
 use hickory_client::proto::op::{Edns, Message, MessageType, OpCode, Query};
 use hickory_client::proto::rr::rdata::opt::EdnsOption;
 use hickory_client::proto::xfer::{DnsRequest, DnsRequestOptions, DnsResponse};
-
 #[derive(Debug)]
 pub struct DnsQuery {
   msg: Message,

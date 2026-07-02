@@ -3,7 +3,6 @@ use crate::dashboard::QueryLog;
 use crate::database::DB;
 use crate::database::devices::{Device, DeviceType};
 use crate::domain::registered_domain;
-use crate::engine::message::BlockOrigin;
 use anyhow::Result;
 use chrono::Utc;
 use clap::ValueEnum;
@@ -15,6 +14,7 @@ use std::net::SocketAddr;
 use std::sync::atomic::Ordering;
 use tokio::sync::mpsc::Receiver;
 use tracing::{debug, warn};
+use vox_dns::block_origin::BlockOrigin;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryEvent {
@@ -115,11 +115,7 @@ impl DB {
     .bind(&event.record_type)
     .bind(&event.client_ip)
     .bind(event.blocked)
-    .bind(match event.block_origin {
-      BlockOrigin::Plain => "plain",
-      BlockOrigin::DoH => "doh",
-      BlockOrigin::WindowsClient => "plain-win-divert",
-    })
+    .bind(event.block_origin.to_u8())
     .bind(&event.response_code)
     .bind(event.timestamp)
     .bind(event.response_time)

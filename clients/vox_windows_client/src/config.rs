@@ -27,4 +27,8 @@ impl WinClientConfig {
 
     Ok(toml::from_slice(&read(path)?)?)
   }
+
+  pub fn using_doh(&self) -> bool {
+    self.doh.is_some()
+  }
 }

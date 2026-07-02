@@ -15,3 +15,4 @@ futures = { workspace = true }
 anyhow = { workspace = true }
 vox_shared = { workspace = true }
 rand = { workspace = true }
+serde = { workspace = true }

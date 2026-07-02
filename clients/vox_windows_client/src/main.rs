@@ -51,7 +51,7 @@ async fn run() -> Result<()> {
     }
   });
 
-  let win_divert = WinDivert::new(&config)?;
+  let win_divert = WinDivert::new(config)?;
   spawn(named_task("WinDivert", win_divert.start_redirects(client)));
 
   ctrl_c().await?;

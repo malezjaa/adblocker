@@ -22,7 +22,7 @@ impl DB {
           record_type   TEXT    NOT NULL,
           client_ip     TEXT    NOT NULL,
           blocked       INTEGER NOT NULL,
-          block_origin  TEXT,
+          block_origin  INTEGER,
           response_code TEXT    NOT NULL,
           timestamp     INTEGER NOT NULL,
           response_time INTEGER NOT NULL,

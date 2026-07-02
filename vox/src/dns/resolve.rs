@@ -42,7 +42,6 @@ impl Context {
     if let Some(mut rx) = rx_follower {
       rx.recv().await.map_err(|_| anyhow!("in-flight lookup dropped"))?;
       if let Some(response) = self.try_cache(msg, &cache_key) {
-        debug!(name = %cache_key.name, record_type = ?cache_key.record_type, "dns cache hit from an in-flight lookup");
         return Ok(response);
       }
     }
@@ -62,7 +61,6 @@ impl Context {
   fn try_cache(&self, msg: &Message, key: &CacheKey) -> Option<Message> {
     match self.cache().get(key, self.rules_version()) {
       CacheLookup::Resolved(cached) => {
-        debug!(name = %key.name, record_type = ?key.record_type, "dns cache hit");
         let mut response = msg.clone().into_response();
         response.metadata.response_code = cached.response_code;
         for record in cached.records {

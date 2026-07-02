@@ -1,9 +1,10 @@
 use crate::context::Context;
-use crate::engine::message::{BlockOrigin, BlockResult};
+use crate::engine::message::BlockResult;
 use adblock::Engine;
 use adblock::request::Request;
 use hickory_proto::op::Message;
 use tracing::info;
+use vox_dns::block_origin::BlockOrigin;
 use vox_dns::cache::CacheKey;
 
 impl Context {

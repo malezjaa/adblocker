@@ -1,9 +1,9 @@
 use crate::application::app::App;
 use crate::context::Context;
-use crate::engine::message::BlockOrigin;
 use std::io::ErrorKind;
 use tokio::net::UdpSocket;
 use tracing::info;
+use vox_dns::block_origin::BlockOrigin;
 
 impl App {
   pub async fn start_dns(ctx: Context) -> anyhow::Result<()> {
@@ -25,7 +25,7 @@ impl App {
         continue;
       }
 
-      let response = ctx.query_dns(raw, BlockOrigin::Plain, src, None).await?;
+      let response = ctx.query_dns(raw, BlockOrigin::plain(), src, None).await?;
       socket.send_to(&response.to_vec()?, src).await?;
     }
   }

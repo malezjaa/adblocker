@@ -3665,6 +3665,7 @@ dependencies = [
  "hickory-resolver",
  "moka",
  "rand 0.10.1",
+ "serde",
  "tokio",
  "tracing",
  "vox_shared",

@@ -12,7 +12,7 @@ use reqwest::Client;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
 pub async fn download_blocklist(
   list: &List,
@@ -90,11 +90,17 @@ pub async fn load_blocklists(ctx: &Context) -> Result<FilterSet> {
   let configured_ids: HashSet<&str> = ids.iter().map(|s| s.as_str()).collect();
 
   for result in results {
-    let (id, rules, _) = result?;
-    if configured_ids.contains(id.as_str()) {
-      total += rules.len();
-      filterset.add_filters(rules, ParseOptions::default());
-      info!(%id, "loaded blocklist into filterset");
+    match result {
+      Ok((id, rules, _)) => {
+        if configured_ids.contains(id.as_str()) {
+          total += rules.len();
+          filterset.add_filters(&rules, ParseOptions::default());
+          info!(%id, "loaded blocklist into filterset");
+        }
+      }
+      Err(e) => {
+        error!("failed to download/read blocklist: {e:#}");
+      }
     }
   }
 

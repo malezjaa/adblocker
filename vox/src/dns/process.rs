@@ -2,15 +2,18 @@ use crate::context::Context;
 use crate::dashboard::ws::WsEvent;
 use crate::dns::rewrite::apply::{apply_rewrites, restore_original_queries};
 use crate::engine::EngineMessage;
-use crate::engine::message::{BlockLookup, BlockOrigin, BlockResult};
+use crate::engine::message::{BlockLookup, BlockResult};
 use anyhow::Result;
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
+use hickory_proto::rr::rdata::opt::{EdnsCode, EdnsOption};
 use hickory_proto::rr::rdata::{A, AAAA};
 use hickory_proto::rr::{RData, Record, RecordType};
 use hickory_proto::serialize::binary::BinDecodable;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::time::Instant;
 use tokio::sync::oneshot;
+use vox_dns::block_origin::BlockOrigin;
+use vox_dns::edns::EDNSCode;
 
 pub fn handle_blocked_response(msg: &Message) -> anyhow::Result<Message> {
   let mut response = Message::response(msg.id(), msg.op_code).into_response();
@@ -40,9 +43,22 @@ impl Context {
   async fn process_message(
     &self,
     raw: Vec<u8>,
-    origin: BlockOrigin,
-  ) -> anyhow::Result<(bool, Message)> {
+    mut origin: BlockOrigin,
+  ) -> Result<(bool, Message, BlockOrigin)> {
     let mut msg = Message::from_bytes(&raw)?;
+
+    if let Some(edns) = &msg.edns {
+      // Clients can overwrite some settings using EDNS
+      if let Some(opt) = edns.option(EdnsCode::Unknown(EDNSCode::BlockOrigin as u16)) {
+        match opt {
+          EdnsOption::Unknown(_, data) => {
+            origin = BlockOrigin::from_u8(data[0])?;
+          }
+          _ => {}
+        }
+      }
+    }
+
     let original_queries = msg.queries.clone();
 
     let rewrite_result = apply_rewrites(self, &mut msg)?;
@@ -56,7 +72,7 @@ impl Context {
       .await?;
 
     match rx.await? {
-      BlockResult::Block => Ok((true, handle_blocked_response(&msg)?)),
+      BlockResult::Block => Ok((true, handle_blocked_response(&msg)?, origin)),
 
       BlockResult::Ok => {
         let mut response = if rewrite_result.synthetic_response {
@@ -69,7 +85,7 @@ impl Context {
           restore_original_queries(&mut response, &original_queries);
         }
 
-        Ok((false, response))
+        Ok((false, response, origin))
       }
     }
   }
@@ -82,7 +98,7 @@ impl Context {
     device: Option<String>,
   ) -> Result<Message> {
     let start = Instant::now();
-    let (blocked, response) = self.process_message(bytes, origin).await?;
+    let (blocked, response, origin) = self.process_message(bytes, origin).await?;
 
     self
       .db()

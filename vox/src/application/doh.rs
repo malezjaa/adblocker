@@ -1,7 +1,6 @@
 use crate::application::app::App;
 use crate::context::Context;
 use crate::dashboard::AppError;
-use crate::engine::message::BlockOrigin;
 use anyhow::Result;
 use axum::Router;
 use axum::body::Bytes;
@@ -16,6 +15,7 @@ use serde::Deserialize;
 use std::net::SocketAddr;
 use tower_http::trace::TraceLayer;
 use tracing::info;
+use vox_dns::block_origin::BlockOrigin;
 
 #[derive(Deserialize)]
 pub struct DohQuery {
@@ -54,7 +54,7 @@ impl App {
     bytes: Vec<u8>,
     device: Option<String>,
   ) -> Result<impl IntoResponse, AppError> {
-    let response = ctx.query_dns(bytes, BlockOrigin::DoH, addr, device).await?;
+    let response = ctx.query_dns(bytes, BlockOrigin::doh(), addr, device).await?;
     Ok((
       StatusCode::OK,
       [("content-type", "application/dns-message")],

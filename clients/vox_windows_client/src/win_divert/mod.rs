@@ -8,7 +8,9 @@ use hickory_client::proto::op::Message;
 use std::borrow::Cow;
 use std::time::Instant;
 use tracing::{debug, info, warn};
+use vox_dns::block_origin::{BlockOrigin, ClientOrigin, TransportOrigin};
 use vox_dns::dns_query::DnsQuery;
+use vox_dns::edns::EDNSCode;
 use windivert::WinDivert as Divert;
 use windivert::address::WinDivertAddress;
 use windivert::layer::NetworkLayer;
@@ -19,16 +21,17 @@ use windivert_sys::ChecksumFlags;
 #[derive(Debug)]
 pub struct WinDivert {
   pub divert: Divert<NetworkLayer>,
+  pub config: WinClientConfig,
 }
 
 impl WinDivert {
-  pub fn new(config: &WinClientConfig) -> Result<Self> {
+  pub fn new(config: WinClientConfig) -> Result<Self> {
     let filter = format!(
-      "outbound and (udp.DstPort == 53 or tcp.DstPort == 53) and ip.DstAddr != 127.0.0.1 and ip.DstAddr != {}",
+      "outbound and (udp.DstPort == 53) and ip.DstAddr != 127.0.0.1 and ip.DstAddr != {}",
       config.dns_server.ip()
     );
     let divert = Divert::network(&filter, 0, WinDivertFlags::new())?;
-    Ok(WinDivert { divert })
+    Ok(WinDivert { divert, config })
   }
 
   pub async fn start_redirects(self, client: Client) -> Result<()> {
@@ -57,7 +60,20 @@ impl WinDivert {
     let msg = Message::from_vec(&packet.payload)?;
     let query_domain =
       msg.queries()[0].name().to_string().trim_end_matches('.').to_string();
-    let response_bytes = DnsQuery::from_message(msg).send(client).await?.to_vec()?;
+
+    let origin = BlockOrigin::Client {
+      transport: if self.config.using_doh() {
+        TransportOrigin::DoH
+      } else {
+        TransportOrigin::Plain
+      },
+      client: ClientOrigin::Windows,
+    };
+    let response_bytes = DnsQuery::from_message(msg)
+      .add_edns_option(EDNSCode::BlockOrigin, &[origin.to_u8()])
+      .send(client)
+      .await?
+      .to_vec()?;
     debug!("dns request: {}ms src={query_domain}", start.elapsed().as_millis());
 
     let mut ip_header = match packet.ip_header.to_owned() {

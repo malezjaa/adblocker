@@ -1,3 +1,4 @@
+pub mod block_origin;
 pub mod cache;
 pub mod dns_query;
 pub mod edns;
