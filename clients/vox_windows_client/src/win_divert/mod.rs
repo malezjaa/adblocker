@@ -27,7 +27,7 @@ pub struct WinDivert {
 impl WinDivert {
   pub fn new(config: WinClientConfig) -> Result<Self> {
     let filter = format!(
-      "outbound and (udp.DstPort == 53) and ip.DstAddr != 127.0.0.1 and ip.DstAddr != {}",
+      "outbound and (udp.DstPort == 53) and not loopback and ip.DstAddr != 127.0.0.1 and ip.DstAddr != {}",
       config.dns_server.ip()
     );
     let divert = Divert::network(&filter, 0, WinDivertFlags::new())?;

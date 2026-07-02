@@ -25,7 +25,7 @@ impl CliContext {
   pub async fn new() -> Result<Self> {
     let home_path = home_dir();
 
-    let db_path = home_path.join("dns-adblock.sqlite");
+    let db_path = home_path.join("vox.sqlite");
     let db = DB::init(db_path).await?;
 
     let config_path = home_path.join("config.toml");

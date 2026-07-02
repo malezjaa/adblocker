@@ -46,7 +46,7 @@ impl Context {
 
     create_dir_all(&cache_dir)?;
 
-    let db_path = home_path.join("dns-adblock.sqlite");
+    let db_path = home_path.join("vox.sqlite");
     let db = DB::init(db_path).await?;
 
     let config_path = home_path.join("config.toml");

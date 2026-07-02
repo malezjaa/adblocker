@@ -23,7 +23,7 @@ x509_extensions    = v3_ca
 prompt             = no
 
 [req_distinguished_name]
-CN = Local Dev CA
+CN = Vox CA
 
 [v3_ca]
 basicConstraints        = critical, CA:true
