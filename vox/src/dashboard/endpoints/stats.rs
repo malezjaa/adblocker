@@ -1,11 +1,11 @@
 use crate::context::Context;
-use crate::dashboard::AppError;
 use crate::dashboard::auth::AuthGuard;
+use crate::dashboard::AppError;
 use crate::database::devices::Device;
 use crate::database::stats::{Stats, TopDomain};
-use axum::Json;
 use axum::extract::Query;
 use axum::extract::State as AxumState;
+use axum::Json;
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
 
@@ -64,7 +64,7 @@ pub struct QueryLog {
   pub record_type: String,
   pub client_ip: String,
   pub blocked: bool,
-  pub block_origin: Option<String>,
+  pub block_origin: Option<u8>,
   pub response_code: String,
   pub timestamp: i64,
   pub response_time: i64,

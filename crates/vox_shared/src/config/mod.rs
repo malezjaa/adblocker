@@ -4,7 +4,7 @@ use fs_err::{create_dir_all, read, write};
 use serde::{Deserialize, Serialize};
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::Path;
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub mod rewrite;
 pub mod rules;
@@ -22,6 +22,7 @@ impl UpstreamServer {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
   pub blocklists: Vec<String>,
   pub upstreams: Option<Vec<UpstreamServer>>,
@@ -30,6 +31,13 @@ pub struct Config {
   pub dashboard: Option<bool>,
   pub rewrites: Option<Vec<Rewrite>>,
   pub dnssec: Option<bool>,
+  pub certs: Option<Certs>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct Certs {
+  pub use_local_certificates: Option<bool>,
 }
 
 impl Config {
@@ -45,6 +53,7 @@ impl Config {
       dashboard: Some(true),
       rewrites: None,
       dnssec: Some(false),
+      certs: None,
     })
   }
 
@@ -77,6 +86,10 @@ impl Config {
     config.compile_regexes()?;
     config.validate_rules();
 
+    if config.use_local_certs() {
+      warn!("Using locally generated certificates is still experimental!")
+    }
+
     Ok(config)
   }
 
@@ -90,5 +103,9 @@ impl Config {
 
   pub fn dnssec_enabled(&self) -> bool {
     self.dnssec.unwrap_or(false)
+  }
+
+  pub fn use_local_certs(&self) -> bool {
+    self.certs.as_ref().map(|certs| certs.use_local_certificates.unwrap_or(false)).unwrap_or(false)
   }
 }

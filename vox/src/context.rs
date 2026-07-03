@@ -3,7 +3,7 @@ use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
 use crate::dns::resolver::create_hickory_resolver;
 use crate::engine::EngineMessage;
-use crate::mmdb::downloader::{MMDBSPaths, download_mmdbs_files};
+use crate::mmdb::downloader::{download_mmdbs_files, MMDBSPaths};
 use crate::mmdb::mmdbs::MMDBS;
 use anyhow::Result;
 use fs_err::create_dir_all;
@@ -12,8 +12,8 @@ use parking_lot::{RwLock, RwLockReadGuard};
 use rustls::ServerConfig;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 use tracing::log::trace;
@@ -102,7 +102,7 @@ impl Context {
   }
 
   pub fn socket() -> SocketAddr {
-    SocketAddr::from(([127, 0, 0, 1], 53))
+    SocketAddr::from(([0, 0, 0, 0], 53))
   }
 
   pub fn config(&self) -> RwLockReadGuard<'_, Config> {

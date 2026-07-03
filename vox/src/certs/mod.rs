@@ -1,8 +1,9 @@
 pub mod crl;
 
-use anyhow::{Context, Result, anyhow, bail};
-use base64::Engine;
+use crate::windows::primary_adapter::primary_adapter;
+use anyhow::{anyhow, bail, Context, Result};
 use base64::engine::general_purpose;
+use base64::Engine;
 use fs_err::File;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls_pemfile::{certs, private_key};
@@ -13,7 +14,6 @@ use vox_shared::home_dir;
 
 #[derive(Debug)]
 pub struct Certs {
-  pub ca_cert: CertificateDer<'static>,
   pub certs: Vec<CertificateDer<'static>>,
   pub key: PrivateKeyDer<'static>,
 }
@@ -33,21 +33,27 @@ impl Certs {
       && key_path.exists()
       && crl_path.exists()
     {
-      return Self::load(&ca_cert_path, &cert_path, &key_path);
+      return Self::load(&cert_path, &key_path);
     }
 
     fs_err::create_dir_all(&certs_path)?;
     Self::generate_certs(&certs_path)?;
     Self::install_in_cert_store(&ca_cert_path)?;
-    Self::load(&ca_cert_path, &cert_path, &key_path)
+    Self::load(&cert_path, &key_path)
   }
 
   fn create_open_ssl_config(certs_path: &Path) -> Result<()> {
     let cfg = certs_path.join("openssl.cnf");
 
     if !cfg.exists() {
-      fs_err::create_dir_all(cfg.parent().unwrap())?;
-      fs_err::write(cfg, include_str!("openssl.cnf"))?;
+      if let Some(adapter) = primary_adapter()? {
+        let contents = include_str!("openssl.cnf").replace("{HOST_IP}", &adapter.pick_ipv4()?.to_string());
+
+        fs_err::create_dir_all(cfg.parent().unwrap())?;
+        fs_err::write(cfg, contents)?;
+      } else {
+        bail!("Couldn't find a primary adapter")
+      }
     }
     Ok(())
   }
@@ -90,15 +96,11 @@ impl Certs {
     Ok(())
   }
 
-  fn load(ca_cert_path: &Path, cert_path: &Path, key_path: &Path) -> Result<Certs> {
-    let ca_cert =
-      certs(&mut BufReader::new(File::open(ca_cert_path)?)).next().ok_or_else(
-        || anyhow!("No CA certificate found in {}", ca_cert_path.display()),
-      )??;
+  fn load(cert_path: &Path, key_path: &Path) -> Result<Certs> {
     let certs = certs(&mut BufReader::new(File::open(cert_path)?))
       .collect::<Result<Vec<_>, _>>()?;
     let key = private_key(&mut BufReader::new(File::open(key_path)?))?
       .ok_or_else(|| anyhow!("No private key found in {}", key_path.display()))?;
-    Ok(Certs { ca_cert, certs, key })
+    Ok(Certs { certs, key })
   }
 }

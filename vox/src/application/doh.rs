@@ -2,17 +2,18 @@ use crate::application::app::App;
 use crate::context::Context;
 use crate::dashboard::AppError;
 use anyhow::Result;
-use axum::Router;
 use axum::body::Bytes;
 use axum::extract::{ConnectInfo, Path, Query, State as AxumState};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
+use axum::Router;
 use axum_server::tls_rustls::RustlsConfig;
-use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::Engine;
 use serde::Deserialize;
 use std::net::SocketAddr;
+use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use vox_dns::block_origin::BlockOrigin;
@@ -37,12 +38,10 @@ impl App {
       .layer(TraceLayer::new_for_http())
       .with_state(ctx.clone());
 
-    let config = RustlsConfig::from_config(ctx.server_config());
-    let addr = SocketAddr::from(([127, 0, 0, 1], 443));
-
-    info!("DoH server listening on {addr}");
-    axum_server::bind_rustls(addr, config)
-      .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+    let listener = TcpListener::bind("127.0.0.1:4443").await?;
+    info!("DoH server listening on 127.0.0.1:4443");
+    
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
       .await?;
 
     Ok(())

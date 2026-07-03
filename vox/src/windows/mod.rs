@@ -4,6 +4,7 @@ pub mod adapters;
 pub mod filter;
 pub mod pwstr_buf;
 pub mod transaction;
+pub mod primary_adapter;
 
 #[cfg(windows)]
 pub mod wfp_session {

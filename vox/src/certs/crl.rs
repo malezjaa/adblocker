@@ -20,7 +20,7 @@ pub async fn serve_crl_pem() -> anyhow::Result<()> {
 
   let app = Router::new().route("/crl.pem", get(crl_pem_get)).with_state(CrlPem(bytes));
 
-  let listener = TcpListener::bind("127.0.0.1:8080").await?;
+  let listener = TcpListener::bind("0.0.0.0:8080").await?;
   axum::serve(listener, app).await?;
   Ok(())
 }
