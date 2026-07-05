@@ -1,9 +1,10 @@
-use crate::CliContext;
+use std::net::SocketAddr;
 use crate::pretty::{print_field, print_separator, print_success, print_warning};
+use crate::CliContext;
 use anyhow::Result;
 use tracing::warn;
 use vox::context::Context;
-use vox::firewall::override_dns::{OverrideDns, override_default_dns};
+use vox::firewall::override_dns::{override_default_dns, OverrideDns};
 use yansi::Paint;
 
 pub async fn set_dns(
@@ -19,7 +20,7 @@ pub async fn set_dns(
       let device = ctx.db.get_device(&device).await?;
       Some(format!("https://doh.local/dns-query/{}", device.id))
     } else {
-      if ctx.config.dashboard_enabled() {
+      if ctx.config.dashboard {
         warn!("setting no device means losing analytics")
       }
       Some("https://doh.local/dns-query".to_owned())
@@ -27,7 +28,7 @@ pub async fn set_dns(
   };
 
   override_default_dns(OverrideDns {
-    socket: Context::socket(),
+    socket: SocketAddr::from(([0, 0, 0, 0], ctx.config.dns.port)),
     secondary: None,
     doh: doh.clone(),
   })?;

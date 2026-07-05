@@ -38,9 +38,9 @@ impl App {
       .layer(TraceLayer::new_for_http())
       .with_state(ctx.clone());
 
-    let listener = TcpListener::bind("127.0.0.1:4443").await?;
-    info!("DoH server listening on 127.0.0.1:4443");
-    
+    let listener = TcpListener::bind(ctx.doh_socket()).await?;
+    info!("DoH server listening on {}", ctx.doh_socket());
+
     axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
       .await?;
 

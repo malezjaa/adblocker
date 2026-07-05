@@ -45,8 +45,6 @@ pub fn open_ports(mut engine: HANDLE) -> Result<()> {
       (Protocol::TCP, 53),
       (Protocol::TCP, 443),
       (Protocol::UDP, 443),
-      (Protocol::TCP, 80),
-      (Protocol::UDP, 80),
     ];
 
     fwpm_transaction! { engine, {

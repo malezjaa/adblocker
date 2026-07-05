@@ -101,8 +101,12 @@ impl Context {
     self.0.config.read().blocklists.clone()
   }
 
-  pub fn socket() -> SocketAddr {
-    SocketAddr::from(([0, 0, 0, 0], 53))
+  pub fn socket(&self) -> SocketAddr {
+    SocketAddr::from(([0, 0, 0, 0], self.config().dns.port))
+  }
+
+  pub fn doh_socket(&self) -> SocketAddr {
+    SocketAddr::from(([0, 0, 0, 0], self.config().doh.port))
   }
 
   pub fn config(&self) -> RwLockReadGuard<'_, Config> {

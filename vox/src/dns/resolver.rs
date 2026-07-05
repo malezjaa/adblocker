@@ -12,8 +12,8 @@ pub fn create_hickory_resolver(
 ) -> Result<Resolver<TokioRuntimeProvider>> {
   let mut r_config = ResolverConfig::default();
 
-  if let Some(upstreams) = &config.upstreams {
-    for upstream in upstreams {
+  if !config.resolver.upstreams.is_empty() {
+    for upstream in &config.resolver.upstreams {
       r_config.add_name_server(NameServerConfig::https(
         upstream.addr,
         Arc::from(upstream.name.as_str()),
@@ -32,7 +32,7 @@ pub fn create_hickory_resolver(
   opts.negative_min_ttl = Some(Duration::from_secs(60));
   opts.positive_min_ttl = Some(Duration::from_secs(60));
   opts.num_concurrent_reqs = 3;
-  opts.validate = config.dnssec_enabled();
+  opts.validate = config.resolver.dnssec;
 
   Ok(resolver_builder.build()?)
 }

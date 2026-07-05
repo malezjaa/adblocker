@@ -59,10 +59,10 @@ impl App {
 
         tasks.spawn(named_task("DNS", Self::start_dns(self.ctx.clone())));
         tasks.spawn(named_task("CRL server", serve_crl_pem()));
-        if config.doh_enabled() {
+        if config.doh.enabled {
           tasks.spawn(named_task("DoH", Self::start_doh(self.ctx.clone())));
         }
-        if config.dashboard_enabled() {
+        if config.dashboard {
           tasks.spawn(named_task("Dashboard", Self::start_dashboard(self.ctx.clone())));
         }
         // mutex guard would be held across await point below

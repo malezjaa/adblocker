@@ -65,8 +65,8 @@ impl DB {
     tokio::spawn(async move {
       while let Some(event) = rx.recv().await {
         debug!(
-          "dns request: {}ms blocked={} src={} origin={:?}",
-          event.response_time, event.blocked, event.domain, event.block_origin
+          "dns request: {:4}ms blocked={} origin={:?} src={}",
+          event.response_time, event.blocked, event.block_origin, event.domain
         );
         if let Err(err) = db.insert_query(&event).await {
           warn!(error = ?err, "failed to insert query_log");

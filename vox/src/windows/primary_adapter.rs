@@ -81,17 +81,19 @@ unsafe fn sockaddr_to_ip(sa: *const SOCKADDR) -> Option<IpAddr> {
 }
 
 unsafe fn wide_ptr_to_string(ptr: *const u16) -> String {
-  if ptr.is_null() {
-    return String::new();
-  }
+  unsafe {
+    if ptr.is_null() {
+      return String::new();
+    }
 
-  let mut len = 0;
-  while *ptr.add(len) != 0 {
-    len += 1;
-  }
+    let mut len = 0;
+    while *ptr.add(len) != 0 {
+      len += 1;
+    }
 
-  let slice = std::slice::from_raw_parts(ptr, len);
-  String::from_utf16_lossy(slice)
+    let slice = std::slice::from_raw_parts(ptr, len);
+    String::from_utf16_lossy(slice)
+  }
 }
 
 pub fn get_active_adapters() -> Result<Vec<AdapterInfo>> {
