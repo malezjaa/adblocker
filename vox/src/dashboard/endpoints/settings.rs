@@ -1,9 +1,9 @@
 use crate::context::Context;
-use crate::dashboard::auth::AuthGuard;
 use crate::dashboard::AppError;
+use crate::dashboard::auth::AuthGuard;
 use anyhow::Result;
-use axum::extract::State;
 use axum::Json;
+use axum::extract::State;
 use parking_lot::RwLockReadGuard;
 use serde::{Deserialize, Serialize};
 use vox_shared::config::{Config, UpstreamServer};

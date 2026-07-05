@@ -1,6 +1,6 @@
 use crate::firewall::Protocol;
 use crate::windows::filter::{add, condition_protocol};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::ptr::null;
 use tracing::debug;
 
@@ -10,15 +10,15 @@ use windows::Win32::Foundation::HANDLE;
 #[cfg(windows)]
 pub fn open_ports(config: &Config, mut engine: HANDLE) -> Result<()> {
   use crate::fwpm_transaction;
-  use crate::windows::filter::{condition_local_port, FilterBuilder};
+  use crate::windows::filter::{FilterBuilder, condition_local_port};
   use crate::windows::pwstr_buf::PwstrBuffer;
 
   use windows::Win32::NetworkManagement::WindowsFilteringPlatform::{
-    FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6,
-    FWP_ACTION_PERMIT,
+    FWP_ACTION_PERMIT, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4,
+    FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6,
   };
   use windows::Win32::NetworkManagement::WindowsFilteringPlatform::{
-    FwpmEngineOpen0, FWPM_SESSION0, FWPM_SESSION_FLAG_DYNAMIC,
+    FWPM_SESSION_FLAG_DYNAMIC, FWPM_SESSION0, FwpmEngineOpen0,
   };
   use windows::Win32::NetworkManagement::WindowsFilteringPlatform::{
     FwpmTransactionAbort0, FwpmTransactionBegin0, FwpmTransactionCommit0,

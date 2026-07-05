@@ -1,7 +1,7 @@
 use crate::context::Context;
 use crate::dashboard::QueryLog;
-use crate::database::devices::{Device, DeviceType};
 use crate::database::DB;
+use crate::database::devices::{Device, DeviceType};
 use crate::domain::registered_domain;
 use anyhow::Result;
 use chrono::Utc;
@@ -111,19 +111,19 @@ impl DB {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       "#,
     )
-      .bind(&event.domain)
-      .bind(&event.record_type)
-      .bind(&event.client_ip)
-      .bind(event.blocked)
-      .bind(event.block_origin.to_u8())
-      .bind(&event.response_code)
-      .bind(event.timestamp)
-      .bind(event.response_time)
-      .bind(&device)
-      .bind(country_code)
-      .bind(company_name)
-      .execute(&mut *tx)
-      .await?;
+    .bind(&event.domain)
+    .bind(&event.record_type)
+    .bind(&event.client_ip)
+    .bind(event.blocked)
+    .bind(event.block_origin.to_u8())
+    .bind(&event.response_code)
+    .bind(event.timestamp)
+    .bind(event.response_time)
+    .bind(&device)
+    .bind(country_code)
+    .bind(company_name)
+    .execute(&mut *tx)
+    .await?;
 
     let hits_blocked = i64::from(event.blocked);
 

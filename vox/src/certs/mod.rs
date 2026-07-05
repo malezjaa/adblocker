@@ -1,9 +1,9 @@
 pub mod crl;
 
 use crate::windows::primary_adapter::primary_adapter;
-use anyhow::{anyhow, bail, Context, Result};
-use base64::engine::general_purpose;
+use anyhow::{Context, Result, anyhow, bail};
 use base64::Engine;
+use base64::engine::general_purpose;
 use fs_err::File;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls_pemfile::{certs, private_key};
@@ -47,7 +47,8 @@ impl Certs {
 
     if !cfg.exists() {
       if let Some(adapter) = primary_adapter()? {
-        let contents = include_str!("openssl.cnf").replace("{HOST_IP}", &adapter.pick_ipv4()?.to_string());
+        let contents = include_str!("openssl.cnf")
+          .replace("{HOST_IP}", &adapter.pick_ipv4()?.to_string());
 
         fs_err::create_dir_all(cfg.parent().unwrap())?;
         fs_err::write(cfg, contents)?;

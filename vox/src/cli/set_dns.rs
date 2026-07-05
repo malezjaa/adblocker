@@ -1,10 +1,10 @@
-use std::net::SocketAddr;
-use crate::pretty::{print_field, print_separator, print_success, print_warning};
 use crate::CliContext;
+use crate::pretty::{print_field, print_separator, print_success, print_warning};
 use anyhow::Result;
+use std::net::SocketAddr;
 use tracing::warn;
 use vox::context::Context;
-use vox::firewall::override_dns::{override_default_dns, OverrideDns};
+use vox::firewall::override_dns::{OverrideDns, override_default_dns};
 use yansi::Paint;
 
 pub async fn set_dns(

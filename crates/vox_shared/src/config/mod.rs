@@ -52,10 +52,7 @@ pub struct DoHConfig {
 
 impl Default for DoHConfig {
   fn default() -> Self {
-    Self {
-      enabled: true,
-      port: default_doh_port(),
-    }
+    Self { enabled: true, port: default_doh_port() }
   }
 }
 
@@ -70,10 +67,7 @@ pub struct DNSConfig {
 
 impl Default for DNSConfig {
   fn default() -> Self {
-    Self {
-      enabled: true,
-      port: default_dns_port(),
-    }
+    Self { enabled: true, port: default_dns_port() }
   }
 }
 

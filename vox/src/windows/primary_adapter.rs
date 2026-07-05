@@ -1,8 +1,11 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
 use windows::Win32::Foundation::{ERROR_BUFFER_OVERFLOW, NO_ERROR};
-use windows::Win32::NetworkManagement::IpHelper::{GetAdaptersAddresses, GetBestInterfaceEx, GAA_FLAG_INCLUDE_PREFIX, IF_TYPE_SOFTWARE_LOOPBACK, IF_TYPE_TUNNEL, IP_ADAPTER_ADDRESSES_LH};
+use windows::Win32::NetworkManagement::IpHelper::{
+  GAA_FLAG_INCLUDE_PREFIX, GetAdaptersAddresses, GetBestInterfaceEx,
+  IF_TYPE_SOFTWARE_LOOPBACK, IF_TYPE_TUNNEL, IP_ADAPTER_ADDRESSES_LH,
+};
 use windows::Win32::NetworkManagement::Ndis::IfOperStatusUp;
 use windows::Win32::Networking::WinSock::{
   AF_INET, AF_INET6, SOCKADDR, SOCKADDR_IN, SOCKADDR_IN6,
@@ -27,16 +30,9 @@ impl AdapterInfo {
 
       let mut index: u32 = 0;
 
-      let res = GetBestInterfaceEx(
-        &addr as *const _ as *const SOCKADDR,
-        &mut index,
-      );
+      let res = GetBestInterfaceEx(&addr as *const _ as *const SOCKADDR, &mut index);
 
-      if res == 0 {
-        index
-      } else {
-        0
-      }
+      if res == 0 { index } else { 0 }
     }
   }
 
@@ -49,10 +45,12 @@ impl AdapterInfo {
         IpAddr::V6(_) => None,
       })
       .find(|v4| !v4.is_link_local())
-      .or_else(|| self.ipv4.iter().find_map(|ip| match ip {
-        IpAddr::V4(v4) => Some(*v4),
-        IpAddr::V6(_) => None,
-      }))
+      .or_else(|| {
+        self.ipv4.iter().find_map(|ip| match ip {
+          IpAddr::V4(v4) => Some(*v4),
+          IpAddr::V6(_) => None,
+        })
+      })
       .ok_or_else(|| anyhow::anyhow!("Adapter {} has no IPv4 address", self.name))
   }
 }
@@ -145,9 +143,7 @@ pub fn get_active_adapters() -> Result<Vec<AdapterInfo>> {
         while !ua.is_null() {
           let ua_ref = &*ua;
 
-          if let Some(ip) =
-            sockaddr_to_ip(ua_ref.Address.lpSockaddr as *const SOCKADDR)
-          {
+          if let Some(ip) = sockaddr_to_ip(ua_ref.Address.lpSockaddr as *const SOCKADDR) {
             match ip {
               IpAddr::V4(_) => ipv4.push(ip),
               IpAddr::V6(_) => ipv6.push(ip),
