@@ -4,10 +4,11 @@ use anyhow::{bail, Result};
 use std::ptr::null;
 use tracing::debug;
 
+use vox_shared::config::Config;
 use windows::Win32::Foundation::HANDLE;
 
 #[cfg(windows)]
-pub fn open_ports(mut engine: HANDLE) -> Result<()> {
+pub fn open_ports(config: &Config, mut engine: HANDLE) -> Result<()> {
   use crate::fwpm_transaction;
   use crate::windows::filter::{condition_local_port, FilterBuilder};
   use crate::windows::pwstr_buf::PwstrBuffer;
@@ -41,10 +42,9 @@ pub fn open_ports(mut engine: HANDLE) -> Result<()> {
     }
 
     let rules = &[
-      (Protocol::UDP, 53),
-      (Protocol::TCP, 53),
-      (Protocol::TCP, 443),
-      (Protocol::UDP, 443),
+      (Protocol::UDP, config.dns.port),
+      (Protocol::TCP, config.dns.port),
+      (Protocol::TCP, config.doh.port),
     ];
 
     fwpm_transaction! { engine, {

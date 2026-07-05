@@ -25,7 +25,7 @@ impl App {
   #[cfg(windows)]
   pub async fn init(ctx: Context) -> Result<Self> {
     let engine = HANDLE::default();
-    open_ports(engine)?;
+    open_ports(&ctx.config(), engine)?;
 
     Ok(Self { ctx, wfp_sess: WfpSession { engine } })
   }
