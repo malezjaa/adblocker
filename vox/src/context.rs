@@ -3,7 +3,7 @@ use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
 use crate::dns::resolver::create_hickory_resolver;
 use crate::engine::EngineMessage;
-use crate::mmdb::downloader::{download_mmdbs_files, MMDBSPaths};
+use crate::mmdb::downloader::{MMDBSPaths, download_mmdbs_files};
 use crate::mmdb::mmdbs::MMDBS;
 use anyhow::Result;
 use fs_err::create_dir_all;
@@ -12,14 +12,14 @@ use parking_lot::{RwLock, RwLockReadGuard};
 use rustls::ServerConfig;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 use tracing::log::trace;
 use vox_dns::cache::DnsCache;
-use vox_shared::config::certs::CertificateStrategy;
 use vox_shared::config::Config;
+use vox_shared::config::certs::CertificateStrategy;
 use vox_shared::home_dir;
 
 #[derive(Clone)]
@@ -58,7 +58,8 @@ impl Context {
     } else {
       let certs = Certs::load_certs(&config).await?;
       let mut server_config = ServerConfig::builder()
-        .with_no_client_auth().with_single_cert(certs.certs, certs.key)?;
+        .with_no_client_auth()
+        .with_single_cert(certs.certs, certs.key)?;
       server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
 
       Some(Arc::new(server_config))

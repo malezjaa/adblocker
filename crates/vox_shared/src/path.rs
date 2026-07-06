@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use anyhow::Result;
+use std::path::{Path, PathBuf};
 
 pub fn canonicalize_with_strip<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
   let canonical = fs_err::canonicalize(path)?;

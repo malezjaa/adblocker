@@ -1,5 +1,5 @@
 use crate::CliContext;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use vox::database::devices::DeviceType;
 use vox_shared::pretty::{print_field, print_separator, print_success};
 use yansi::Paint;

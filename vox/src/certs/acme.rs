@@ -1,13 +1,16 @@
 use crate::certs::renewal::certs_need_renewal;
-use crate::certs::{load_certs, Certs};
-use anyhow::{bail, Result};
+use crate::certs::{Certs, load_certs};
+use anyhow::{Result, bail};
 use fs_err::{create_dir_all, remove_file, rename, write};
-use instant_acme::{Account, AccountCredentials, AuthorizationStatus, ChallengeType, Identifier, NewAccount, NewOrder, OrderStatus, RetryPolicy, RevocationRequest};
+use instant_acme::{
+  Account, AccountCredentials, AuthorizationStatus, ChallengeType, Identifier,
+  NewAccount, NewOrder, OrderStatus, RetryPolicy, RevocationRequest,
+};
 use std::collections::HashMap;
 use std::io;
 use tracing::debug;
-use vox_shared::config::certs::AcmeChallenge;
 use vox_shared::config::Config;
+use vox_shared::config::certs::AcmeChallenge;
 use vox_shared::home_dir;
 use vox_shared::pretty::{print_field, print_message, print_separator};
 
@@ -16,9 +19,9 @@ impl Certs {
     let acme_file = home_dir().join("acme-accounts.toml");
 
     let mut accounts = if acme_file.exists() {
-      toml::from_str::<HashMap<String, AccountCredentials>>(
-        &fs_err::read_to_string(&acme_file)?,
-      )?
+      toml::from_str::<HashMap<String, AccountCredentials>>(&fs_err::read_to_string(
+        &acme_file,
+      )?)?
     } else {
       HashMap::new()
     };
@@ -26,24 +29,14 @@ impl Certs {
     let directory_url = config.certs.acme.directory_url.clone();
 
     if let Some(creds) = accounts.remove(&directory_url) {
-      let account = Account::builder()?
-        .from_credentials(creds)
-        .await?;
+      let account = Account::builder()?.from_credentials(creds).await?;
 
       return Ok(account);
     }
 
-    let contact = config
-      .certs
-      .acme
-      .email
-      .as_ref()
-      .map(|email| format!("mailto:{email}"));
+    let contact = config.certs.acme.email.as_ref().map(|email| format!("mailto:{email}"));
 
-    let contact_refs = contact
-      .as_deref()
-      .into_iter()
-      .collect::<Vec<_>>();
+    let contact_refs = contact.as_deref().into_iter().collect::<Vec<_>>();
 
     let (account, credentials) = Account::builder()?
       .create(
@@ -92,9 +85,8 @@ impl Certs {
       bail!("Currently only DNS01 challenge is supported.")
     }
 
-    let mut order = account
-      .new_order(&NewOrder::new(&[Identifier::Dns(domain.into())]))
-      .await?;
+    let mut order =
+      account.new_order(&NewOrder::new(&[Identifier::Dns(domain.into())])).await?;
     let state = order.state();
 
     if state.status != OrderStatus::Pending {

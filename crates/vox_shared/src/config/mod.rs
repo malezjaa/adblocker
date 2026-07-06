@@ -7,9 +7,9 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::path::Path;
 use tracing::{debug, warn};
 
+pub mod certs;
 pub mod rewrite;
 pub mod rules;
-pub mod certs;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UpstreamServer {

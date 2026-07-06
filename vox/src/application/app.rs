@@ -59,7 +59,7 @@ impl App {
         ));
 
         tasks.spawn(named_task("DNS", Self::start_dns(self.ctx.clone())));
-        if matches!(config.certs.strategy,CertificateStrategy::SelfSigned) {
+        if matches!(config.certs.strategy, CertificateStrategy::SelfSigned) {
           tasks.spawn(named_task("CRL server", serve_crl_pem()));
         }
 

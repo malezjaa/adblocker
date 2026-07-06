@@ -5,7 +5,7 @@ pub mod set_dns;
 
 use crate::cli::{AdminCommand, Cli, Commands, DeviceCommand, DnsCommand};
 use crate::set_dns::set_dns;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use clap::Parser;
 use cliclack::log;
 use vox::database::DB;

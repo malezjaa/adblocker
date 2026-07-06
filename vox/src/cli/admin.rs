@@ -1,5 +1,5 @@
 use crate::CliContext;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use chrono::Utc;
 use cliclack::{confirm, log, password};
 use vox::password::hash_password;

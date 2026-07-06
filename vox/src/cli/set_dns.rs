@@ -3,7 +3,7 @@ use anyhow::Result;
 use std::net::SocketAddr;
 use tracing::warn;
 use vox::context::Context;
-use vox::firewall::override_dns::{override_default_dns, OverrideDns};
+use vox::firewall::override_dns::{OverrideDns, override_default_dns};
 use vox_shared::pretty::{print_field, print_separator, print_success, print_warning};
 use yansi::Paint;
 

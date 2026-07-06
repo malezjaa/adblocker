@@ -1,9 +1,9 @@
 use crate::context::Context;
-use crate::lists::cache::{load_cache_file, CacheFile};
-use crate::lists::list::{List, LISTS};
-use adblock::lists::ParseOptions;
+use crate::lists::cache::{CacheFile, load_cache_file};
+use crate::lists::list::{LISTS, List};
 use adblock::FilterSet;
-use anyhow::{bail, Result};
+use adblock::lists::ParseOptions;
+use anyhow::{Result, bail};
 use axum::http::StatusCode;
 use chrono::Duration;
 use fs_err::{read, write};
@@ -36,7 +36,7 @@ pub async fn download_blocklist(
   let new_etag =
     resp.headers().get("etag").and_then(|v| v.to_str().ok()).map(str::to_owned);
   let status = resp.status();
-  
+
   if status == StatusCode::NOT_MODIFIED {
     return read_rules(list.id, &cache_file, new_etag);
   }
