@@ -2,15 +2,15 @@ use crate::application::app::App;
 use crate::context::Context;
 use crate::dashboard::AppError;
 use anyhow::Result;
-use axum::Router;
 use axum::body::Bytes;
 use axum::extract::{ConnectInfo, Path, Query, State as AxumState};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
+use axum::Router;
 use axum_server::tls_rustls::RustlsConfig;
-use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::Engine;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
@@ -36,13 +36,20 @@ impl App {
         get(Self::doh_get_device_handler).post(Self::doh_device_handler),
       )
       .layer(TraceLayer::new_for_http())
-      .with_state(ctx.clone());
+      .with_state(ctx.clone())
+      .into_make_service_with_connect_info::<SocketAddr>();
 
-    let listener = TcpListener::bind(ctx.doh_socket()).await?;
     info!("DoH server listening on {}", ctx.doh_socket());
 
-    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
-      .await?;
+    if let Some(server_config) = ctx.0.server_config.clone() {
+      let config = RustlsConfig::from_config(server_config);
+      axum_server::bind_rustls(ctx.doh_socket(), config)
+        .serve(app)
+        .await?;
+    } else {
+      let tcp_listener = TcpListener::bind(ctx.doh_socket()).await?;
+      axum::serve(tcp_listener, app).await?;
+    }
 
     Ok(())
   }

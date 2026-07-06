@@ -1,9 +1,9 @@
 use crate::CliContext;
-use crate::pretty::{print_error, print_warning};
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use chrono::Utc;
 use cliclack::{confirm, log, password};
 use vox::password::hash_password;
+use vox_shared::pretty::{print_error, print_warning};
 
 impl CliContext {
   pub async fn create_admin(&self) -> Result<()> {

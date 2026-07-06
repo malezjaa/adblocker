@@ -9,6 +9,10 @@ pub fn print_success(label: &str) {
   println!("  {} {}", "✓".green().bold(), label.green().bold());
 }
 
+pub fn print_message(label: &str) {
+  println!("  {}", label.cyan().bold());
+}
+
 pub fn print_warning(msg: &str) {
   println!("  {} {}", "⚠".bright_yellow(), msg.rgb(251, 191, 36));
 }

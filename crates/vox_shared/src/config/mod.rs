@@ -1,3 +1,4 @@
+use crate::config::certs::CertsConfig;
 use crate::config::rewrite::Rewrite;
 use crate::config::rules::Rule;
 use fs_err::{create_dir_all, read, write};
@@ -8,6 +9,7 @@ use tracing::{debug, warn};
 
 pub mod rewrite;
 pub mod rules;
+pub mod certs;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UpstreamServer {
@@ -36,7 +38,7 @@ pub struct Config {
   #[serde(default)]
   pub resolver: ResolverConfig,
   #[serde(default)]
-  pub certs: Certs,
+  pub certs: CertsConfig,
   #[serde(default)]
   pub firewall: FirewallConfig,
 }
@@ -113,13 +115,6 @@ fn default_open_ports() -> bool {
   false
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[serde(deny_unknown_fields)]
-pub struct Certs {
-  #[serde(default)]
-  pub use_local_certificates: bool,
-}
-
 fn default_true() -> bool {
   true
 }
@@ -134,7 +129,7 @@ impl Config {
       dashboard: true,
       rewrites: None,
       resolver: ResolverConfig::default(),
-      certs: Certs::default(),
+      certs: CertsConfig::default(),
       firewall: FirewallConfig::default(),
     })
   }
@@ -163,7 +158,7 @@ impl Config {
     let mut config: Config = toml::from_slice(&read(path)?)?;
     config.compile_regexes()?;
     config.validate_rules();
-    if config.certs.use_local_certificates {
+    if config.certs.self_signed() {
       warn!("Using locally generated certificates is still experimental!")
     }
     Ok(config)

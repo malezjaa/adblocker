@@ -1,9 +1,9 @@
 use crate::context::Context;
-use crate::lists::cache::{CacheFile, load_cache_file};
-use crate::lists::list::{LISTS, List};
-use adblock::FilterSet;
+use crate::lists::cache::{load_cache_file, CacheFile};
+use crate::lists::list::{List, LISTS};
 use adblock::lists::ParseOptions;
-use anyhow::Result;
+use adblock::FilterSet;
+use anyhow::{bail, Result};
 use axum::http::StatusCode;
 use chrono::Duration;
 use fs_err::{read, write};
@@ -35,16 +35,22 @@ pub async fn download_blocklist(
   let resp = req.send().await?;
   let new_etag =
     resp.headers().get("etag").and_then(|v| v.to_str().ok()).map(str::to_owned);
-
-  if resp.status() == StatusCode::NOT_MODIFIED {
+  let status = resp.status();
+  
+  if status == StatusCode::NOT_MODIFIED {
     return read_rules(list.id, &cache_file, new_etag);
   }
 
-  if resp.status() == StatusCode::NOT_FOUND {
-    warn!("Couldn't download {} list, because it doesn't exist", list.id)
+  if status == StatusCode::NOT_FOUND {
+    bail!("Couldn't download {} list, because it doesn't exist", list.id)
   }
 
   let body = resp.text().await?;
+
+  if status.is_server_error() || status.is_client_error() {
+    bail!("failed to download {} list: {body}", list.id)
+  }
+
   let tmp = cache_file.with_extension("tmp");
   write(&tmp, &body)?;
   fs_err::rename(&tmp, &cache_file)?;

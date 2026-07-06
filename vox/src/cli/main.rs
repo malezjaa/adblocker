@@ -1,12 +1,11 @@
 pub mod admin;
 mod cli;
 pub mod devices;
-pub mod pretty;
 pub mod set_dns;
 
 use crate::cli::{AdminCommand, Cli, Commands, DeviceCommand, DnsCommand};
 use crate::set_dns::set_dns;
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use clap::Parser;
 use cliclack::log;
 use vox::database::DB;

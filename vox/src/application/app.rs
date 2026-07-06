@@ -11,6 +11,7 @@ use tokio::sync::mpsc::Receiver;
 use tokio::task::{JoinSet, LocalSet};
 use tracing::error;
 use tracing::log::warn;
+use vox_shared::config::certs::CertificateStrategy;
 use vox_shared::task::named_task;
 use windows::Win32::Foundation::HANDLE;
 
@@ -58,7 +59,10 @@ impl App {
         ));
 
         tasks.spawn(named_task("DNS", Self::start_dns(self.ctx.clone())));
-        tasks.spawn(named_task("CRL server", serve_crl_pem()));
+        if matches!(config.certs.strategy,CertificateStrategy::SelfSigned) {
+          tasks.spawn(named_task("CRL server", serve_crl_pem()));
+        }
+
         if config.doh.enabled {
           tasks.spawn(named_task("DoH", Self::start_doh(self.ctx.clone())));
         }

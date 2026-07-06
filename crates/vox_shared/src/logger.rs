@@ -21,11 +21,11 @@ where
     event: &Event<'_>,
   ) -> fmt::Result {
     let level = match *event.metadata().level() {
-      Level::ERROR => Paint::red("[error]").bold(),
-      Level::WARN => Paint::yellow("[warning]").bold(),
-      Level::INFO => Paint::green("[info]").bold(),
-      Level::DEBUG => Paint::blue("[debug]").bold(),
-      Level::TRACE => Paint::magenta("[trace]").bold(),
+      Level::ERROR => Paint::bright_red("[error]").bold(),
+      Level::WARN => Paint::bright_yellow("[warning]").bold(),
+      Level::INFO => Paint::bright_magenta("[info]").bold(),
+      Level::DEBUG => Paint::bright_blue("[debug]").bold(),
+      Level::TRACE => Paint::dim("[trace]").bold(),
     };
     write!(writer, "{} ", level)?;
 

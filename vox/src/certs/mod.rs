@@ -1,16 +1,21 @@
 pub mod crl;
+pub mod acme;
+pub mod renewal;
 
 use crate::windows::primary_adapter::primary_adapter;
-use anyhow::{Context, Result, anyhow, bail};
-use base64::Engine;
+use anyhow::{anyhow, bail, Context, Result};
 use base64::engine::general_purpose;
-use fs_err::File;
+use base64::Engine;
+use fs_err::create_dir_all;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls_pemfile::{certs, private_key};
-use std::io::BufReader;
+use std::io::Cursor;
 use std::path::Path;
 use std::process::Command;
+use vox_shared::config::certs::CertificateStrategy;
+use vox_shared::config::Config;
 use vox_shared::home_dir;
+use vox_shared::path::canonicalize_with_strip;
 
 #[derive(Debug)]
 pub struct Certs {
@@ -19,8 +24,23 @@ pub struct Certs {
 }
 
 impl Certs {
-  pub fn load_certs() -> Result<Certs> {
-    let certs_path = home_dir().join("certs");
+  pub async fn load_certs(config: &Config) -> Result<Certs> {
+    match config.certs.strategy {
+      CertificateStrategy::Manual => Self::load_manual(config),
+      CertificateStrategy::Acme => Self::load_certs_with_acme(config).await,
+      CertificateStrategy::SelfSigned => Self::load_self_signed(),
+      CertificateStrategy::None => unreachable!()
+    }
+  }
+
+  fn load_self_signed() -> Result<Certs> {
+    if which::which("openssl").is_err() {
+      bail!("couldn't find openssl installed in the path.")
+    }
+
+    let certs_path = home_dir().join("certs").join("self_signed");
+    create_dir_all(&certs_path)?;
+
     Self::create_open_ssl_config(&certs_path)?;
 
     let ca_cert_path = certs_path.join("ca.pem");
@@ -36,9 +56,19 @@ impl Certs {
       return Self::load(&cert_path, &key_path);
     }
 
-    fs_err::create_dir_all(&certs_path)?;
+    create_dir_all(&certs_path)?;
     Self::generate_certs(&certs_path)?;
     Self::install_in_cert_store(&ca_cert_path)?;
+    Self::load(&cert_path, &key_path)
+  }
+
+  fn load_manual(config: &Config) -> Result<Certs> {
+    let (Some(cert_path), Some(key_path)) = (&config.certs.manual.cert_path, &config.certs.manual.key_path) else {
+      bail!("with certificate strategy set to manual you must provide both certificate and key path")
+    };
+    let cert_path = canonicalize_with_strip(cert_path)?;
+    let key_path = canonicalize_with_strip(key_path)?;
+
     Self::load(&cert_path, &key_path)
   }
 
@@ -97,11 +127,23 @@ impl Certs {
     Ok(())
   }
 
-  fn load(cert_path: &Path, key_path: &Path) -> Result<Certs> {
-    let certs = certs(&mut BufReader::new(File::open(cert_path)?))
-      .collect::<Result<Vec<_>, _>>()?;
-    let key = private_key(&mut BufReader::new(File::open(key_path)?))?
-      .ok_or_else(|| anyhow!("No private key found in {}", key_path.display()))?;
-    Ok(Certs { certs, key })
+  pub fn load(cert_path: &Path, key_path: &Path) -> Result<Certs> {
+    Ok(Certs {
+      certs: load_certs(cert_path)?,
+      key: load_key(key_path)?,
+    })
   }
+}
+
+fn load_certs(path: &Path) -> Result<Vec<CertificateDer<'static>>> {
+  let bytes = fs_err::read(path)?;
+
+  Ok(certs(&mut Cursor::new(bytes)).collect::<Result<Vec<_>, _>>()?)
+}
+
+fn load_key(path: &Path) -> Result<PrivateKeyDer<'static>> {
+  let bytes = fs_err::read(path)?;
+
+  private_key(&mut Cursor::new(bytes))?
+    .ok_or_else(|| anyhow!("No private key found in {}", path.display()))
 }

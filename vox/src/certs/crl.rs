@@ -1,9 +1,11 @@
+use std::net::SocketAddr;
 use axum::Router;
 use axum::body::Bytes;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use tokio::net::TcpListener;
+use tracing::info;
 use vox_shared::home_dir;
 
 #[derive(Clone)]
@@ -14,13 +16,15 @@ async fn crl_pem_get(State(pem): State<CrlPem>) -> impl IntoResponse {
 }
 
 pub async fn serve_crl_pem() -> anyhow::Result<()> {
-  let certs_path = home_dir().join("certs");
+  let certs_path = home_dir().join("certs").join("self_signed");
   let crl_path = certs_path.join("crl.pem");
   let bytes = fs_err::read(crl_path)?;
 
   let app = Router::new().route("/crl.pem", get(crl_pem_get)).with_state(CrlPem(bytes));
+  let addr = SocketAddr::from(([0,0,0,0], 8080));
+  info!("CRL server listening on {addr:?}");
 
-  let listener = TcpListener::bind("0.0.0.0:8080").await?;
+  let listener = TcpListener::bind(addr).await?;
   axum::serve(listener, app).await?;
   Ok(())
 }
