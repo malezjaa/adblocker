@@ -49,13 +49,10 @@ impl Context {
 
     if let Some(edns) = &msg.edns {
       // Clients can overwrite some settings using EDNS
-      if let Some(opt) = edns.option(EdnsCode::Unknown(EDNSCode::BlockOrigin as u16)) {
-        match opt {
-          EdnsOption::Unknown(_, data) => {
-            origin = BlockOrigin::from_u8(data[0])?;
-          }
-          _ => {}
-        }
+      if let Some(opt) = edns.option(EdnsCode::Unknown(EDNSCode::BlockOrigin as u16))
+        && let EdnsOption::Unknown(_, data) = opt
+      {
+        origin = BlockOrigin::from_u8(data[0])?;
       }
     }
 

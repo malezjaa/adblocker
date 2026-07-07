@@ -2,18 +2,19 @@ pub mod acme;
 pub mod crl;
 pub mod renewal;
 
+use crate::dns::resolver::HickoryResolver;
 use crate::windows::primary_adapter::primary_adapter;
-use anyhow::{Context, Result, anyhow, bail};
-use base64::Engine;
+use anyhow::{anyhow, bail, Context, Result};
 use base64::engine::general_purpose;
+use base64::Engine;
 use fs_err::create_dir_all;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls_pemfile::{certs, private_key};
 use std::io::Cursor;
 use std::path::Path;
 use std::process::Command;
-use vox_shared::config::Config;
 use vox_shared::config::certs::CertificateStrategy;
+use vox_shared::config::Config;
 use vox_shared::home_dir;
 use vox_shared::path::canonicalize_with_strip;
 
@@ -24,10 +25,10 @@ pub struct Certs {
 }
 
 impl Certs {
-  pub async fn load_certs(config: &Config) -> Result<Certs> {
+  pub async fn load_certs(config: &Config, resolver: &HickoryResolver) -> Result<Certs> {
     match config.certs.strategy {
       CertificateStrategy::Manual => Self::load_manual(config),
-      CertificateStrategy::Acme => Self::load_certs_with_acme(config).await,
+      CertificateStrategy::Acme => Self::load_certs_with_acme(config, resolver).await,
       CertificateStrategy::SelfSigned => Self::load_self_signed(),
       CertificateStrategy::None => unreachable!(),
     }

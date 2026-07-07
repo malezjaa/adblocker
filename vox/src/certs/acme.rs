@@ -1,16 +1,19 @@
 use crate::certs::renewal::certs_need_renewal;
-use crate::certs::{Certs, load_certs};
-use anyhow::{Result, bail};
+use crate::certs::{load_certs, Certs};
+use crate::dns::resolver::HickoryResolver;
+use anyhow::{bail, Result};
 use fs_err::{create_dir_all, remove_file, rename, write};
+use hickory_proto::rr::{RData, RecordType};
 use instant_acme::{
   Account, AccountCredentials, AuthorizationStatus, ChallengeType, Identifier,
-  NewAccount, NewOrder, OrderStatus, RetryPolicy, RevocationRequest,
+  NewAccount, NewOrder, OrderStatus, RetryPolicy,
 };
 use std::collections::HashMap;
 use std::io;
 use tracing::debug;
-use vox_shared::config::Config;
+use tracing::log::error;
 use vox_shared::config::certs::AcmeChallenge;
+use vox_shared::config::Config;
 use vox_shared::home_dir;
 use vox_shared::pretty::{print_field, print_message, print_separator};
 
@@ -57,7 +60,7 @@ impl Certs {
     Ok(account)
   }
 
-  pub async fn load_certs_with_acme(config: &Config) -> Result<Certs> {
+  pub async fn load_certs_with_acme(config: &Config, resolver: &HickoryResolver) -> Result<Certs> {
     let account = Self::acme_account(config).await?;
     let Some(domain) = &config.certs.acme.domain else {
       bail!("No domain provided for ACME challenge");
@@ -87,36 +90,77 @@ impl Certs {
 
     let mut order =
       account.new_order(&NewOrder::new(&[Identifier::Dns(domain.into())])).await?;
-    let state = order.state();
 
-    if state.status != OrderStatus::Pending {
-      bail!("unexpected initial order status: {:?}", state.status);
-    }
+    match order.state().status {
+      OrderStatus::Pending => {
+        let mut authorizations = order.authorizations();
 
-    let mut authorizations = order.authorizations();
-    while let Some(auth) = authorizations.next().await {
-      let mut authz = auth?;
-      match authz.status {
-        AuthorizationStatus::Pending => {}
-        AuthorizationStatus::Valid => continue,
-        status => bail!("unexpected authorization status: {status:?}"),
+        while let Some(auth) = authorizations.next().await {
+          let mut authz = auth?;
+
+          match authz.status {
+            AuthorizationStatus::Pending => {}
+            AuthorizationStatus::Valid => continue,
+            status => bail!("unexpected authorization status: {status:?}"),
+          }
+
+          let mut challenge = authz
+            .challenge(ChallengeType::Dns01)
+            .ok_or_else(|| anyhow::anyhow!("no dns01 challenge found"))?;
+
+          let record_name = format!("_acme-challenge.{}", challenge.identifier());
+          let challenge_value = challenge.key_authorization().dns_value();
+
+          print_separator(44);
+          print_message("Please set the following DNS record then press the Return key:");
+          print_field("Name", &record_name);
+          print_field("Record type", "TXT");
+          print_field("Content", &challenge_value);
+          print_separator(44);
+
+          loop {
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+
+            resolver.clear_lookup_cache(&record_name, RecordType::TXT);
+            let query = resolver.txt_lookup(&record_name).await?;
+
+            let has_added_record = query.answers().iter().any(|r| match &r.data {
+              RData::TXT(txt) => {
+                let value = txt
+                  .txt_data
+                  .iter()
+                  .flat_map(|chunk| chunk.iter().copied())
+                  .collect::<Vec<u8>>();
+
+                value == challenge_value.as_bytes()
+              }
+              _ => false,
+            });
+
+            if has_added_record {
+              challenge.set_ready().await?;
+              break;
+            }
+
+            error!("the DNS TXT record has still not been added. wait a few minutes before retrying");
+            print_message("Press Return to check again.");
+          }
+        }
+
+        let status = order.poll_ready(&RetryPolicy::default()).await?;
+        if status != OrderStatus::Ready {
+          bail!("unexpected order status after challenge validation: {status:?}");
+        }
       }
 
-      let mut challenge = authz
-        .challenge(ChallengeType::Dns01)
-        .ok_or_else(|| anyhow::anyhow!("no dns01 challenge found"))?;
+      OrderStatus::Ready => {
+        debug!(%domain, "ACME order is already ready, skipping challenges");
+      }
 
-      // TODO: validate the DNS record using internal resolver
-      print_separator(44);
-      print_message("Please set the following DNS record then press the Return key:");
-      print_field("Name", format!("_acme-challenge.{}", challenge.identifier()));
-      print_field("Record type", "TXT");
-      print_field("Content", challenge.key_authorization().dns_value());
-      print_separator(44);
-
-      io::stdin().read_line(&mut String::new())?;
-
-      challenge.set_ready().await?;
+      status => {
+        bail!("unexpected initial order status: {status:?}");
+      }
     }
 
     let status = order.poll_ready(&RetryPolicy::default()).await?;

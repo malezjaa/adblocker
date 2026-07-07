@@ -2,13 +2,12 @@ use crate::context::Context;
 use anyhow::{anyhow, bail};
 use dashmap::Entry;
 use hickory_proto::op::{Message, ResponseCode};
-use hickory_proto::rr::RData;
 use hickory_resolver::lookup::Lookup;
-use hickory_resolver::net::{DnsError, NetError, NoRecords};
+use hickory_resolver::net::{DnsError, NetError};
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast;
-use tracing::{debug, trace, warn};
-use vox_dns::cache::{CacheKey, CacheLookup, InFlightGuard, MAX_NEGATIVE_TTL};
+use tracing::{trace, warn};
+use vox_dns::cache::{CacheKey, CacheLookup, InFlightGuard};
 use vox_dns::ttl::negative_ttl;
 
 impl Context {

@@ -3,7 +3,7 @@ use crate::dashboard::ws::WsEvent;
 use crate::database::DB;
 use crate::dns::resolver::create_hickory_resolver;
 use crate::engine::EngineMessage;
-use crate::mmdb::downloader::{MMDBSPaths, download_mmdbs_files};
+use crate::mmdb::downloader::{download_mmdbs_files, MMDBSPaths};
 use crate::mmdb::mmdbs::MMDBS;
 use anyhow::Result;
 use fs_err::create_dir_all;
@@ -12,14 +12,14 @@ use parking_lot::{RwLock, RwLockReadGuard};
 use rustls::ServerConfig;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 use tracing::log::trace;
 use vox_dns::cache::DnsCache;
-use vox_shared::config::Config;
 use vox_shared::config::certs::CertificateStrategy;
+use vox_shared::config::Config;
 use vox_shared::home_dir;
 
 #[derive(Clone)]
@@ -53,10 +53,11 @@ impl Context {
     let config_path = home_path.join("config.toml");
     let config = Config::from_file(&config_path)?;
 
+    let resolver = create_hickory_resolver(&config)?;
     let server_config = if matches!(config.certs.strategy, CertificateStrategy::None) {
       None
     } else {
-      let certs = Certs::load_certs(&config).await?;
+      let certs = Certs::load_certs(&config, &resolver).await?;
       let mut server_config = ServerConfig::builder()
         .with_no_client_auth()
         .with_single_cert(certs.certs, certs.key)?;
@@ -67,7 +68,6 @@ impl Context {
 
     let paths = download_mmdbs_files();
 
-    let resolver = create_hickory_resolver(&config)?;
     let ctx = Self(Arc::new(ContextImpl {
       tx,
       config: RwLock::new(config),

@@ -1,24 +1,16 @@
 use crate::config::WinClientConfig;
-use anyhow::{Result, bail};
+use anyhow::Result;
 use clap::Parser;
-use std::io::ErrorKind;
-use std::net::SocketAddr;
-use std::str::FromStr;
-use std::time::Duration;
 use tracing::{error, warn};
 use vox_shared::logger::setup_logger;
-use vox_shared::{SharedCli, home_dir, win_client_home};
+use vox_shared::{SharedCli, win_client_home};
 
 use crate::win_divert::WinDivert;
-use hickory_client::client::{Client, ClientHandle};
-use hickory_client::proto::op::Query;
-use hickory_client::proto::rr::{DNSClass, Name, RecordType};
+use hickory_client::client::Client;
 use hickory_client::proto::runtime::TokioRuntimeProvider;
 use hickory_client::proto::udp::UdpClientStream;
-use tokio::net::UdpSocket;
 use tokio::signal::ctrl_c;
 use tokio::spawn;
-use tokio::time::timeout;
 use vox_dns::server_health::check_server_health;
 use vox_shared::task::named_task;
 

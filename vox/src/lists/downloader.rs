@@ -12,7 +12,7 @@ use reqwest::Client;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 pub async fn download_blocklist(
   list: &List,

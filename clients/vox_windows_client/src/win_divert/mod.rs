@@ -7,7 +7,7 @@ use hickory_client::client::Client;
 use hickory_client::proto::op::Message;
 use std::borrow::Cow;
 use std::time::Instant;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 use vox_dns::block_origin::{BlockOrigin, ClientOrigin, TransportOrigin};
 use vox_dns::dns_query::DnsQuery;
 use vox_dns::edns::EDNSCode;
@@ -57,7 +57,7 @@ impl WinDivert {
     packet: Packet<'_>,
   ) -> Result<()> {
     let start = Instant::now();
-    let msg = Message::from_vec(&packet.payload)?;
+    let msg = Message::from_vec(packet.payload)?;
     let query_domain =
       msg.queries()[0].name().to_string().trim_end_matches('.').to_string();
 
