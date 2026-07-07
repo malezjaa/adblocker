@@ -3799,7 +3799,6 @@ dependencies = [
  "axum",
  "axum-server",
  "base64",
- "bitflags",
  "chrono",
  "clap",
  "cliclack",
@@ -3821,10 +3820,8 @@ dependencies = [
  "reqwest",
  "rustls",
  "rustls-pemfile",
- "scopeguard",
  "serde",
  "serde_json",
- "sha2 0.11.0",
  "sqlx",
  "time",
  "tokio",
@@ -3832,10 +3829,10 @@ dependencies = [
  "tower-http 0.7.0",
  "tracing",
  "vox_dns",
+ "vox_lists",
  "vox_shared",
+ "vox_windows",
  "which",
- "widestring",
- "windows",
  "winres",
  "x509-parser",
  "yansi",
@@ -3860,6 +3857,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "vox_lists"
+version = "0.1.0"
+dependencies = [
+ "adblock",
+ "anyhow",
+ "bitflags",
+ "chrono",
+ "fs-err",
+ "futures",
+ "reqwest",
+ "serde",
+ "sha2 0.11.0",
+ "toml 1.1.2+spec-1.1.0",
+ "tracing",
+ "vox_shared",
+]
+
+[[package]]
 name = "vox_shared"
 version = "0.1.0"
 dependencies = [
@@ -3874,6 +3889,15 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "yansi",
+]
+
+[[package]]
+name = "vox_windows"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "tracing",
+ "windows",
 ]
 
 [[package]]

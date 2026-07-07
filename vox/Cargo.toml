@@ -15,9 +15,7 @@ toml = { workspace = true }
 serde = { workspace = true }
 fs-err = { workspace = true }
 futures = { workspace = true }
-sha2 = "0.11.0"
 chrono = { version = "0.4.44", features = ["serde"] }
-scopeguard = "1.2.0"
 axum = { version = "0.8.9", features = ["ws", "macros"] }
 sqlx = { version = "0.9.0", features = ["runtime-tokio", "sqlite", "chrono"] }
 serde_json = "1.0.149"
@@ -42,25 +40,13 @@ dashmap = { workspace = true }
 argon2 = "0.6.0-rc.8"
 cliclack = "0.5.4"
 hex = "0.4.3"
-bitflags = "2.11.1"
 vox_shared = { workspace = true }
 vox_dns = { workspace = true }
+vox_lists = { workspace = true }
 which = { workspace = true }
 instant-acme = { workspace = true }
 x509-parser = "0.18.1"
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.62", features = [
-    "Win32_Foundation",
-    "Win32_NetworkManagement_WindowsFilteringPlatform",
-    "Win32_System_Rpc",
-    "Win32_Security",
-    "Win32_Networking_WinSock",
-    "Win32_NetworkManagement_IpHelper",
-    "Win32_NetworkManagement_Ndis", "Win32_Networking_WinInet",
-    "Win32_Security_Cryptography"
-] }
-widestring = "1.2.1"
+vox_windows = { workspace = true }
 
 [build-dependencies]
 winres = "0.1"
@@ -72,4 +58,3 @@ path = "src/cli/main.rs"
 [[bin]]
 name = "daemon"
 path = "src/main.rs"
-

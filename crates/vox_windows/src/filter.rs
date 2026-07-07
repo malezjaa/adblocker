@@ -1,5 +1,5 @@
-use crate::firewall::Protocol;
-use crate::windows::pwstr_buf::PwstrBuffer;
+use crate::Protocol;
+use crate::pwstr_buf::PwstrBuffer;
 use anyhow::{Result, bail};
 use windows::Win32::Foundation::HANDLE;
 use windows::Win32::NetworkManagement::WindowsFilteringPlatform::*;

@@ -1,6 +1,5 @@
 use crate::context::Context;
 use crate::dashboard::ws::WsEvent;
-use crate::dns::rewrite::apply::{apply_rewrites, restore_original_queries};
 use crate::engine::EngineMessage;
 use crate::engine::message::{BlockLookup, BlockResult};
 use anyhow::Result;
@@ -14,6 +13,7 @@ use std::time::Instant;
 use tokio::sync::oneshot;
 use vox_dns::block_origin::BlockOrigin;
 use vox_dns::edns::EDNSCode;
+use vox_dns::rewrite::apply::{apply_rewrites, restore_original_queries};
 
 pub fn handle_blocked_response(msg: &Message) -> anyhow::Result<Message> {
   let mut response = Message::response(msg.id(), msg.op_code).into_response();
@@ -58,7 +58,10 @@ impl Context {
 
     let original_queries = msg.queries.clone();
 
-    let rewrite_result = apply_rewrites(self, &mut msg)?;
+    let rewrite_result = {
+      let config = self.config();
+      apply_rewrites(config.rewrites.as_deref(), &mut msg)?
+    };
 
     let (tx, rx) = oneshot::channel();
 

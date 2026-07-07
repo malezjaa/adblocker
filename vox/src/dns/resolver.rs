@@ -9,9 +9,7 @@ use vox_shared::config::Config;
 
 pub type HickoryResolver = Resolver<TokioRuntimeProvider>;
 
-pub fn create_hickory_resolver(
-  config: &Config,
-) -> Result<HickoryResolver> {
+pub fn create_hickory_resolver(config: &Config) -> Result<HickoryResolver> {
   let mut r_config = ResolverConfig::default();
 
   if !config.resolver.upstreams.is_empty() {

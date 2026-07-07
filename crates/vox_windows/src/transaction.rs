@@ -7,9 +7,9 @@ macro_rules! fwpm_transaction {
     }
 
     let result: anyhow::Result<()> = (|| $blck)();
-    if result.is_err() {
+    if let Err(err) = result {
       FwpmTransactionAbort0($engine);
-      return result;
+      return Err(err);
     }
 
     let status = FwpmTransactionCommit0($engine);

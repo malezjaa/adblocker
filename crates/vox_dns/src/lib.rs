@@ -2,5 +2,6 @@ pub mod block_origin;
 pub mod cache;
 pub mod dns_query;
 pub mod edns;
+pub mod rewrite;
 pub mod server_health;
 pub mod ttl;

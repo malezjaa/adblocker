@@ -1,18 +1,17 @@
-use crate::context::Context;
-use crate::lists::cache::{CacheFile, load_cache_file};
-use crate::lists::list::{LISTS, List};
+use crate::cache::{CacheFile, load_cache_file};
+use crate::list::{LISTS, List};
 use adblock::FilterSet;
 use adblock::lists::ParseOptions;
 use anyhow::{Result, bail};
-use axum::http::StatusCode;
 use chrono::Duration;
 use fs_err::{read, write};
 use futures::future::join_all;
-use reqwest::Client;
+use reqwest::{Client, StatusCode};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tracing::{debug, error, info};
+use vox_shared::config::rules::Rule;
 
 pub async fn download_blocklist(
   list: &List,
@@ -60,16 +59,19 @@ pub async fn download_blocklist(
   Ok((list.id.to_string(), rules, new_etag))
 }
 
-pub async fn load_blocklists(ctx: &Context) -> Result<FilterSet> {
+pub async fn load_blocklists(
+  cache_dir: &Path,
+  enabled_ids: &[String],
+  custom_rules: Option<&[Rule]>,
+) -> Result<FilterSet> {
   let start = Instant::now();
-  let cache_dir = ctx.cache_dir();
   let mut filterset = FilterSet::new(false);
   let mut cache = load_cache_file(cache_dir)?;
 
   let mut total = 0;
-  if let Some(rules) = &ctx.config().rules {
+  if let Some(rules) = custom_rules {
     total += rules.len();
-    let rules = rules.iter().map(|rule| rule.adblock_rule()).collect::<Vec<_>>();
+    let rules = rules.iter().map(Rule::adblock_rule).collect::<Vec<_>>();
     filterset.add_filters(&rules, Default::default());
     info!(
       "loaded {} custom block {}",
@@ -92,8 +94,7 @@ pub async fn load_blocklists(ctx: &Context) -> Result<FilterSet> {
 
   write(cache_dir.join("cache.toml"), toml::to_string(&cache)?)?;
 
-  let ids = ctx.blocklists();
-  let configured_ids: HashSet<&str> = ids.iter().map(|s| s.as_str()).collect();
+  let configured_ids: HashSet<&str> = enabled_ids.iter().map(|s| s.as_str()).collect();
 
   for result in results {
     match result {
@@ -112,7 +113,6 @@ pub async fn load_blocklists(ctx: &Context) -> Result<FilterSet> {
 
   debug!("loaded {} rules in total", total);
   info!("loaded lists in {:.2?}", start.elapsed());
-  ctx.increment_rules_version();
 
   Ok(filterset)
 }

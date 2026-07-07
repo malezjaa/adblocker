@@ -33,6 +33,8 @@ instant-acme = "0.8.5"
 
 vox_shared = { path = "crates/vox_shared", version = "0.1.0" }
 vox_dns = { path = "crates/vox_dns", version = "0.1.0" }
+vox_lists = { path = "crates/vox_lists", version = "0.1.0" }
+vox_windows = { path = "crates/vox_windows", version = "0.1.0" }
 
 [profile.release]
 debug = true

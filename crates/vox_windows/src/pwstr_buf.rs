@@ -1,7 +1,7 @@
 use windows::core::PWSTR;
 
 pub struct PwstrBuffer {
-  buf: Vec<u16>,
+  _buf: Vec<u16>,
   ptr: PWSTR,
 }
 
@@ -10,7 +10,7 @@ impl PwstrBuffer {
     let mut buf: Vec<u16> = s.encode_utf16().chain(Some(0)).collect();
     let ptr = PWSTR(buf.as_mut_ptr());
 
-    Self { buf, ptr }
+    Self { _buf: buf, ptr }
   }
 
   pub fn as_pwstr(&self) -> PWSTR {

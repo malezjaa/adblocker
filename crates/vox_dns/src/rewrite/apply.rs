@@ -1,5 +1,4 @@
-use crate::context::Context;
-use crate::dns::rewrite::record::construct_rewrite_records;
+use crate::rewrite::record::construct_rewrite_records;
 use anyhow::Result;
 use hickory_proto::op::{Message, Query, ResponseCode};
 use hickory_proto::rr::{Name, Record};
@@ -11,12 +10,18 @@ pub struct RewriteResult {
   pub restore_original_queries: bool,
 }
 
-pub fn apply_rewrites(ctx: &Context, msg: &mut Message) -> Result<RewriteResult> {
-  let Some(rewrites) = &ctx.config().rewrites else {
-    return Ok(RewriteResult {
-      synthetic_response: false,
-      restore_original_queries: false,
-    });
+impl RewriteResult {
+  fn passthrough() -> Self {
+    Self { synthetic_response: false, restore_original_queries: false }
+  }
+}
+
+pub fn apply_rewrites(
+  rewrites: Option<&[Rewrite]>,
+  msg: &mut Message,
+) -> Result<RewriteResult> {
+  let Some(rewrites) = rewrites else {
+    return Ok(RewriteResult::passthrough());
   };
 
   let mut synthetic_answers = Vec::new();
@@ -54,7 +59,6 @@ pub fn apply_rewrites(ctx: &Context, msg: &mut Message) -> Result<RewriteResult>
 
         RewriteBehavior::Rewrite(name) => {
           replace_queries = true;
-
           rewritten_queries.push(Query::query(Name::from_str(name)?, query.query_type()));
         }
 

@@ -2,9 +2,6 @@ use crate::certs::crl::serve_crl_pem;
 use crate::context::Context;
 use crate::database::DB;
 use crate::engine::{EngineActor, EngineMessage};
-use crate::firewall::open_port::open_ports;
-#[cfg(windows)]
-use crate::windows::wfp_session::WfpSession;
 use anyhow::Result;
 use chrono::Duration;
 use tokio::sync::mpsc::Receiver;
@@ -13,9 +10,11 @@ use tracing::error;
 use tracing::log::warn;
 use vox_shared::config::certs::CertificateStrategy;
 use vox_shared::task::named_task;
-use windows::Win32::Foundation::HANDLE;
+#[cfg(windows)]
+use vox_windows::WfpSession;
+#[cfg(windows)]
+use vox_windows::open_port::{OpenPortsConfig, open_ports};
 
-#[derive(Clone)]
 pub struct App {
   #[cfg(windows)]
   pub wfp_sess: WfpSession,
@@ -25,16 +24,16 @@ pub struct App {
 impl App {
   #[cfg(windows)]
   pub async fn init(ctx: Context) -> Result<Self> {
-    let engine = HANDLE::default();
-    open_ports(&ctx.config(), engine)?;
+    let config = ctx.config();
+    let ports = OpenPortsConfig { dns_port: config.dns.port, doh_port: config.doh.port };
+    let wfp_sess = open_ports(ports)?;
+    drop(config);
 
-    Ok(Self { ctx, wfp_sess: WfpSession { engine } })
+    Ok(Self { ctx, wfp_sess })
   }
 
   #[cfg(not(windows))]
   pub async fn init(ctx: Context) -> Result<Self> {
-    open_ports()?;
-
     Ok(Self { ctx })
   }
 

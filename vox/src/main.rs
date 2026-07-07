@@ -1,8 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
 use rustls::crypto::ring;
-use scopeguard::defer;
-use std::sync::Arc;
 use tokio::sync::mpsc::channel;
 use vox::application::app::App;
 use vox::context::Context;
@@ -21,13 +19,7 @@ async fn main() -> Result<()> {
   let ctx = Context::new(tx).await?;
   ctx.load_mmdbs()?;
 
-  let app = Arc::new(App::init(ctx).await?);
-  defer! {
-    #[cfg(windows)] unsafe {
-      use ::windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0;
-      FwpmEngineClose0(app.wfp_sess.engine);
-    }
-  }
+  let app = App::init(ctx).await?;
 
   app.start_all(rx).await?;
 

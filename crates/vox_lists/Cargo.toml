@@ -1,0 +1,18 @@
+[package]
+name = "vox_lists"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+adblock = "0.12.3"
+anyhow = { workspace = true }
+bitflags = "2.11.1"
+chrono = { version = "0.4.44", features = ["serde"] }
+fs-err = { workspace = true }
+futures = { workspace = true }
+reqwest = "0.13.3"
+serde = { workspace = true }
+sha2 = "0.11.0"
+toml = { workspace = true }
+tracing = { workspace = true }
+vox_shared = { workspace = true }

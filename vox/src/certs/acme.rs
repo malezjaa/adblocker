@@ -1,7 +1,7 @@
 use crate::certs::renewal::certs_need_renewal;
-use crate::certs::{load_certs, Certs};
+use crate::certs::{Certs, load_certs};
 use crate::dns::resolver::HickoryResolver;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use fs_err::{create_dir_all, remove_file, rename, write};
 use hickory_proto::rr::{RData, RecordType};
 use instant_acme::{
@@ -12,8 +12,8 @@ use std::collections::HashMap;
 use std::io;
 use tracing::debug;
 use tracing::log::error;
-use vox_shared::config::certs::AcmeChallenge;
 use vox_shared::config::Config;
+use vox_shared::config::certs::AcmeChallenge;
 use vox_shared::home_dir;
 use vox_shared::pretty::{print_field, print_message, print_separator};
 
@@ -60,7 +60,10 @@ impl Certs {
     Ok(account)
   }
 
-  pub async fn load_certs_with_acme(config: &Config, resolver: &HickoryResolver) -> Result<Certs> {
+  pub async fn load_certs_with_acme(
+    config: &Config,
+    resolver: &HickoryResolver,
+  ) -> Result<Certs> {
     let account = Self::acme_account(config).await?;
     let Some(domain) = &config.certs.acme.domain else {
       bail!("No domain provided for ACME challenge");
@@ -143,7 +146,9 @@ impl Certs {
               break;
             }
 
-            error!("the DNS TXT record has still not been added. wait a few minutes before retrying");
+            error!(
+              "the DNS TXT record has still not been added. wait a few minutes before retrying"
+            );
             print_message("Press Return to check again.");
           }
         }

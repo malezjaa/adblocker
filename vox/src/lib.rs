@@ -6,8 +6,6 @@ pub mod database;
 pub mod dns;
 pub mod domain;
 pub mod engine;
-pub mod firewall;
 pub mod lists;
 pub mod mmdb;
 pub mod password;
-pub mod windows;

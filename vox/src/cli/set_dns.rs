@@ -2,8 +2,8 @@ use crate::CliContext;
 use anyhow::Result;
 use std::net::SocketAddr;
 use tracing::warn;
-use vox::firewall::override_dns::{OverrideDns, override_default_dns};
 use vox_shared::pretty::{print_field, print_separator, print_success, print_warning};
+use vox_windows::override_dns::{OverrideDns, override_default_dns};
 use yansi::Paint;
 
 pub async fn set_dns(

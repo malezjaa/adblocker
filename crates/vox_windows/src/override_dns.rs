@@ -1,4 +1,4 @@
-use crate::windows::pwstr_buf::PwstrBuffer;
+use crate::pwstr_buf::PwstrBuffer;
 use anyhow::{Result, bail};
 use std::net::SocketAddr;
 use windows::Win32::NetworkManagement::IpHelper::{
@@ -17,9 +17,9 @@ pub struct OverrideDns {
   pub doh: Option<String>,
 }
 
-#[cfg(windows)]
+#[allow(unused_assignments)]
 pub fn override_default_dns(settings: OverrideDns) -> Result<()> {
-  use crate::windows::adapters::dns_servers_to_strings;
+  use crate::adapters::dns_servers_to_strings;
   use windows::Win32::Foundation::{ERROR_BUFFER_OVERFLOW, NO_ERROR};
   use windows::Win32::NetworkManagement::IpHelper::{
     GAA_FLAG_INCLUDE_PREFIX, GetAdaptersAddresses, IF_TYPE_SOFTWARE_LOOPBACK,
