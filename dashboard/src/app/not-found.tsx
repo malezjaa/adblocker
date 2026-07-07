@@ -23,11 +23,9 @@ export function NotFoundPage() {
         </EmptyHeader>
         <EmptyContent>
           <div className="flex gap-2">
-            <Button asChild>
-              <a href="/login" className="flex items-center gap-2">
-                <LogInIcon data-icon="inline-start" />
-                Login
-              </a>
+            <Button render={<a href="/login" />}>
+              <LogInIcon data-icon="inline-start" />
+              Login
             </Button>
           </div>
         </EmptyContent>

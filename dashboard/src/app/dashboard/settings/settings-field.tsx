@@ -107,7 +107,9 @@ export function SettingsField({
         {def.type === "select" && (
           <Select
             value={String(value ?? "")}
-            onValueChange={onChange}
+            onValueChange={(nextValue) => {
+              if (nextValue !== null) onChange(nextValue)
+            }}
             disabled={disabled}
           >
             <SelectTrigger id={inputId} className="w-full">

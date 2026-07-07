@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/chart"
 import { useChartData } from "@/lib/api.ts"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
-import { DashboardCard } from "@/components/dashboard-card.tsx"
+import { DashboardCard } from "@/components/app/dashboard-card.tsx"
 
 const chartConfig = {
   total: {

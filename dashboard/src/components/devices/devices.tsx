@@ -27,7 +27,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { AddDeviceDialog } from "./add-device-dialog"
 import { DeviceTableRow } from "./device-table-row"
 import { DEVICE_CONFIG } from "./device-table-config"
-import { DashboardCard } from "@/components/dashboard-card.tsx"
+import { DashboardCard } from "@/components/app/dashboard-card.tsx"
 
 const DeviceTable = () => {
   const { data: devices = [], isLoading, isError } = useDevices()

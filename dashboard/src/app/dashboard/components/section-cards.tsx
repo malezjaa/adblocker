@@ -4,7 +4,7 @@ import { CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useStats } from "@/lib/api.ts"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
 import NumberFlow from "@number-flow/react"
-import { DashboardCard } from "./dashboard-card"
+import { DashboardCard } from "@/components/app/dashboard-card.tsx"
 import { Activity, ArrowDown, ArrowUp, Ban, Percent, Timer } from "lucide-react"
 
 interface BadgeProps {

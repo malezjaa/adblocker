@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react"
-import { AppShell } from "@/components/app/app-shell"
-import { DashboardCard } from "@/components/dashboard-card"
-import { ProtectedRoute } from "@/components/protected-route"
+import { DashboardCard } from "@/components/app/dashboard-card.tsx"
+import { DashboardPage } from "@/components/app/dashboard-page.tsx"
 import { useLists, useStatsWs, useToggleList } from "@/lib/api"
 import {
   CardContent,
@@ -165,193 +164,170 @@ export function Lists() {
   }, [data, query, activeCategories])
 
   return (
-    <ProtectedRoute>
-      <AppShell>
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col py-4 md:py-6">
-              <DashboardCard className="w-full">
-                <CardHeader>
-                  <CardDescription>Manage block lists</CardDescription>
-                  <CardTitle>Block lists</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col gap-3 pb-4 sm:flex-row sm:items-center">
-                    <div className="relative flex-1">
-                      <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search lists by name or description"
-                        className="pl-9"
-                      />
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger>
-                        <Button variant="outline" className="gap-2">
-                          <ListFilter className="size-4" />
-                          Categories
-                          {activeCategories.length > 0 && (
-                            <Badge className="ml-1 px-1.5">
-                              {activeCategories.length}
-                            </Badge>
-                          )}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuGroup>
-                          <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-                            <DropdownMenuLabel className="p-0 text-sm font-medium">
-                              Filter by category
-                            </DropdownMenuLabel>
-                            {activeCategories.length > 0 && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  setActiveCategories([])
-                                }}
-                                className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-                                aria-label="Clear category filters"
-                              >
-                                <X className="size-3.5" />
-                              </button>
-                            )}
-                          </div>
-                          <DropdownMenuSeparator />
-                          {ALL_CATEGORIES.map((category) => (
-                            <DropdownMenuCheckboxItem
-                              key={category}
-                              checked={activeCategories.includes(category)}
-                              onCheckedChange={() =>
-                                toggleCategoryFilter(category)
-                              }
-                              onSelect={(e) => e.preventDefault()}
-                            >
-                              {CATEGORY_META[category].label}
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                        </DropdownMenuGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  {isLoading && (
-                    <div className="space-y-2">
-                      {Array.from({ length: 10 }).map((_, i) => (
-                        <Skeleton
-                          key={`lists-skeleton-${i}`}
-                          className="h-12 w-full"
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>Failed to load lists.</AlertDescription>
-                    </Alert>
-                  )}
-                  {filtered && filtered.length === 0 && (
-                    <div className="flex flex-col items-center gap-1 py-10 text-center">
-                      <p className="font-heading text-base font-medium">
-                        No lists match your filters
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Try a different search term or clear the category
-                        filter.
-                      </p>
-                    </div>
-                  )}
-                  {filtered && filtered.length > 0 && (
-                    <ul className={"flex flex-col py-4"}>
-                      {filtered.map((list, index) => {
-                        const enabled = list.enabled ?? false
-                        const categories = parseCategories(list.categories)
-                        return (
-                          <li
-                            className={`flex w-full flex-row items-center justify-between gap-4 py-3 ${
-                              index > 0 ? "border-t" : ""
-                            }`}
-                            key={`list-${list.id}`}
-                          >
-                            <div className={"flex flex-col gap-1.5"}>
-                              <div className="flex flex-row items-center gap-2">
-                                <p
-                                  className={
-                                    "font-heading text-base font-medium"
-                                  }
-                                >
-                                  {list.name}
-                                </p>
-                                <Badge>
-                                  <NumberFlow value={list.domains || 0} />
-                                </Badge>
-                                <CompatibilityBadge
-                                  value={list.compatibility}
-                                />
-                                {list.recommended && (
-                                  <Badge
-                                    variant="outline"
-                                    className="gap-1 border-sky-200 bg-sky-50 font-normal text-sky-700 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-300"
-                                  >
-                                    <Sparkles className="size-3" />
-                                    Recommended
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className={"text-sm text-muted-foreground"}>
-                                {list.description}
-                              </p>
-                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                                {categories.map((category) => (
-                                  <CategoryBadge
-                                    key={category}
-                                    category={category}
-                                  />
-                                ))}
-                              </div>
-                              <div className="flex flex-row items-center gap-3 pt-1">
-                                {list.homepage && (
-                                  <a
-                                    href={list.homepage}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                  >
-                                    <Globe className="size-3.5" />
-                                    Homepage
-                                  </a>
-                                )}
-                                {list.url && (
-                                  <a
-                                    href={list.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                  >
-                                    <ExternalLink className="size-3.5" />
-                                    Source
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                            <Switch
-                              checked={enabled}
-                              disabled={toggleList.isPending}
-                              onCheckedChange={() => handleToggle(list)}
-                            />
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  )}
-                </CardContent>
-              </DashboardCard>
+    <DashboardPage>
+      <DashboardCard className="w-full">
+        <CardHeader>
+          <CardDescription>Manage block lists</CardDescription>
+          <CardTitle>Block lists</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-3 pb-4 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search lists by name or description"
+                className="pl-9"
+              />
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger>
+                <Button variant="outline" className="gap-2">
+                  <ListFilter className="size-4" />
+                  Categories
+                  {activeCategories.length > 0 && (
+                    <Badge className="ml-1 px-1.5">
+                      {activeCategories.length}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuGroup>
+                  <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+                    <DropdownMenuLabel className="p-0 text-sm font-medium">
+                      Filter by category
+                    </DropdownMenuLabel>
+                    {activeCategories.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setActiveCategories([])
+                        }}
+                        className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+                        aria-label="Clear category filters"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <DropdownMenuSeparator />
+                  {ALL_CATEGORIES.map((category) => (
+                    <DropdownMenuCheckboxItem
+                      key={category}
+                      checked={activeCategories.includes(category)}
+                      onCheckedChange={() => toggleCategoryFilter(category)}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      {CATEGORY_META[category].label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </div>
-      </AppShell>
-    </ProtectedRoute>
+
+          {isLoading && (
+            <div className="space-y-2">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <Skeleton key={`lists-skeleton-${i}`} className="h-12 w-full" />
+              ))}
+            </div>
+          )}
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>Failed to load lists.</AlertDescription>
+            </Alert>
+          )}
+          {filtered && filtered.length === 0 && (
+            <div className="flex flex-col items-center gap-1 py-10 text-center">
+              <p className="font-heading text-base font-medium">
+                No lists match your filters
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Try a different search term or clear the category filter.
+              </p>
+            </div>
+          )}
+          {filtered && filtered.length > 0 && (
+            <ul className={"flex flex-col py-4"}>
+              {filtered.map((list, index) => {
+                const enabled = list.enabled ?? false
+                const categories = parseCategories(list.categories)
+                return (
+                  <li
+                    className={`flex w-full flex-row items-center justify-between gap-4 py-3 ${
+                      index > 0 ? "border-t" : ""
+                    }`}
+                    key={`list-${list.id}`}
+                  >
+                    <div className={"flex flex-col gap-1.5"}>
+                      <div className="flex flex-row items-center gap-2">
+                        <p className={"font-heading text-base font-medium"}>
+                          {list.name}
+                        </p>
+                        <Badge>
+                          <NumberFlow value={list.domains || 0} />
+                        </Badge>
+                        <CompatibilityBadge value={list.compatibility} />
+                        {list.recommended && (
+                          <Badge
+                            variant="outline"
+                            className="gap-1 border-sky-200 bg-sky-50 font-normal text-sky-700 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-300"
+                          >
+                            <Sparkles className="size-3" />
+                            Recommended
+                          </Badge>
+                        )}
+                      </div>
+                      <p className={"text-sm text-muted-foreground"}>
+                        {list.description}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {categories.map((category) => (
+                          <CategoryBadge key={category} category={category} />
+                        ))}
+                      </div>
+                      <div className="flex flex-row items-center gap-3 pt-1">
+                        {list.homepage && (
+                          <a
+                            href={list.homepage}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            <Globe className="size-3.5" />
+                            Homepage
+                          </a>
+                        )}
+                        {list.url && (
+                          <a
+                            href={list.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            <ExternalLink className="size-3.5" />
+                            Source
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <Switch
+                      checked={enabled}
+                      disabled={toggleList.isPending}
+                      onCheckedChange={() => handleToggle(list)}
+                    />
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </DashboardCard>
+    </DashboardPage>
   )
 }

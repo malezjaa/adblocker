@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react"
-import { ProtectedRoute } from "@/components/protected-route.tsx"
-import { AppShell } from "@/components/app/app-shell.tsx"
+import { DashboardPage } from "@/components/app/dashboard-page.tsx"
 import {
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.tsx"
-import { DashboardCard } from "@/components/dashboard-card.tsx"
+import { DashboardCard } from "@/components/app/dashboard-card.tsx"
 import {
   type SettingDef,
   SettingsField,
@@ -60,40 +59,32 @@ export default function Settings() {
   }
 
   return (
-    <ProtectedRoute>
-      <AppShell>
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-6 py-4 pb-24 md:py-6">
-              <DashboardCard className="w-full">
-                <CardHeader>
-                  <CardDescription>Configure your DNS settings</CardDescription>
-                  <CardTitle>DNS</CardTitle>
-                </CardHeader>
-                <CardContent className="divide-y">
-                  <UpstreamsField
-                    label="Upstream DNS servers"
-                    description="Queried in order. The first one that responds is used."
-                    value={draft?.upstreams ?? []}
-                    onChange={(value) => updateField("upstreams", value)}
-                    disabled={isLoading || !draft}
-                  />
+    <DashboardPage className="gap-6 pb-24">
+      <DashboardCard className="w-full">
+        <CardHeader>
+          <CardDescription>Configure your DNS settings</CardDescription>
+          <CardTitle>DNS</CardTitle>
+        </CardHeader>
+        <CardContent className="divide-y">
+          <UpstreamsField
+            label="Upstream DNS servers"
+            description="Queried in order. The first one that responds is used."
+            value={draft?.upstreams ?? []}
+            onChange={(value) => updateField("upstreams", value)}
+            disabled={isLoading || !draft}
+          />
 
-                  {dnsFields.map((def) => (
-                    <SettingsField
-                      key={def.key}
-                      def={def}
-                      value={draft ? draft[def.key] : ""}
-                      onChange={(value) => updateField(def.key, value)}
-                      disabled={isLoading || !draft}
-                    />
-                  ))}
-                </CardContent>
-              </DashboardCard>
-            </div>
-          </div>
-        </div>
-      </AppShell>
+          {dnsFields.map((def) => (
+            <SettingsField
+              key={def.key}
+              def={def}
+              value={draft ? draft[def.key] : ""}
+              onChange={(value) => updateField(def.key, value)}
+              disabled={isLoading || !draft}
+            />
+          ))}
+        </CardContent>
+      </DashboardCard>
 
       <SettingsToolbar
         open={isDirty}
@@ -101,6 +92,6 @@ export default function Settings() {
         onSave={handleSave}
         onCancel={handleCancel}
       />
-    </ProtectedRoute>
+    </DashboardPage>
   )
 }

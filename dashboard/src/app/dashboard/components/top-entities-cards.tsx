@@ -13,7 +13,7 @@ import { ArrowUpRightIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import { useLayoutEffect, useRef } from "react"
 import NumberFlow from "@number-flow/react"
-import { DashboardCard } from "@/components/dashboard-card.tsx"
+import { DashboardCard } from "@/components/app/dashboard-card.tsx"
 import { chartColors, countryFlag } from "@/lib/utils.ts"
 
 function useFlipAnimation(keys: string[]) {

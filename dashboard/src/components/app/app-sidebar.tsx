@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar.tsx"
 import { footerNavLinks, navGroups } from "@/components/app/app-shared.tsx"
-import { LatestChange } from "@/components/latest-change.tsx"
+import { LatestChange } from "@/components/app/latest-change.tsx"
 import { NavGroup } from "../nav/nav-group.tsx"
 import { Link, useLocation } from "react-router"
 

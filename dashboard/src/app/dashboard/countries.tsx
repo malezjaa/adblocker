@@ -6,15 +6,14 @@ import {
   ZoomableGroup,
 } from "react-simple-maps"
 import React, { useRef, useState } from "react"
-import { ProtectedRoute } from "@/components/protected-route.tsx"
-import { AppShell } from "@/components/app/app-shell.tsx"
+import { DashboardPage } from "@/components/app/dashboard-page.tsx"
 import {
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.tsx"
-import { DashboardCard } from "@/components/dashboard-card.tsx"
+import { DashboardCard } from "@/components/app/dashboard-card.tsx"
 import { useStats } from "@/lib/api.ts"
 
 type TooltipState = {
@@ -247,26 +246,16 @@ function WorldMap() {
 
 export default function Countries() {
   return (
-    <ProtectedRoute>
-      <AppShell>
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col py-4 md:py-6">
-              <DashboardCard className="w-full">
-                <CardHeader>
-                  <CardDescription>
-                    See where your DNS requests lead to
-                  </CardDescription>
-                  <CardTitle>Countries</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <WorldMap />
-                </CardContent>
-              </DashboardCard>
-            </div>
-          </div>
-        </div>
-      </AppShell>
-    </ProtectedRoute>
+    <DashboardPage>
+      <DashboardCard className="w-full">
+        <CardHeader>
+          <CardDescription>See where your DNS requests lead to</CardDescription>
+          <CardTitle>Countries</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <WorldMap />
+        </CardContent>
+      </DashboardCard>
+    </DashboardPage>
   )
 }
