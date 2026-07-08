@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils.ts"
 interface SettingsToolbarProps {
   open: boolean
   isSaving?: boolean
+  saveDisabled?: boolean
   onSave: () => void
   onCancel: () => void
 }
@@ -12,6 +13,7 @@ interface SettingsToolbarProps {
 export function SettingsToolbar({
   open,
   isSaving,
+  saveDisabled,
   onSave,
   onCancel,
 }: SettingsToolbarProps) {
@@ -41,7 +43,11 @@ export function SettingsToolbar({
           >
             Cancel
           </Button>
-          <Button size="sm" onClick={onSave} disabled={isSaving}>
+          <Button
+            size="sm"
+            onClick={onSave}
+            disabled={isSaving || saveDisabled}
+          >
             {isSaving ? (
               <>
                 <Loader2 className="size-4 animate-spin" />

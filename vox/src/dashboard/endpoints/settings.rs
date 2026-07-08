@@ -1,45 +1,34 @@
 use crate::context::Context;
 use crate::dashboard::AppError;
 use crate::dashboard::auth::AuthGuard;
+use crate::dns::resolver::create_hickory_resolver;
 use anyhow::Result;
 use axum::Json;
 use axum::extract::State;
-use parking_lot::RwLockReadGuard;
-use serde::{Deserialize, Serialize};
-use vox_shared::config::{Config, UpstreamServer};
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Settings {
-  pub upstreams: Vec<UpstreamServer>,
-  pub dnssec: bool,
-}
-
-fn to_settings(val: RwLockReadGuard<Config>) -> Settings {
-  Settings { upstreams: val.resolver.upstreams.clone(), dnssec: val.resolver.dnssec }
-}
+use vox_shared::config::Config;
 
 pub async fn settings_handler(
   _guard: AuthGuard,
   State(ctx): State<Context>,
-) -> Result<Json<Settings>, AppError> {
+) -> Result<Json<Config>, AppError> {
   let config = ctx.config();
-  Ok(Json(to_settings(config)))
+  Ok(Json(config.clone()))
 }
 
 pub async fn update_settings(
   _guard: AuthGuard,
   State(ctx): State<Context>,
-  Json(body): Json<Settings>,
-) -> Result<Json<Settings>, AppError> {
+  Json(mut new_config): Json<Config>,
+) -> Result<Json<Config>, AppError> {
   let old_config = ctx.config().clone();
-  let mut new_config = old_config.clone();
-  new_config.resolver.dnssec = body.dnssec;
-  new_config.resolver.upstreams = body.upstreams;
+
+  new_config.compile_regexes()?;
+  new_config.validate_rules();
+  let resolver = create_hickory_resolver(&new_config)?;
 
   fs_err::write(ctx.config_path(), toml::to_string(&new_config)?)?;
+  ctx.update_resolver(resolver);
   ctx.apply_config_change(old_config, new_config.clone()).await?;
-  Ok(Json(Settings {
-    upstreams: new_config.resolver.upstreams.clone(),
-    dnssec: new_config.resolver.dnssec,
-  }))
+
+  Ok(Json(new_config))
 }

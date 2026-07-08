@@ -11,7 +11,13 @@ import {
 } from "@/components/ui/select.tsx"
 import type { UpstreamServer } from "@/app/dashboard/settings/user-settings.ts"
 
-type SettingValue = string | boolean | UpstreamServer[]
+type SettingValue =
+  | string
+  | number
+  | boolean
+  | UpstreamServer[]
+  | null
+  | undefined
 
 interface BaseSettingDef<TKey extends string> {
   key: TKey
@@ -33,6 +39,12 @@ interface TextareaSettingDef<TKey extends string> extends BaseSettingDef<TKey> {
   placeholder?: string
 }
 
+interface NumberSettingDef<TKey extends string> extends BaseSettingDef<TKey> {
+  type: "number"
+  min?: number
+  max?: number
+}
+
 interface SelectSettingDef<TKey extends string> extends BaseSettingDef<TKey> {
   type: "select"
   options: { label: string; value: string }[]
@@ -42,6 +54,7 @@ export type SettingDef<TKey extends string = string> =
   | ToggleSettingDef<TKey>
   | TextSettingDef<TKey>
   | TextareaSettingDef<TKey>
+  | NumberSettingDef<TKey>
   | SelectSettingDef<TKey>
 
 interface SettingsFieldProps {
@@ -89,6 +102,28 @@ export function SettingsField({
             placeholder={def.placeholder}
             disabled={disabled}
             onChange={(e) => onChange(e.target.value)}
+          />
+        )}
+
+        {def.type === "number" && (
+          <Input
+            id={inputId}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={String(value ?? "")}
+            disabled={disabled}
+            onChange={(e) => {
+              const nextValue = e.target.value.replace(/\D/g, "")
+              if (nextValue === "") {
+                return
+              }
+
+              const nextNumber = Number(nextValue)
+              const min = def.min ?? Number.NEGATIVE_INFINITY
+              const max = def.max ?? Number.POSITIVE_INFINITY
+              onChange(Math.min(max, Math.max(min, nextNumber)))
+            }}
           />
         )}
 

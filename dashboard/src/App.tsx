@@ -9,6 +9,7 @@ import Settings from "@/app/dashboard/settings/settings.tsx"
 import { HTML5Backend } from "react-dnd-html5-backend"
 import { DndProvider } from "react-dnd"
 import Rules from "@/app/dashboard/rules.tsx"
+import Rewrites from "@/app/dashboard/rewrites.tsx"
 
 let router = createBrowserRouter([
   {
@@ -42,6 +43,10 @@ let router = createBrowserRouter([
   {
     path: "/rules",
     Component: Rules,
+  },
+  {
+    path: "/rewrites",
+    Component: Rewrites,
   },
 ])
 

@@ -13,6 +13,9 @@ use crate::dashboard::endpoints::devices::{
   create_device_handler, delete_device_handler, get_device_handler, get_devices_handler,
 };
 use crate::dashboard::endpoints::lists::{get_lists_handler, toggle_list};
+use crate::dashboard::endpoints::rewrites::{
+  create_rewrite, delete_rewrite, get_rewrites, update_rewrite,
+};
 use crate::dashboard::endpoints::stats::{
   chart_data, query_logs_handler, stats, top_handler,
 };
@@ -48,6 +51,8 @@ impl App {
       .route("/api/settings", get(settings_handler).post(update_settings))
       .route("/api/rules", get(rule_handler).post(create_rule))
       .route("/api/rules/{domain}", patch(update_rule).delete(delete_rule))
+      .route("/api/rewrites", get(get_rewrites).post(create_rewrite))
+      .route("/api/rewrites/{index}", patch(update_rewrite).delete(delete_rewrite))
       .route("/api/top", get(top_handler))
       .route("/api/stats", get(stats))
       .route("/api/chart-data", get(chart_data))

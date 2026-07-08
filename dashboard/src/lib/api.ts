@@ -12,6 +12,10 @@ import type {
   Stats,
   TopBlocked,
 } from "@/lib/types.ts"
+import type {
+  Rewrite,
+  RewriteEntry,
+} from "@/app/dashboard/settings/user-settings.ts"
 
 const BASE_URL = "http://127.0.0.64"
 
@@ -258,5 +262,46 @@ export const useDeleteRule = () => {
     mutationFn: (domain: string) =>
       del<void>(`api/rules/${encodeURIComponent(domain)}`),
     onSuccess: () => queryClient.refetchQueries({ queryKey: ["rules"] }),
+  })
+}
+
+export const useRewrites = () =>
+  useQuery<RewriteEntry[]>({
+    queryKey: ["rewrites"],
+    queryFn: () => api<RewriteEntry[]>("api/rewrites"),
+  })
+
+export const useCreateRewrite = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (rewrite: Rewrite) =>
+      post<RewriteEntry[]>("api/rewrites", rewrite),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["rewrites"] })
+      await queryClient.invalidateQueries({ queryKey: ["user-settings"] })
+    },
+  })
+}
+
+export const useUpdateRewrite = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ index, rewrite }: { index: number; rewrite: Rewrite }) =>
+      patch<RewriteEntry[]>(`api/rewrites/${index}`, rewrite),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["rewrites"] })
+      await queryClient.invalidateQueries({ queryKey: ["user-settings"] })
+    },
+  })
+}
+
+export const useDeleteRewrite = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (index: number) => del<RewriteEntry[]>(`api/rewrites/${index}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["rewrites"] })
+      await queryClient.invalidateQueries({ queryKey: ["user-settings"] })
+    },
   })
 }

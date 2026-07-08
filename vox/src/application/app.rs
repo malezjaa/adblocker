@@ -17,7 +17,7 @@ use vox_windows::open_port::{OpenPortsConfig, open_ports};
 
 pub struct App {
   #[cfg(windows)]
-  pub wfp_sess: WfpSession,
+  pub wfp_sess: Option<WfpSession>,
   pub ctx: Context,
 }
 
@@ -25,8 +25,13 @@ impl App {
   #[cfg(windows)]
   pub async fn init(ctx: Context) -> Result<Self> {
     let config = ctx.config();
-    let ports = OpenPortsConfig { dns_port: config.dns.port, doh_port: config.doh.port };
-    let wfp_sess = open_ports(ports)?;
+    let wfp_sess = if config.firewall.open_ports {
+      let ports =
+        OpenPortsConfig { dns_port: config.dns.port, doh_port: config.doh.port };
+      Some(open_ports(ports)?)
+    } else {
+      None
+    };
     drop(config);
 
     Ok(Self { ctx, wfp_sess })
