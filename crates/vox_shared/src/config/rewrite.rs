@@ -1,11 +1,21 @@
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rewrite {
   pub name: Option<String>,
+  #[serde(default = "default_true")]
+  pub enabled: bool,
+  #[serde(default = "default_priority")]
+  pub priority: i32,
   pub when: RewriteMatchWhen,
-  pub actions: Vec<RewriteAction>,
+  #[serde(default)]
+  pub conditions: RewriteConditions,
+  pub behavior: RewriteBehavior,
+  #[serde(default)]
+  pub ttl: Option<u32>,
+  #[serde(default)]
+  pub continue_processing: bool,
   #[serde(skip)]
   pub regex: Option<Regex>,
 }
@@ -13,7 +23,8 @@ pub struct Rewrite {
 impl Rewrite {
   pub fn compile(&mut self) -> anyhow::Result<()> {
     if self.when.ty == RewriteMatchWhenType::Regex {
-      self.regex = Some(Regex::new(&self.when.value)?);
+      self.regex =
+        Some(RegexBuilder::new(&self.when.value).case_insensitive(true).build()?);
     }
     Ok(())
   }
@@ -23,7 +34,6 @@ impl Rewrite {
 pub struct RewriteMatchWhen {
   #[serde(rename = "type")]
   pub ty: RewriteMatchWhenType,
-  /// The pattern to match against - a literal domain or a regex string.
   pub value: String,
 }
 
@@ -31,31 +41,104 @@ pub struct RewriteMatchWhen {
 #[serde(rename_all = "lowercase")]
 pub enum RewriteMatchWhenType {
   Exact,
+  Suffix,
+  Wildcard,
   Regex,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct RewriteConditions {
+  /// Limit this rule to specific query types. Empty means every query type.
+  #[serde(default)]
+  pub query_types: Vec<RewriteRecordType>,
+  /// Limit this rule to specific dashboard/client device identifiers.
+  #[serde(default)]
+  pub devices: Vec<String>,
+  /// Limit this rule to specific DNS transports. Empty means every transport.
+  #[serde(default)]
+  pub transports: Vec<RewriteTransportCondition>,
+  /// Limit this rule to specific client operating systems. Empty means every client OS.
+  #[serde(default)]
+  pub client_origins: Vec<RewriteClientCondition>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum RewriteTransportCondition {
+  Plain,
+  #[serde(rename = "doh")]
+  DoH,
+  #[serde(rename = "dot")]
+  DoT,
+  #[serde(rename = "doq")]
+  DoQ,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum RewriteClientCondition {
+  Windows,
+  Linux,
+  #[serde(alias = "macos")]
+  Mac,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum RewriteBehavior {
+  /// Return synthetic DNS records without resolving upstream.
+  Respond { records: Vec<RewriteRecord>, ttl: Option<u32> },
+  /// Return an alias record for the queried name.
+  Alias { target: String, ttl: Option<u32> },
+  /// Resolve a different DNS name while preserving the original query name in the response.
+  Forward { target: String },
+  /// Respond with NXDOMAIN.
+  NxDomain,
+  /// Respond with empty NOERROR.
+  NoData,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RewriteRecord {
+  #[serde(rename = "type")]
+  pub ty: RewriteRecordType,
+  pub value: RewriteRecordValue,
+  #[serde(default)]
+  pub ttl: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum RewriteRecordType {
+  A,
+  AAAA,
+  CNAME,
+  MX,
+  TXT,
+  PTR,
+  SRV,
+  HTTPS,
+  SVCB,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "UPPERCASE")]
-pub enum RewriteAction {
-  /// Respond with a static IPv4 address.
+pub enum RewriteRecordValue {
   A { value: String },
-  /// Respond with a static IPv6 address.
   AAAA { value: String },
-  /// Alias this name to another; the resolver follows the chain.
   CNAME { value: String },
-  /// Mail exchanger record. Lower `preference` = higher priority.
   MX { exchange: String, preference: u16 },
-  /// One or more text strings (SPF, DKIM, verification tokens, …).
   TXT { value: Vec<String> },
-  /// Reverse-DNS pointer, typically in `.arpa` zones.
   PTR { value: String },
-  /// Service-locator record used by SIP, XMPP, and similar protocols.
   SRV { priority: u16, weight: u16, port: u16, target: String },
-  /// Transparently rewrite the queried name before resolving.
-  #[serde(rename = "rewrite")]
-  Rewrite { value: String },
-  /// Respond with NXDOMAIN - the name does not exist.
-  NXDOMAIN,
-  /// Respond with an empty NOERROR - name exists but has no data for this type.
-  NOERROR,
+  HTTPS { priority: u16, target: String, params: Vec<String> },
+  SVCB { priority: u16, target: String, params: Vec<String> },
+}
+
+fn default_true() -> bool {
+  true
+}
+
+fn default_priority() -> i32 {
+  100
 }

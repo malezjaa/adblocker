@@ -13,7 +13,9 @@ use std::time::Instant;
 use tokio::sync::oneshot;
 use vox_dns::block_origin::BlockOrigin;
 use vox_dns::edns::EDNSCode;
-use vox_dns::rewrite::apply::{apply_rewrites, restore_original_queries};
+use vox_dns::rewrite::apply::{
+  RewriteContext, apply_rewrites_with_context, restore_original_queries,
+};
 
 pub fn handle_blocked_response(msg: &Message) -> anyhow::Result<Message> {
   let mut response = Message::response(msg.id(), msg.op_code).into_response();
@@ -44,6 +46,7 @@ impl Context {
     &self,
     raw: Vec<u8>,
     mut origin: BlockOrigin,
+    device: Option<&str>,
   ) -> Result<(bool, Message, BlockOrigin)> {
     let mut msg = Message::from_bytes(&raw)?;
 
@@ -60,19 +63,49 @@ impl Context {
 
     let rewrite_result = {
       let config = self.config();
-      apply_rewrites(config.rewrites.as_deref(), &mut msg)?
+      apply_rewrites_with_context(
+        config.rewrites.as_deref(),
+        &mut msg,
+        RewriteContext { origin: Some(origin), device },
+      )?
     };
 
-    let (tx, rx) = oneshot::channel();
-
     let _ = self.ws_tx().send(WsEvent::DNSRequest);
+
+    if rewrite_result.skip_block_lookup {
+      let mut response = msg.clone().into_response();
+
+      if rewrite_result.restore_original_queries {
+        restore_original_queries(
+          &mut response,
+          &original_queries,
+          &rewrite_result.rewritten_names,
+        );
+      }
+
+      return Ok((false, response, origin));
+    }
+
+    let (tx, rx) = oneshot::channel();
     self
       .tx()
       .send(EngineMessage::Lookup(BlockLookup::new(msg.clone(), tx).origin(origin)))
       .await?;
 
     match rx.await? {
-      BlockResult::Block => Ok((true, handle_blocked_response(&msg)?, origin)),
+      BlockResult::Block => {
+        let mut response = handle_blocked_response(&msg)?;
+
+        if rewrite_result.restore_original_queries {
+          restore_original_queries(
+            &mut response,
+            &original_queries,
+            &rewrite_result.rewritten_names,
+          );
+        }
+
+        Ok((true, response, origin))
+      }
 
       BlockResult::Ok => {
         let mut response = if rewrite_result.synthetic_response {
@@ -82,7 +115,11 @@ impl Context {
         };
 
         if rewrite_result.restore_original_queries {
-          restore_original_queries(&mut response, &original_queries);
+          restore_original_queries(
+            &mut response,
+            &original_queries,
+            &rewrite_result.rewritten_names,
+          );
         }
 
         Ok((false, response, origin))
@@ -98,7 +135,8 @@ impl Context {
     device: Option<String>,
   ) -> Result<Message> {
     let start = Instant::now();
-    let (blocked, response, origin) = self.process_message(bytes, origin).await?;
+    let (blocked, response, origin) =
+      self.process_message(bytes, origin, device.as_deref()).await?;
 
     self
       .db()

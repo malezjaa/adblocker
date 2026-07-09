@@ -4,7 +4,7 @@ use hickory_proto::rr::{Name, Record, RecordType};
 use moka::sync::Cache;
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender;
-use tracing::log::trace;
+use tracing::trace;
 
 #[derive(Clone, Hash, Eq, PartialEq, Debug)]
 pub struct CacheKey {

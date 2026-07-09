@@ -42,14 +42,36 @@ export interface CertsConfig {
   manual: ManualCertConfig
 }
 
-export type RewriteMatchType = "exact" | "regex"
+export type RewriteMatchType = "exact" | "suffix" | "wildcard" | "regex"
 
 export interface RewriteMatch {
   type: RewriteMatchType
   value: string
 }
 
-export type RewriteAction =
+export type RewriteRecordType =
+  | "A"
+  | "AAAA"
+  | "CNAME"
+  | "MX"
+  | "TXT"
+  | "PTR"
+  | "SRV"
+  | "HTTPS"
+  | "SVCB"
+
+export interface RewriteConditions {
+  query_types: RewriteRecordType[]
+  devices: string[]
+  transports: RewriteTransportCondition[]
+  client_origins: RewriteClientCondition[]
+}
+
+export type RewriteTransportCondition = "plain" | "doh" | "dot" | "doq"
+
+export type RewriteClientCondition = "windows" | "linux" | "mac"
+
+export type RewriteRecordValue =
   | { type: "A"; value: string }
   | { type: "AAAA"; value: string }
   | { type: "CNAME"; value: string }
@@ -63,14 +85,31 @@ export type RewriteAction =
       port: number
       target: string
     }
-  | { type: "rewrite"; value: string }
-  | { type: "NXDOMAIN" }
-  | { type: "NOERROR" }
+  | { type: "HTTPS"; priority: number; target: string; params: string[] }
+  | { type: "SVCB"; priority: number; target: string; params: string[] }
+
+export interface RewriteRecord {
+  type: RewriteRecordType
+  value: RewriteRecordValue
+  ttl: number | null
+}
+
+export type RewriteBehavior =
+  | { type: "respond"; records: RewriteRecord[]; ttl: number | null }
+  | { type: "alias"; target: string; ttl: number | null }
+  | { type: "forward"; target: string }
+  | { type: "nxdomain" }
+  | { type: "nodata" }
 
 export interface Rewrite {
   name: string | null
+  enabled: boolean
+  priority: number
   when: RewriteMatch
-  actions: RewriteAction[]
+  conditions: RewriteConditions
+  behavior: RewriteBehavior
+  ttl: number | null
+  continue_processing: boolean
 }
 
 export interface RewriteEntry {
