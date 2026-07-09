@@ -2,7 +2,7 @@ use crate::context::Context;
 use crate::dashboard::ws::WsEvent;
 use crate::engine::EngineMessage;
 use crate::engine::message::{BlockLookup, BlockResult};
-use anyhow::Result;
+use anyhow::{Result, bail};
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::opt::{EdnsCode, EdnsOption};
 use hickory_proto::rr::rdata::{A, AAAA};
@@ -41,6 +41,24 @@ pub fn handle_blocked_response(msg: &Message) -> anyhow::Result<Message> {
   Ok(response)
 }
 
+fn origin_from_edns(msg: &Message, fallback: BlockOrigin) -> Result<BlockOrigin> {
+  let Some(edns) = &msg.edns else {
+    return Ok(fallback);
+  };
+
+  let Some(EdnsOption::Unknown(_, data)) =
+    edns.option(EdnsCode::Unknown(EDNSCode::BlockOrigin as u16))
+  else {
+    return Ok(fallback);
+  };
+
+  let Some(origin) = data.first() else {
+    bail!("EDNS BlockOrigin option is empty");
+  };
+
+  BlockOrigin::from_u8(*origin)
+}
+
 impl Context {
   async fn process_message(
     &self,
@@ -50,14 +68,8 @@ impl Context {
   ) -> Result<(bool, Message, BlockOrigin)> {
     let mut msg = Message::from_bytes(&raw)?;
 
-    if let Some(edns) = &msg.edns {
-      // Clients can overwrite some settings using EDNS
-      if let Some(opt) = edns.option(EdnsCode::Unknown(EDNSCode::BlockOrigin as u16))
-        && let EdnsOption::Unknown(_, data) = opt
-      {
-        origin = BlockOrigin::from_u8(data[0])?;
-      }
-    }
+    // Clients can overwrite some settings using EDNS.
+    origin = origin_from_edns(&msg, origin)?;
 
     let original_queries = msg.queries.clone();
 
@@ -151,5 +163,93 @@ impl Context {
       .await;
 
     Ok(response)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use hickory_proto::op::{Edns, Query};
+  use hickory_proto::rr::Name;
+  use std::net::{Ipv4Addr, Ipv6Addr};
+  use std::str::FromStr;
+  use vox_dns::block_origin::{ClientOrigin, TransportOrigin};
+
+  fn query(record_type: RecordType) -> Message {
+    let mut msg = Message::query();
+    msg.add_query(Query::query(Name::from_str("blocked.test.").unwrap(), record_type));
+    msg
+  }
+
+  fn query_with_origin(origin: BlockOrigin) -> Message {
+    let mut msg = query(RecordType::A);
+    let mut edns = Edns::new();
+    edns
+      .options_mut()
+      .insert(EdnsOption::Unknown(EDNSCode::BlockOrigin as u16, vec![origin.to_u8()]));
+    msg.edns = Some(edns);
+    msg
+  }
+
+  #[test]
+  fn blocked_a_queries_return_loopback_answer() {
+    let response = handle_blocked_response(&query(RecordType::A)).unwrap();
+
+    assert_eq!(response.response_code, ResponseCode::NoError);
+    assert_eq!(response.answers.len(), 1);
+    assert_eq!(response.answers[0].ttl, 5);
+    assert_eq!(response.answers[0].data, RData::A(A(Ipv4Addr::LOCALHOST)));
+  }
+
+  #[test]
+  fn blocked_aaaa_queries_return_ipv6_loopback_answer() {
+    let response = handle_blocked_response(&query(RecordType::AAAA)).unwrap();
+
+    assert_eq!(response.response_code, ResponseCode::NoError);
+    assert_eq!(response.answers.len(), 1);
+    assert_eq!(response.answers[0].ttl, 5);
+    assert_eq!(response.answers[0].data, RData::AAAA(AAAA(Ipv6Addr::LOCALHOST)));
+  }
+
+  #[test]
+  fn blocked_non_address_queries_return_nxdomain() {
+    let response = handle_blocked_response(&query(RecordType::TXT)).unwrap();
+
+    assert_eq!(response.response_code, ResponseCode::NXDomain);
+    assert!(response.answers.is_empty());
+    assert_eq!(response.queries.len(), 1);
+  }
+
+  #[test]
+  fn edns_block_origin_overrides_fallback_origin() {
+    let expected = BlockOrigin::Client {
+      client: ClientOrigin::Windows,
+      transport: TransportOrigin::DoH,
+    };
+    let msg = query_with_origin(expected);
+
+    assert_eq!(origin_from_edns(&msg, BlockOrigin::plain()).unwrap(), expected);
+  }
+
+  #[test]
+  fn missing_edns_block_origin_keeps_fallback_origin() {
+    let mut msg = query(RecordType::A);
+    msg.edns = Some(Edns::new());
+
+    assert_eq!(origin_from_edns(&msg, BlockOrigin::doh()).unwrap(), BlockOrigin::doh());
+  }
+
+  #[test]
+  fn empty_edns_block_origin_returns_error_instead_of_panicking() {
+    let mut msg = query(RecordType::A);
+    let mut edns = Edns::new();
+    edns
+      .options_mut()
+      .insert(EdnsOption::Unknown(EDNSCode::BlockOrigin as u16, Vec::new()));
+    msg.edns = Some(edns);
+
+    let err = origin_from_edns(&msg, BlockOrigin::plain()).unwrap_err();
+
+    assert!(err.to_string().contains("BlockOrigin option is empty"));
   }
 }

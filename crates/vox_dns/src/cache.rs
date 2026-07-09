@@ -143,3 +143,90 @@ impl DnsCache {
     &self.in_flight
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use hickory_proto::rr::rdata::A;
+  use hickory_proto::rr::{RData, RecordType};
+  use std::net::Ipv4Addr;
+  use std::str::FromStr;
+
+  fn key(name: &str) -> CacheKey {
+    CacheKey { name: Name::from_str(name).unwrap(), record_type: RecordType::A }
+  }
+
+  fn record(name: &str, ip: Ipv4Addr) -> Record {
+    Record::from_rdata(Name::from_str(name).unwrap(), 60, RData::A(A(ip)))
+  }
+
+  #[test]
+  fn resolved_entries_are_returned_until_rules_version_changes() {
+    let cache = DnsCache::new();
+    let key = key("example.test.");
+    let records = vec![record("example.test.", Ipv4Addr::new(10, 0, 0, 2))];
+
+    cache.insert_resolved(
+      key.clone(),
+      records.clone(),
+      ResponseCode::NoError,
+      Duration::from_secs(60),
+      7,
+    );
+
+    match cache.get(&key, 7) {
+      CacheLookup::Resolved(entry) => {
+        assert_eq!(entry.records, records);
+        assert_eq!(entry.response_code, ResponseCode::NoError);
+      }
+      CacheLookup::Blocked | CacheLookup::Miss => panic!("expected resolved cache hit"),
+    }
+
+    assert!(matches!(cache.get(&key, 8), CacheLookup::Miss));
+    assert!(matches!(cache.get(&key, 7), CacheLookup::Miss));
+  }
+
+  #[test]
+  fn expired_resolved_entries_are_invalidated() {
+    let cache = DnsCache::new();
+    let key = key("expired.test.");
+
+    cache.insert_resolved(
+      key.clone(),
+      Vec::new(),
+      ResponseCode::NoError,
+      Duration::from_secs(0),
+      1,
+    );
+
+    assert!(matches!(cache.get(&key, 1), CacheLookup::Miss));
+  }
+
+  #[test]
+  fn blocked_entries_are_scoped_to_rules_version() {
+    let cache = DnsCache::new();
+    let key = key("blocked.test.");
+
+    cache.insert_blocked(key.clone(), 3);
+
+    assert!(cache.is_blocked(&key, 3));
+    assert!(matches!(cache.get(&key, 3), CacheLookup::Blocked));
+    assert!(!cache.is_blocked(&key, 4));
+    assert!(matches!(cache.get(&key, 3), CacheLookup::Miss));
+  }
+
+  #[test]
+  fn in_flight_guard_removes_entry_and_notifies_waiters() {
+    let cache = DnsCache::new();
+    let key = key("in-flight.test.");
+    let (tx, mut rx) = tokio::sync::broadcast::channel(1);
+    cache.in_flight().insert(key.clone(), tx);
+
+    {
+      let _guard = InFlightGuard { cache: &cache, key: key.clone() };
+    }
+
+    assert!(!cache.in_flight().contains_key(&key));
+    assert!(rx.try_recv().is_ok());
+  }
+}

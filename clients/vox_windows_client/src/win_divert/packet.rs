@@ -167,9 +167,10 @@ impl<'a> Packet<'a> {
     }
 
     let buf_start = data.as_ptr() as usize;
+    let buf_end = buf_start + data.len();
     let hdr_start = hdr.as_ptr() as usize;
 
-    if hdr_start < buf_start {
+    if hdr_start < buf_start || hdr_start + hdr.len() > buf_end {
       return None;
     }
 
@@ -185,5 +186,110 @@ impl<'a> Packet<'a> {
 
   pub fn dst_port_offset(&self, data: &'a [u8]) -> Option<usize> {
     self.port_offsets(data).map(|(_, d)| d)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn source_addr_reads_ipv4_source_and_transport_port() {
+    let mut ip = [0u8; 20];
+    ip[12..16].copy_from_slice(&[192, 0, 2, 10]);
+    let transport = [0x1f, 0x90, 0x00, 0x35];
+    let packet = Packet {
+      ip_header: IpHeader::V4(&ip),
+      transport_header: Some(TransportHeader::Udp(&transport)),
+      payload: &[],
+      next: None,
+    };
+
+    assert!(packet.is_ipv4());
+    assert!(!packet.is_ipv6());
+    assert_eq!(
+      packet.source_addr(),
+      SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 10)), 8080)
+    );
+  }
+
+  #[test]
+  fn source_addr_reads_ipv6_source_and_tcp_port() {
+    let mut ip = [0u8; 40];
+    let source = Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1).octets();
+    ip[8..24].copy_from_slice(&source);
+    let transport = [0x01, 0xbb, 0x00, 0x35];
+    let packet = Packet {
+      ip_header: IpHeader::V6(&ip),
+      transport_header: Some(TransportHeader::Tcp(&transport)),
+      payload: &[],
+      next: None,
+    };
+
+    assert!(!packet.is_ipv4());
+    assert!(packet.is_ipv6());
+    assert_eq!(
+      packet.source_addr(),
+      SocketAddr::new(IpAddr::V6(Ipv6Addr::from(source)), 443)
+    );
+  }
+
+  #[test]
+  fn source_addr_uses_unspecified_ip_and_zero_port_for_short_headers() {
+    let ip = [0u8; 8];
+    let transport = [0x1f];
+    let packet = Packet {
+      ip_header: IpHeader::V4(&ip),
+      transport_header: Some(TransportHeader::Udp(&transport)),
+      payload: &[],
+      next: None,
+    };
+
+    assert_eq!(
+      packet.source_addr(),
+      SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0)
+    );
+  }
+
+  #[test]
+  fn port_offsets_return_source_and_destination_positions_inside_packet() {
+    let data = [0u8; 32];
+    let transport = &data[20..28];
+    let packet = Packet {
+      ip_header: IpHeader::V4(&data[..20]),
+      transport_header: Some(TransportHeader::Udp(transport)),
+      payload: &[],
+      next: None,
+    };
+
+    assert_eq!(packet.port_offsets(&data), Some((20, 22)));
+    assert_eq!(packet.src_port_offset(&data), Some(20));
+    assert_eq!(packet.dst_port_offset(&data), Some(22));
+  }
+
+  #[test]
+  fn port_offsets_reject_transport_header_outside_packet_buffer() {
+    let data = [0u8; 32];
+    let packet = Packet {
+      ip_header: IpHeader::V4(&data[..20]),
+      transport_header: Some(TransportHeader::Udp(&data[20..28])),
+      payload: &[],
+      next: None,
+    };
+
+    assert_eq!(packet.port_offsets(&data[..20]), None);
+  }
+
+  #[test]
+  fn port_offsets_require_at_least_four_transport_bytes() {
+    let data = [0u8; 24];
+    let packet = Packet {
+      ip_header: IpHeader::V4(&data[..20]),
+      transport_header: Some(TransportHeader::Udp(&data[20..23])),
+      payload: &[],
+      next: None,
+    };
+
+    assert_eq!(packet.port_offsets(&data), None);
   }
 }

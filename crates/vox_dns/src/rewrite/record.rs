@@ -111,3 +111,118 @@ fn build_svcb(priority: u16, target: &str, params: &[String]) -> Result<SVCB> {
 
   Ok(SVCB::new(priority, Name::from_str_relaxed(target)?, Vec::new()))
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use hickory_proto::op::Query;
+  use hickory_proto::rr::rdata::{A, AAAA};
+  use std::net::{Ipv4Addr, Ipv6Addr};
+  use std::str::FromStr;
+
+  fn query(record_type: RecordType) -> Query {
+    Query::query(Name::from_str("service.test.").unwrap(), record_type)
+  }
+
+  fn rewrite_record(
+    ty: RewriteRecordType,
+    value: RewriteRecordValue,
+    ttl: Option<u32>,
+  ) -> RewriteRecord {
+    RewriteRecord { ty, value, ttl }
+  }
+
+  #[test]
+  fn query_type_filters_records_but_keeps_cname_answers() {
+    let records = vec![
+      rewrite_record(
+        RewriteRecordType::A,
+        RewriteRecordValue::A { value: "10.0.0.2".into() },
+        Some(30),
+      ),
+      rewrite_record(
+        RewriteRecordType::AAAA,
+        RewriteRecordValue::AAAA { value: "2001:db8::2".into() },
+        None,
+      ),
+      rewrite_record(
+        RewriteRecordType::CNAME,
+        RewriteRecordValue::CNAME { value: "target.test.".into() },
+        Some(45),
+      ),
+    ];
+
+    let answers =
+      construct_structured_rewrite_records(&query(RecordType::A), &records, 300).unwrap();
+
+    assert_eq!(answers.len(), 2);
+    assert_eq!(answers[0].record_type(), RecordType::A);
+    assert_eq!(answers[0].ttl, 30);
+    assert_eq!(answers[0].data, RData::A(A(Ipv4Addr::new(10, 0, 0, 2))));
+    assert_eq!(answers[1].record_type(), RecordType::CNAME);
+    assert_eq!(answers[1].ttl, 45);
+  }
+
+  #[test]
+  fn any_query_returns_records_using_default_ttl_when_unset() {
+    let records = vec![
+      rewrite_record(
+        RewriteRecordType::A,
+        RewriteRecordValue::A { value: "10.0.0.2".into() },
+        None,
+      ),
+      rewrite_record(
+        RewriteRecordType::AAAA,
+        RewriteRecordValue::AAAA { value: "2001:db8::2".into() },
+        None,
+      ),
+    ];
+
+    let answers =
+      construct_structured_rewrite_records(&query(RecordType::ANY), &records, 120)
+        .unwrap();
+
+    assert_eq!(answers.len(), 2);
+    assert_eq!(answers[0].ttl, 120);
+    assert_eq!(answers[1].ttl, 120);
+    assert_eq!(
+      answers[1].data,
+      RData::AAAA(AAAA(Ipv6Addr::from_str("2001:db8::2").unwrap()))
+    );
+  }
+
+  #[test]
+  fn mismatched_record_type_and_value_is_rejected() {
+    let records = vec![rewrite_record(
+      RewriteRecordType::A,
+      RewriteRecordValue::AAAA { value: "2001:db8::2".into() },
+      None,
+    )];
+
+    let err = construct_structured_rewrite_records(&query(RecordType::A), &records, 300)
+      .unwrap_err();
+
+    assert!(
+      err.to_string().contains("rewrite record type A does not match value type AAAA")
+    );
+  }
+
+  #[test]
+  fn svcb_params_are_rejected_until_supported() {
+    let records = vec![rewrite_record(
+      RewriteRecordType::HTTPS,
+      RewriteRecordValue::HTTPS {
+        priority: 1,
+        target: "svc.test.".into(),
+        params: vec!["alpn=h2".into()],
+      },
+      None,
+    )];
+
+    let err =
+      construct_structured_rewrite_records(&query(RecordType::HTTPS), &records, 300)
+        .unwrap_err();
+
+    assert!(err.to_string().contains("params are not supported yet"));
+  }
+}

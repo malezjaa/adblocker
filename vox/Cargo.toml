@@ -51,6 +51,9 @@ vox_windows = { workspace = true }
 [build-dependencies]
 winres = "0.1"
 
+[dev-dependencies]
+rcgen = { version = "0.14.8", default-features = false, features = ["aws_lc_rs"] }
+
 [[bin]]
 name = "cli"
 path = "src/cli/main.rs"

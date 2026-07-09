@@ -59,3 +59,43 @@ pub fn load_cache_file(cache_dir: &Path) -> anyhow::Result<CacheFile> {
   let content = read(path)?;
   Ok(toml::from_slice(&content)?)
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn insert_stores_entries_by_stable_id_hash() {
+    let mut cache = CacheFile::default();
+    let id = "https://example.test/blocklist.txt";
+
+    cache.insert(id, Some("\"etag-1\"".into()), 42);
+
+    assert!(!cache.lists.contains_key(id));
+
+    let entry = cache.get_by_id(id).unwrap();
+    assert_eq!(entry.id, id);
+    assert_eq!(entry.etag.as_deref(), Some("\"etag-1\""));
+    assert_eq!(entry.domains, 42);
+  }
+
+  #[test]
+  fn freshness_depends_on_entry_age_and_requested_max_age() {
+    let mut cache = CacheFile::default();
+    let id = "https://example.test/blocklist.txt";
+
+    cache.lists.insert(
+      CacheFile::id_hash(id),
+      ListEntry {
+        id: id.into(),
+        last_fetched: Utc::now() - Duration::hours(2),
+        etag: None,
+        domains: 10,
+      },
+    );
+
+    assert!(cache.is_fresh(id, Duration::hours(3)));
+    assert!(!cache.is_fresh(id, Duration::hours(1)));
+    assert!(!cache.is_fresh("https://example.test/missing.txt", Duration::hours(3)));
+  }
+}

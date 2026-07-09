@@ -52,7 +52,7 @@ impl BlockOrigin {
 
   pub fn to_u8(self) -> u8 {
     match self {
-      BlockOrigin::Transport(t) => t as u8,
+      BlockOrigin::Transport(t) => Self::CLIENT_MASK | t as u8,
       BlockOrigin::Client { client, transport } => {
         let c = (client as u8) << Self::CLIENT_SHIFT;
         let t = transport as u8;
@@ -138,5 +138,43 @@ impl fmt::Debug for TransportOrigin {
       TransportOrigin::DoQ => "DoQ",
     };
     write!(f, "{s}")
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn transport_origins_round_trip_through_byte_encoding() {
+    for origin in
+      [BlockOrigin::plain(), BlockOrigin::doh(), BlockOrigin::dot(), BlockOrigin::doq()]
+    {
+      assert_eq!(BlockOrigin::from_u8(origin.to_u8()).unwrap(), origin);
+    }
+  }
+
+  #[test]
+  fn client_origins_round_trip_through_byte_encoding() {
+    for client in [ClientOrigin::Windows, ClientOrigin::Linux, ClientOrigin::Mac] {
+      for transport in [
+        TransportOrigin::Plain,
+        TransportOrigin::DoH,
+        TransportOrigin::DoT,
+        TransportOrigin::DoQ,
+      ] {
+        let origin = BlockOrigin::Client { client, transport };
+
+        assert_eq!(BlockOrigin::from_u8(origin.to_u8()).unwrap(), origin);
+      }
+    }
+  }
+
+  #[test]
+  fn byte_encoding_keeps_transport_only_values_out_of_client_range() {
+    assert_eq!(BlockOrigin::plain().to_u8(), 0b0000_1100);
+    assert_eq!(BlockOrigin::doh().to_u8(), 0b0000_1101);
+    assert_eq!(BlockOrigin::dot().to_u8(), 0b0000_1110);
+    assert_eq!(BlockOrigin::doq().to_u8(), 0b0000_1111);
   }
 }
