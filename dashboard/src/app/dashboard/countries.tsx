@@ -6,6 +6,7 @@ import {
   ZoomableGroup,
 } from "react-simple-maps"
 import React, { useRef, useState } from "react"
+import worldTopology from "@/assets/countries-110m.json"
 import { DashboardPage } from "@/components/app/dashboard-page.tsx"
 import {
   CardContent,
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/card.tsx"
 import { DashboardCard } from "@/components/app/dashboard-card.tsx"
 import { useStats } from "@/lib/api.ts"
+import { COUNTRY_COORDS } from "@/lib/country-coordinates.ts"
 
 type TooltipState = {
   name: string
@@ -22,70 +24,6 @@ type TooltipState = {
   x: number
   y: number
 } | null
-
-const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"
-
-const COUNTRY_COORDS: Record<string, [number, number]> = {
-  US: [-95.71, 37.09],
-  GB: [-3.44, 55.38],
-  DE: [10.45, 51.17],
-  FR: [2.21, 46.23],
-  JP: [138.25, 36.2],
-  CN: [104.19, 35.86],
-  BR: [-51.93, -14.24],
-  IN: [78.96, 20.59],
-  RU: [105.32, 61.52],
-  AU: [133.77, -25.27],
-  CA: [-96.8, 56.13],
-  MX: [-102.55, 23.63],
-  ZA: [25.08, -29.0],
-  NG: [8.68, 9.08],
-  EG: [30.8, 26.82],
-  KR: [127.77, 35.91],
-  ID: [113.92, -0.79],
-  SA: [45.08, 23.89],
-  AR: [-63.62, -38.42],
-  TR: [35.24, 38.96],
-  IT: [12.57, 41.87],
-  ES: [-3.75, 40.46],
-  PL: [19.15, 51.92],
-  NL: [5.29, 52.13],
-  SE: [18.64, 60.13],
-  NO: [8.47, 60.47],
-  CH: [8.23, 46.82],
-  BE: [4.47, 50.5],
-  AT: [14.55, 47.52],
-  PT: [-8.22, 39.4],
-  CZ: [15.47, 49.82],
-  UA: [31.17, 48.38],
-  RO: [24.97, 45.94],
-  HU: [19.5, 47.16],
-  GR: [21.82, 39.07],
-  FI: [25.75, 61.92],
-  DK: [10.0, 56.26],
-  TH: [100.99, 15.87],
-  VN: [108.28, 14.06],
-  PH: [122.88, 12.88],
-  MY: [109.7, 4.21],
-  SG: [103.82, 1.36],
-  NZ: [174.89, -40.9],
-  CL: [-71.54, -35.68],
-  CO: [-74.3, 4.57],
-  PE: [-75.02, -9.19],
-  PK: [69.35, 30.38],
-  BD: [90.36, 23.68],
-  IR: [53.69, 32.43],
-  IQ: [43.68, 33.22],
-  IL: [34.85, 31.05],
-  AE: [53.85, 23.42],
-  KE: [37.91, -0.02],
-  TZ: [34.89, -6.37],
-  GH: [-1.02, 7.95],
-  ET: [40.49, 9.15],
-  MA: [-7.09, 31.79],
-  TW: [120.96, 23.7],
-  HK: [114.11, 22.4],
-}
 
 function getCountryName(code: string): string {
   try {
@@ -105,13 +43,23 @@ function WorldMap() {
     zoom: 1,
   })
   const pins = (data?.top_countries ?? [])
-    .filter((c) => COUNTRY_COORDS[c.country_code])
-    .map((c) => ({
-      name: getCountryName(c.country_code),
-      coords: COUNTRY_COORDS[c.country_code],
-      total: c.total,
-      blocked: c.blocked,
-    }))
+    .map((c) => {
+      const countryCode = c.country_code.trim().toUpperCase()
+      const coords = COUNTRY_COORDS[countryCode]
+
+      if (!coords) {
+        return null
+      }
+
+      return {
+        code: countryCode,
+        name: getCountryName(countryCode),
+        coords,
+        total: c.total,
+        blocked: c.blocked,
+      }
+    })
+    .filter((pin): pin is NonNullable<typeof pin> => pin !== null)
 
   const showTooltip = (
     event: React.MouseEvent<SVGCircleElement>,
@@ -202,7 +150,7 @@ function WorldMap() {
           onMoveEnd={handleMoveEnd}
           maxZoom={8}
         >
-          <Geographies geography={GEO_URL}>
+          <Geographies geography={worldTopology}>
             {({ geographies }) =>
               geographies.map((geo) => (
                 <Geography
@@ -224,7 +172,7 @@ function WorldMap() {
           {pins.map((pin) => {
             const r = (4 + (pin.total / maxTotal) * 6) / position.zoom
             return (
-              <Marker key={pin.name} coordinates={pin.coords}>
+              <Marker key={pin.code} coordinates={pin.coords}>
                 <circle
                   r={r}
                   fill="#1D9E75"

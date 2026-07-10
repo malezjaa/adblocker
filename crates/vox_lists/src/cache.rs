@@ -44,7 +44,7 @@ impl CacheFile {
 
 pub fn load_cache_file(cache_dir: &Path) -> anyhow::Result<CacheFile> {
   let path = cache_dir.join("cache.toml");
-  debug!(path = path.display().to_string(), "loading config");
+  debug!(path = path.display().to_string(), "loading cache file");
 
   if !path.exists() {
     let cache = CacheFile::default();

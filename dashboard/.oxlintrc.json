@@ -7,7 +7,7 @@
   "env": {
     "builtin": true
   },
-  "ignorePatterns": ["dist"],
+  "ignorePatterns": ["dist", "src/assets/countries-110m.json"],
   "overrides": [
     {
       "files": ["**/*.{ts,tsx}"],
