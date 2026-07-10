@@ -11,9 +11,9 @@ use tracing::log::warn;
 use vox_shared::config::certs::CertificateStrategy;
 use vox_shared::task::named_task;
 #[cfg(windows)]
-use vox_windows::WfpSession;
+use vox_windows::open_port::{open_ports, OpenPortsConfig};
 #[cfg(windows)]
-use vox_windows::open_port::{OpenPortsConfig, open_ports};
+use vox_windows::WfpSession;
 
 pub struct App {
   #[cfg(windows)]
@@ -62,7 +62,10 @@ impl App {
           DB::spawn_cleanup_task(self.ctx.db().pool.clone(), Duration::days(30)),
         ));
 
-        tasks.spawn(named_task("DNS", Self::start_dns(self.ctx.clone())));
+        if config.dns.enabled {
+          tasks.spawn(named_task("DNS", Self::start_dns(self.ctx.clone())));
+        }
+
         if matches!(config.certs.strategy, CertificateStrategy::SelfSigned) {
           tasks.spawn(named_task("CRL server", serve_crl_pem()));
         }
