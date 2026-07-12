@@ -152,7 +152,7 @@ impl Config {
       if let Some(parent) = path.parent() {
         create_dir_all(parent)?;
       }
-      write(path, toml::to_string(&config)?)?;
+      write(path, toml::to_string_pretty(&config)?)?;
       return Ok(config);
     }
     let mut config: Config = toml::from_slice(&read(path)?)?;

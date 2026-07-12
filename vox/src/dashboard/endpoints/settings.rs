@@ -26,7 +26,7 @@ pub async fn update_settings(
   new_config.validate_rules();
   let resolver = create_hickory_resolver(&new_config)?;
 
-  fs_err::write(ctx.config_path(), toml::to_string(&new_config)?)?;
+  fs_err::write(ctx.config_path(), toml::to_string_pretty(&new_config)?)?;
   ctx.update_resolver(resolver);
   ctx.apply_config_change(old_config, new_config.clone()).await?;
 

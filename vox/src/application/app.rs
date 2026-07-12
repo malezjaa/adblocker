@@ -11,9 +11,9 @@ use tracing::log::warn;
 use vox_shared::config::certs::CertificateStrategy;
 use vox_shared::task::named_task;
 #[cfg(windows)]
-use vox_windows::open_port::{open_ports, OpenPortsConfig};
-#[cfg(windows)]
 use vox_windows::WfpSession;
+#[cfg(windows)]
+use vox_windows::open_port::{OpenPortsConfig, open_ports};
 
 pub struct App {
   #[cfg(windows)]

@@ -1,8 +1,8 @@
 use crate::context::Context;
 use crate::dashboard::ws::WsEvent;
-use crate::engine::message::{BlockLookup, BlockResult};
 use crate::engine::EngineMessage;
-use anyhow::{bail, Result};
+use crate::engine::message::{BlockLookup, BlockResult};
+use anyhow::{Result, bail};
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::opt::{EdnsCode, EdnsOption};
 use hickory_proto::rr::rdata::{A, AAAA};
@@ -15,7 +15,7 @@ use tokio::sync::oneshot;
 use vox_dns::block_origin::BlockOrigin;
 use vox_dns::edns::EDNSCode;
 use vox_dns::rewrite::apply::{
-  apply_rewrites_with_context, restore_original_queries, RewriteContext,
+  RewriteContext, apply_rewrites_with_context, restore_original_queries,
 };
 
 pub fn handle_blocked_response(msg: &Message) -> anyhow::Result<Message> {

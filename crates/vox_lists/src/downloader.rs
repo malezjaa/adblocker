@@ -92,7 +92,7 @@ pub async fn load_blocklists(
     cache.insert(id, etag.clone(), rules.len());
   }
 
-  write(cache_dir.join("cache.toml"), toml::to_string(&cache)?)?;
+  write(cache_dir.join("cache.toml"), toml::to_string_pretty(&cache)?)?;
 
   let configured_ids: HashSet<&str> = enabled_ids.iter().map(|s| s.as_str()).collect();
 

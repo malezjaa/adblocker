@@ -35,7 +35,7 @@ async fn save_rewrites(
   new_config.rewrites = if rewrites.is_empty() { None } else { Some(rewrites) };
   new_config.compile_regexes()?;
 
-  fs_err::write(ctx.config_path(), toml::to_string(&new_config)?)?;
+  fs_err::write(ctx.config_path(), toml::to_string_pretty(&new_config)?)?;
   ctx.apply_config_change(old_config, new_config).await?;
 
   Ok(())

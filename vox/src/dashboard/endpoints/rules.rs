@@ -67,7 +67,7 @@ pub async fn create_rule(
     new_config.rules = Some(vec![body.clone()]);
   }
 
-  fs_err::write(ctx.config_path(), toml::to_string(&new_config)?)?;
+  fs_err::write(ctx.config_path(), toml::to_string_pretty(&new_config)?)?;
   ctx.apply_config_change(old_config, new_config).await?;
 
   Ok(Json(body))
@@ -97,7 +97,7 @@ pub async fn update_rule(
   rule.action = body.action;
   let updated = rule.clone();
 
-  fs_err::write(ctx.config_path(), toml::to_string(&new_config)?)?;
+  fs_err::write(ctx.config_path(), toml::to_string_pretty(&new_config)?)?;
   ctx.apply_config_change(old_config, new_config).await?;
 
   Ok(Json(updated))
@@ -120,7 +120,7 @@ pub async fn delete_rule(
     app_error!("Rule with domain '{}' not found", domain);
   }
 
-  fs_err::write(ctx.config_path(), toml::to_string(&new_config)?)?;
+  fs_err::write(ctx.config_path(), toml::to_string_pretty(&new_config)?)?;
   ctx.apply_config_change(old_config, new_config).await?;
 
   Ok(Json(()))

@@ -52,7 +52,7 @@ pub fn load_cache_file(cache_dir: &Path) -> anyhow::Result<CacheFile> {
       create_dir_all(parent)?;
     }
 
-    write(path, toml::to_string(&cache)?)?;
+    write(path, toml::to_string_pretty(&cache)?)?;
     return Ok(cache);
   }
 

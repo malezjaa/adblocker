@@ -55,7 +55,7 @@ impl Certs {
     debug!(%directory_url, "using acme account for directory:");
 
     accounts.insert(directory_url, credentials);
-    fs_err::write(acme_file, toml::to_string(&accounts)?)?;
+    fs_err::write(acme_file, toml::to_string_pretty(&accounts)?)?;
 
     Ok(account)
   }

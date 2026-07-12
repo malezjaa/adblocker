@@ -50,7 +50,7 @@ pub async fn toggle_list(
     new_config.blocklists.push(body.list_id);
   }
 
-  write(ctx.config_path(), toml::to_string(&new_config)?).await?;
+  write(ctx.config_path(), toml::to_string_pretty(&new_config)?).await?;
   ctx.apply_config_change(old_config, new_config).await?;
 
   Ok(Json(()))
