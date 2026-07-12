@@ -1,20 +1,21 @@
 use crate::context::Context;
 use crate::dashboard::ws::WsEvent;
-use crate::engine::EngineMessage;
 use crate::engine::message::{BlockLookup, BlockResult};
-use anyhow::{Result, bail};
+use crate::engine::EngineMessage;
+use anyhow::{bail, Result};
 use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
 use hickory_proto::rr::rdata::opt::{EdnsCode, EdnsOption};
 use hickory_proto::rr::rdata::{A, AAAA};
 use hickory_proto::rr::{RData, Record, RecordType};
 use hickory_proto::serialize::binary::BinDecodable;
+use std::cmp::min;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::time::Instant;
 use tokio::sync::oneshot;
 use vox_dns::block_origin::BlockOrigin;
 use vox_dns::edns::EDNSCode;
 use vox_dns::rewrite::apply::{
-  RewriteContext, apply_rewrites_with_context, restore_original_queries,
+  apply_rewrites_with_context, restore_original_queries, RewriteContext,
 };
 
 pub fn handle_blocked_response(msg: &Message) -> anyhow::Result<Message> {
@@ -59,14 +60,37 @@ fn origin_from_edns(msg: &Message, fallback: BlockOrigin) -> Result<BlockOrigin>
   BlockOrigin::from_u8(*origin)
 }
 
+pub const MAX_RESPONSE_SIZE: u16 = 1232;
+
+pub struct MessageResponse {
+  pub blocked: bool,
+  pub message: Message,
+  pub origin: BlockOrigin,
+  pub max_udp_size: u16,
+}
+
+impl MessageResponse {
+  pub fn maybe_truncate_for_udp(&self) -> Result<Vec<u8>> {
+    let bytes = self.message.to_vec()?;
+
+    if bytes.len() <= self.max_udp_size as usize {
+      return Ok(bytes);
+    }
+
+    Ok(self.message.truncate().to_vec()?)
+  }
+}
+
 impl Context {
   async fn process_message(
     &self,
     raw: Vec<u8>,
     mut origin: BlockOrigin,
     device: Option<&str>,
-  ) -> Result<(bool, Message, BlockOrigin)> {
+  ) -> Result<MessageResponse> {
     let mut msg = Message::from_bytes(&raw)?;
+    let edns_size = msg.edns.as_ref().map(|edns| edns.max_payload()).unwrap_or(512);
+    let max_response_size = min(edns_size, MAX_RESPONSE_SIZE);
 
     // Clients can overwrite some settings using EDNS.
     origin = origin_from_edns(&msg, origin)?;
@@ -95,7 +119,12 @@ impl Context {
         );
       }
 
-      return Ok((false, response, origin));
+      return Ok(MessageResponse {
+        message: response,
+        blocked: false,
+        origin,
+        max_udp_size: max_response_size,
+      });
     }
 
     let (tx, rx) = oneshot::channel();
@@ -104,7 +133,7 @@ impl Context {
       .send(EngineMessage::Lookup(BlockLookup::new(msg.clone(), tx).origin(origin)))
       .await?;
 
-    match rx.await? {
+    let (blocked, response) = (match rx.await? {
       BlockResult::Block => {
         let mut response = handle_blocked_response(&msg)?;
 
@@ -116,7 +145,7 @@ impl Context {
           );
         }
 
-        Ok((true, response, origin))
+        Ok::<_, anyhow::Error>((true, response))
       }
 
       BlockResult::Ok => {
@@ -134,9 +163,16 @@ impl Context {
           );
         }
 
-        Ok((false, response, origin))
+        Ok((false, response))
       }
-    }
+    })?;
+
+    Ok(MessageResponse {
+      message: response,
+      blocked,
+      origin,
+      max_udp_size: max_response_size,
+    })
   }
 
   pub async fn query_dns(
@@ -145,18 +181,17 @@ impl Context {
     origin: BlockOrigin,
     addr: SocketAddr,
     device: Option<String>,
-  ) -> Result<Message> {
+  ) -> Result<MessageResponse> {
     let start = Instant::now();
-    let (blocked, response, origin) =
-      self.process_message(bytes, origin, device.as_deref()).await?;
+    let response = self.process_message(bytes, origin, device.as_deref()).await?;
 
     self
       .db()
       .record_query(
-        &response,
+        &response.message,
         addr,
-        blocked,
-        origin,
+        response.blocked,
+        response.origin,
         start.elapsed().as_millis() as i64,
         device,
       )

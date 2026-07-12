@@ -62,7 +62,7 @@ impl App {
     Ok((
       StatusCode::OK,
       [("content-type", "application/dns-message")],
-      Bytes::from(response.to_vec()?),
+      Bytes::from(response.message.to_vec()?),
     ))
   }
 
