@@ -21,7 +21,7 @@ pub enum EngineMessage {
 impl EngineActor {
   pub async fn new(context: Context) -> Result<Self> {
     let rules = load_blocklists(&context).await?;
-    let engine = Engine::from_filter_set(rules, true);
+    let engine = Engine::new_with_filter_set(rules);
 
     Ok(Self { ctx: context, engine })
   }
@@ -37,7 +37,7 @@ impl EngineActor {
         }
         EngineMessage::ReloadFilterSet => {
           let rules = load_blocklists(&self.ctx).await?;
-          self.engine = Engine::from_filter_set(rules, true);
+          self.engine = Engine::new_with_filter_set(rules);
         }
       }
     }

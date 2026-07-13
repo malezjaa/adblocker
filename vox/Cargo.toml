@@ -7,10 +7,10 @@ edition = "2024"
 tokio = { workspace = true }
 hickory-proto = { workspace = true }
 hickory-resolver = { workspace = true }
-adblock = { version = "0.12.3" }
+adblock = { workspace = true }
 tracing = { workspace = true }
 anyhow = { workspace = true }
-reqwest = "0.13.3"
+reqwest = { workspace = true }
 toml = { workspace = true }
 serde = { workspace = true }
 fs-err = { workspace = true }

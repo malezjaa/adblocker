@@ -10,7 +10,7 @@ use chrono::Duration;
 use dashmap::DashSet;
 use fs_err::{read, write};
 use futures::future::join_all;
-use reqwest::{Client, StatusCode};
+use reqwest::{Client, ClientBuilder, StatusCode};
 use tracing::{debug, error, info};
 use vox_shared::config::rules::Rule;
 
@@ -19,10 +19,26 @@ use crate::{
   list::{LISTS, List},
 };
 
+struct DownloadedBlocklist {
+  id: String,
+  contents: String,
+  rule_count: usize,
+  etag: Option<String>,
+}
+
+impl DownloadedBlocklist {
+  fn new(id: &str, contents: String, etag: Option<String>) -> Self {
+    let rule_count = contents.lines().count();
+
+    Self { id: id.to_owned(), contents, rule_count, etag }
+  }
+}
+
 pub struct ListDownloader<'a> {
   cache_dir: &'a Path,
   enabled_ids: &'a [String],
   custom_rules: Option<&'a [Rule]>,
+  client: Client,
   pub failed_downloads: DashSet<String>,
 }
 
@@ -31,16 +47,22 @@ impl<'a> ListDownloader<'a> {
     cache_dir: &'a Path,
     enabled_ids: &'a [String],
     custom_rules: Option<&'a [Rule]>,
-  ) -> Self {
-    Self { cache_dir, enabled_ids, custom_rules, failed_downloads: DashSet::new() }
+  ) -> Result<Self> {
+    Ok(Self {
+      cache_dir,
+      enabled_ids,
+      custom_rules,
+      failed_downloads: DashSet::new(),
+      client: ClientBuilder::new().zstd(true).brotli(true).gzip(true).build()?,
+    })
   }
 
-  pub async fn download_blocklist(
+  async fn download_blocklist(
     &self,
     list: &List,
     cached_etag: Option<String>,
     is_fresh: bool,
-  ) -> Result<(String, Vec<String>, Option<String>)> {
+  ) -> Result<DownloadedBlocklist> {
     let cache_file = self.cache_dir.join(CacheFile::id_hash(list.id));
 
     if is_fresh && cache_file.exists() {
@@ -52,8 +74,7 @@ impl<'a> ListDownloader<'a> {
       }
     }
 
-    let client = Client::new();
-    let mut req = client.get(list.url.to_string());
+    let mut req = self.client.get(list.url.to_string());
     if let Some(etag) = cached_etag {
       req = req.header("If-None-Match", etag);
     }
@@ -100,8 +121,7 @@ impl<'a> ListDownloader<'a> {
     })?;
     info!(name = %list.name, "downloaded blocklist");
 
-    let rules = body.lines().map(|l| l.to_string()).collect::<Vec<_>>();
-    Ok((list.id.to_string(), rules, new_etag))
+    Ok(DownloadedBlocklist::new(list.id, body, new_etag))
   }
 
   pub async fn load_blocklists(&self) -> Result<FilterSet> {
@@ -113,7 +133,7 @@ impl<'a> ListDownloader<'a> {
     if let Some(rules) = self.custom_rules {
       total += rules.len();
       let rules = rules.iter().map(Rule::adblock_rule).collect::<Vec<_>>();
-      filterset.add_filters(&rules, Default::default());
+      filterset.add_filter_list(rules.join("\n"), Default::default());
       info!(
         "loaded {} custom block {}",
         rules.len(),
@@ -129,8 +149,8 @@ impl<'a> ListDownloader<'a> {
 
     let results: Vec<Result<_>> = join_all(futures).await;
 
-    for (id, rules, etag) in results.iter().flatten() {
-      cache.insert(id, etag.clone(), rules.len());
+    for list in results.iter().flatten() {
+      cache.insert(&list.id, list.etag.clone(), list.rule_count);
     }
 
     write(self.cache_dir.join("cache.toml"), toml::to_string_pretty(&cache)?)?;
@@ -140,11 +160,11 @@ impl<'a> ListDownloader<'a> {
 
     for result in results {
       match result {
-        Ok((id, rules, _)) => {
-          if configured_ids.contains(id.as_str()) {
-            total += rules.len();
-            filterset.add_filters(&rules, ParseOptions::default());
-            info!(%id, "loaded blocklist into filterset");
+        Ok(list) => {
+          if configured_ids.contains(list.id.as_str()) {
+            total += list.rule_count;
+            filterset.add_filter_list(list.contents, ParseOptions::default());
+            info!(id = %list.id, "loaded blocklist into filterset");
           }
         }
         Err(e) => {
@@ -163,10 +183,8 @@ impl<'a> ListDownloader<'a> {
     id: &str,
     cache_file: &PathBuf,
     etag: Option<String>,
-  ) -> Result<(String, Vec<String>, Option<String>)> {
-    let content = read(cache_file)?;
-    let rules =
-      String::from_utf8(content)?.lines().map(ToOwned::to_owned).collect::<Vec<_>>();
-    Ok((id.to_owned(), rules, etag))
+  ) -> Result<DownloadedBlocklist> {
+    let contents = String::from_utf8(read(cache_file)?)?;
+    Ok(DownloadedBlocklist::new(id, contents, etag))
   }
 }

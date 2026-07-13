@@ -17,7 +17,7 @@ pub mod downloader {
   async fn _load_blocklists(ctx: &Context) -> Result<(FilterSet, usize)> {
     let blocklists = ctx.blocklists();
     let rules = ctx.config().rules.clone();
-    let downloader = ListDownloader::new(ctx.cache_dir(), &blocklists, rules.as_deref());
+    let downloader = ListDownloader::new(ctx.cache_dir(), &blocklists, rules.as_deref())?;
 
     let filterset = downloader.load_blocklists().await?;
     ctx.increment_rules_version();

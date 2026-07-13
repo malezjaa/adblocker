@@ -22,9 +22,9 @@ impl Context {
       }
 
       let url = format!("https://{}/", host);
-      if let Ok(req) = Request::new(&url, "", "document") {
+      if let Ok(req) = Request::new(&url, "", "document", "") {
         let res = engine.check_network_request(&req);
-        if res.matched && res.exception.is_none() {
+        if res.should_block() {
           info!(?host, ?origin, "blocked");
           self.cache().insert_blocked(key, self.rules_version());
           return BlockResult::Block;

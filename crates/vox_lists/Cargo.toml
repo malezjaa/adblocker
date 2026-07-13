@@ -4,13 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-adblock = "0.12.3"
+adblock = { workspace = true }
 anyhow = { workspace = true }
 bitflags = "2.11.1"
 chrono = { version = "0.4.44", features = ["serde"] }
 fs-err = { workspace = true }
 futures = { workspace = true }
-reqwest = "0.13.3"
+reqwest = { workspace = true }
 serde = { workspace = true }
 sha2 = "0.11.0"
 toml = { workspace = true }
