@@ -33,15 +33,18 @@ export function AddDeviceDialog() {
   const queryClient = useQueryClient()
 
   const handleSubmit = async () => {
-    const response = await post<{ id: string } | { error: string }>(
-      "api/devices",
-      { name: deviceName, device_type: deviceType }
-    )
+    const response = await post<
+      { id: string; restored: boolean } | { error: string }
+    >("api/devices", { name: deviceName, device_type: deviceType })
 
     if ("error" in response) {
       setNameError(response.error)
     } else {
-      toast.success("Device registered successfully")
+      toast.success(
+        response.restored
+          ? "Device restored with its previous ID"
+          : "Device registered successfully"
+      )
       await queryClient.invalidateQueries({ queryKey: ["devices"] })
       setDeviceName("")
       setDeviceType(DeviceTypes.Windows)

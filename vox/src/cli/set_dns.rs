@@ -18,7 +18,7 @@ pub async fn set_dns(
     None
   } else {
     if let Some(device) = device {
-      let device = ctx.db.get_device(&device).await?;
+      let device = ctx.db.get_device_by_identifier(&device).await?;
       Some(format!("https://doh.local/dns-query/{}", device.id))
     } else {
       if ctx.config.dashboard {

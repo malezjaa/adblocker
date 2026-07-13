@@ -418,7 +418,7 @@ export function RewriteFormDialog({
             <div className="grid gap-2">
               <LabelWithHelp
                 htmlFor="rewrite-devices"
-                help="Comma-separated device identifiers. Leave empty to match every device."
+                help="Comma-separated device names or IDs. Leave empty to match every device."
               >
                 Devices
               </LabelWithHelp>

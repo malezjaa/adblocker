@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 use vox::database::devices::DeviceType;
-use vox_shared::pretty::{print_field, print_separator, print_success};
+use vox_shared::pretty::{print_field, print_separator, print_success, print_warning};
 use yansi::Paint;
 
 use crate::CliContext;
@@ -41,7 +41,7 @@ fn format_last_seen(last_seen: i64) -> (String, bool) {
 
 impl CliContext {
   pub async fn new_device(&self, name: String, ty: DeviceType) -> Result<()> {
-    let id = self
+    let registration = self
       .db
       ._create_device(&name, ty)
       .await
@@ -49,12 +49,39 @@ impl CliContext {
 
     let type_str = pretty_device_type(ty);
 
-    print_success("Device created");
+    print_success(if registration.restored {
+      "Device restored"
+    } else {
+      "Device created"
+    });
     print_separator(30);
-    print_field("Name:", name.bold());
-    print_field("ID:  ", id.cyan());
+    print_field("Name:", name.trim().bold());
+    print_field("ID:  ", registration.id.cyan());
     print_field("Type:", type_str);
     print_separator(30);
+
+    Ok(())
+  }
+
+  pub async fn remove_device(&self, identifier: String) -> Result<()> {
+    let device = self
+      .db
+      .get_device_by_identifier(&identifier)
+      .await
+      .map_err(|err| anyhow!("couldn't find device: {err}"))?;
+
+    self
+      .db
+      .delete_device(&device.id)
+      .await
+      .map_err(|err| anyhow!("couldn't remove device: {err}"))?;
+
+    print_success("Device removed");
+    print_separator(44);
+    print_field("Name:", device.name.bold());
+    print_field("ID:  ", device.id.cyan());
+    print_warning("Adding the same name later will restore this device and ID");
+    print_separator(44);
 
     Ok(())
   }

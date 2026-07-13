@@ -95,13 +95,11 @@ impl DB {
     let (country_code, company_name) =
       lookup_geo_company(ctx.as_ref(), resolved_ip.as_deref());
 
-    let device = if let Some(device_id) = &event.device {
-      if let Some(id) =
-        self.known_devices.iter().find(|d| d.to_lowercase() == device_id.to_lowercase())
-      {
-        Some(id.clone())
+    let device = if let Some(device_identifier) = &event.device {
+      if let Some(device) = self.resolve_known_device(device_identifier) {
+        Some(device.id)
       } else {
-        warn!("Received query for unknown device: {}", device_id);
+        warn!("Received query for unknown device: {}", device_identifier);
         None
       }
     } else {

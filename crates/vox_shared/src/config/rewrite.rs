@@ -51,7 +51,7 @@ pub struct RewriteConditions {
   /// Limit this rule to specific query types. Empty means every query type.
   #[serde(default)]
   pub query_types: Vec<RewriteRecordType>,
-  /// Limit this rule to specific dashboard/client device identifiers.
+  /// Limit this rule to specific dashboard/client device names or identifiers.
   #[serde(default)]
   pub devices: Vec<String>,
   /// Limit this rule to specific DNS transports. Empty means every transport.

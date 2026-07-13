@@ -97,9 +97,9 @@ impl DB {
     sqlx::query(
       r#"
       CREATE TABLE IF NOT EXISTS device (
-          id        TEXT PRIMARY KEY,
-          name      TEXT NOT NULL,
-          type      TEXT NOT NULL CHECK (
+          id         TEXT PRIMARY KEY,
+          name       TEXT NOT NULL,
+          type       TEXT NOT NULL CHECK (
               type IN (
                   'windows',
                   'linux',
@@ -110,8 +110,35 @@ impl DB {
                   'other'
               )
           ),
-          last_seen INTEGER
+          last_seen  INTEGER,
+          deleted_at INTEGER
       );
+      "#,
+    )
+    .execute(&self.pool)
+    .await?;
+
+    let has_deleted_at: bool = sqlx::query_scalar(
+      "SELECT EXISTS(
+          SELECT 1
+          FROM pragma_table_info('device')
+          WHERE name = 'deleted_at'
+      )",
+    )
+    .fetch_one(&self.pool)
+    .await?;
+
+    if !has_deleted_at {
+      sqlx::query("ALTER TABLE device ADD COLUMN deleted_at INTEGER")
+        .execute(&self.pool)
+        .await?;
+    }
+
+    sqlx::query(
+      r#"
+      CREATE INDEX IF NOT EXISTS idx_device_active_name
+          ON device(name COLLATE NOCASE)
+          WHERE deleted_at IS NULL;
       "#,
     )
     .execute(&self.pool)

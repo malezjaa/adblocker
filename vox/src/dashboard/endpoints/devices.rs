@@ -31,8 +31,8 @@ pub async fn create_device_handler(
   AxumState(ctx): AxumState<Context>,
   Json(body): Json<CreateDevice>,
 ) -> Result<Json<Value>, AppError> {
-  let id = ctx.db().create_device(&body.name, &body.device_type).await?;
-  Ok(Json(json!({ "id": id })))
+  let registration = ctx.db().create_device(&body.name, &body.device_type).await?;
+  Ok(Json(json!(registration)))
 }
 
 pub async fn get_device_handler(

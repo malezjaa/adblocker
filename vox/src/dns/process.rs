@@ -103,6 +103,7 @@ impl Context {
     raw: Vec<u8>,
     mut origin: BlockOrigin,
     device: Option<&str>,
+    device_name: Option<&str>,
   ) -> Result<MessageResponse> {
     let mut msg = Message::from_bytes(&raw)?;
     let edns_size = msg.edns.as_ref().map(|edns| edns.max_payload()).unwrap_or(512);
@@ -118,7 +119,7 @@ impl Context {
       apply_rewrites_with_context(
         config.rewrites.as_deref(),
         &mut msg,
-        RewriteContext { origin: Some(origin), device },
+        RewriteContext { origin: Some(origin), device, device_name },
       )?
     };
 
@@ -199,7 +200,15 @@ impl Context {
     device: Option<String>,
   ) -> Result<MessageResponse> {
     let start = Instant::now();
-    let response = self.process_message(bytes, origin, device.as_deref()).await?;
+    let known_device =
+      device.as_deref().and_then(|identifier| self.db().resolve_known_device(identifier));
+    let canonical_device =
+      known_device.as_ref().map(|known| known.id.clone()).or_else(|| device.clone());
+    let device_name = known_device.as_ref().map(|known| known.name.as_str());
+
+    let response = self
+      .process_message(bytes, origin, canonical_device.as_deref(), device_name)
+      .await?;
 
     self
       .db()
@@ -209,7 +218,7 @@ impl Context {
         response.blocked,
         response.origin,
         start.elapsed().as_millis() as i64,
-        device,
+        canonical_device,
       )
       .await;
 

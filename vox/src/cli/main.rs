@@ -3,7 +3,7 @@ mod cli;
 pub mod devices;
 pub mod set_dns;
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use clap::Parser;
 use cliclack::log;
 use vox::database::DB;
@@ -46,7 +46,7 @@ async fn main() -> Result<()> {
     Commands::Devices { command } => match command {
       DeviceCommand::New { name, device_type } => ctx.new_device(name, device_type).await,
       DeviceCommand::List => ctx.list_devices().await,
-      _ => bail!("not implemented"),
+      DeviceCommand::Delete { device } => ctx.remove_device(device).await,
     },
     Commands::Dns { command } => match command {
       DnsCommand::Set { device, no_doh } => set_dns(&ctx, device, no_doh).await,

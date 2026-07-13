@@ -49,7 +49,7 @@ const DeviceTable = () => {
     if (response?.error) {
       toast.error(response.error)
     } else {
-      toast.success("Device deleted successfully")
+      toast.success("Device removed; adding the same name will restore it")
       await queryClient.invalidateQueries({ queryKey: ["devices"] })
     }
   }

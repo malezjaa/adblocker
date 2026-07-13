@@ -106,7 +106,7 @@ export function DeviceTableRow({ device, onDelete }: DeviceTableRowProps) {
                 onClick={() => setOpen(true)}
               >
                 <FolderMinus />
-                <span>Delete</span>
+                <span>Remove</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -114,11 +114,12 @@ export function DeviceTableRow({ device, onDelete }: DeviceTableRowProps) {
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent className="gap-6 rounded-3xl p-6 sm:max-w-sm">
               <DialogHeader>
-                <DialogTitle>Delete device</DialogTitle>
+                <DialogTitle>Remove device</DialogTitle>
               </DialogHeader>
               <DialogDescription>
-                Are you sure you want to delete <strong>{device.name}</strong>?
-                This action cannot be undone.
+                Remove <strong>{device.name}</strong> from active devices? Its
+                history and ID will be kept. Adding the same name later will
+                reconnect existing configuration.
               </DialogDescription>
               <DialogFooter>
                 <DialogClose>
@@ -131,7 +132,7 @@ export function DeviceTableRow({ device, onDelete }: DeviceTableRowProps) {
                     setOpen(false)
                   }}
                 >
-                  Delete
+                  Remove
                 </Button>
               </DialogFooter>
             </DialogContent>

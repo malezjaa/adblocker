@@ -13,7 +13,7 @@ use std::{
 
 use anyhow::{Result, anyhow};
 use chrono::{Duration as ChronoDuration, Utc};
-use dashmap::DashSet;
+use dashmap::DashMap;
 use parking_lot::RwLock;
 use sqlx::SqlitePool;
 use tokio::sync::mpsc::{Sender, channel};
@@ -21,7 +21,7 @@ use tracing::warn;
 
 use crate::{
   context::{Context, ContextImpl},
-  database::query_logs::QueryEvent,
+  database::{devices::KnownDevice, query_logs::QueryEvent},
 };
 
 #[derive(Debug, Clone)]
@@ -29,7 +29,7 @@ pub struct DB {
   pub pool: SqlitePool,
   pub total_queries: Arc<AtomicUsize>,
   pub record_tx: Option<Sender<QueryEvent>>,
-  pub known_devices: DashSet<String>,
+  pub known_devices: Arc<DashMap<String, KnownDevice>>,
   pub ctx_ref: Arc<RwLock<Option<Weak<ContextImpl>>>>,
 }
 
@@ -42,7 +42,7 @@ impl DB {
       pool,
       total_queries: Default::default(),
       record_tx: Some(tx),
-      known_devices: DashSet::new(),
+      known_devices: Arc::new(DashMap::new()),
       ctx_ref: Default::default(),
     };
 
@@ -55,10 +55,9 @@ impl DB {
 
   pub async fn populate_devices(&self) -> Result<()> {
     let devices = self.get_devices().await.map_err(|err| anyhow!("{err}"))?;
-    let ids = devices.iter().map(|d| d.id.clone()).collect::<Vec<_>>();
 
-    for id in ids {
-      self.known_devices.insert(id);
+    for device in &devices {
+      self.cache_device(device);
     }
 
     Ok(())
@@ -71,7 +70,7 @@ impl DB {
       pool,
       total_queries: Default::default(),
       record_tx: None,
-      known_devices: DashSet::new(),
+      known_devices: Arc::new(DashMap::new()),
       ctx_ref: Default::default(),
     };
     db.init_schema().await?;

@@ -50,6 +50,7 @@ impl RewriteResult {
 pub struct RewriteContext<'a> {
   pub origin: Option<BlockOrigin>,
   pub device: Option<&'a str>,
+  pub device_name: Option<&'a str>,
 }
 
 #[derive(Debug)]
@@ -218,7 +219,10 @@ fn conditions_match(
       return false;
     };
 
-    if !conditions.devices.iter().any(|expected| expected.eq_ignore_ascii_case(device)) {
+    if !conditions.devices.iter().any(|expected| {
+      expected.eq_ignore_ascii_case(device)
+        || context.device_name.is_some_and(|name| expected.eq_ignore_ascii_case(name))
+    }) {
       return false;
     }
   }
@@ -440,7 +444,11 @@ mod tests {
     let result = apply_rewrites_with_context(
       Some(&[rule.clone()]),
       &mut msg,
-      RewriteContext { origin: Some(BlockOrigin::plain()), device: Some("laptop") },
+      RewriteContext {
+        origin: Some(BlockOrigin::plain()),
+        device: Some("laptop"),
+        device_name: None,
+      },
     )
     .unwrap();
 
@@ -451,7 +459,34 @@ mod tests {
     let result = apply_rewrites_with_context(
       Some(&[rule]),
       &mut msg,
-      RewriteContext { origin: Some(BlockOrigin::doh()), device: Some("laptop") },
+      RewriteContext {
+        origin: Some(BlockOrigin::doh()),
+        device: Some("laptop"),
+        device_name: None,
+      },
+    )
+    .unwrap();
+
+    assert!(result.synthetic_response);
+    assert_eq!(msg.answers.len(), 1);
+  }
+
+  #[test]
+  fn device_conditions_accept_the_readable_device_name() {
+    let mut rule = rewrite(RewriteMatchWhenType::Exact, "app.test");
+    rule.conditions.devices = vec!["Living Room Laptop".into()];
+    rule.behavior =
+      RewriteBehavior::Respond { records: vec![a_record("10.0.0.3")], ttl: None };
+
+    let mut msg = query("app.test.", RecordType::A);
+    let result = apply_rewrites_with_context(
+      Some(&[rule]),
+      &mut msg,
+      RewriteContext {
+        origin: Some(BlockOrigin::doh()),
+        device: Some("AbC123xY"),
+        device_name: Some("living room laptop"),
+      },
     )
     .unwrap();
 
@@ -477,6 +512,7 @@ mod tests {
           transport: TransportOrigin::Plain,
         }),
         device: None,
+        device_name: None,
       },
     )
     .unwrap();
@@ -494,6 +530,7 @@ mod tests {
           transport: TransportOrigin::DoH,
         }),
         device: None,
+        device_name: None,
       },
     )
     .unwrap();
@@ -511,6 +548,7 @@ mod tests {
           transport: TransportOrigin::DoH,
         }),
         device: None,
+        device_name: None,
       },
     )
     .unwrap();

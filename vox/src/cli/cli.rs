@@ -43,14 +43,16 @@ pub enum DeviceCommand {
   },
 
   Delete {
+    /// Device name or ID.
     #[arg()]
-    id: String,
+    device: String,
   },
 }
 
 #[derive(Subcommand, Debug)]
 pub enum DnsCommand {
   Set {
+    /// Device name or ID.
     #[arg()]
     device: Option<String>,
     #[arg(long = "no-doh", default_value = "false")]
