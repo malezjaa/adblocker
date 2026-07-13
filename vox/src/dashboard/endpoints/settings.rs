@@ -1,11 +1,12 @@
-use crate::context::Context;
-use crate::dashboard::AppError;
-use crate::dashboard::auth::AuthGuard;
-use crate::dns::resolver::create_hickory_resolver;
 use anyhow::Result;
-use axum::Json;
-use axum::extract::State;
+use axum::{Json, extract::State};
 use vox_shared::config::Config;
+
+use crate::{
+  context::Context,
+  dashboard::{AppError, auth::AuthGuard},
+  dns::resolver::create_hickory_resolver,
+};
 
 pub async fn settings_handler(
   _guard: AuthGuard,

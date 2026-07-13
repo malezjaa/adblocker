@@ -1,13 +1,16 @@
-use crate::context::Context;
-use crate::dashboard::AppError;
-use crate::dashboard::auth::AuthGuard;
-use crate::lists::cache::load_cache_file;
-use crate::lists::list::{LIST_IDS, LISTS, List};
 use anyhow::Result;
-use axum::Json;
-use axum::extract::State as AxumState;
+use axum::{Json, extract::State as AxumState};
 use fs_err::tokio::write;
 use serde::Deserialize;
+
+use crate::{
+  context::Context,
+  dashboard::{AppError, auth::AuthGuard},
+  lists::{
+    cache::load_cache_file,
+    list::{LIST_IDS, LISTS, List},
+  },
+};
 
 pub async fn get_lists_handler(
   _guard: AuthGuard,

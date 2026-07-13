@@ -1,17 +1,19 @@
-use crate::context::Context;
-use crate::dashboard::AppError;
-use crate::database::sessions::generate_token;
-use crate::password::verify_password;
+use std::net::SocketAddr;
+
 use anyhow::anyhow;
-use axum::Json;
-use axum::extract::{ConnectInfo, FromRef, FromRequestParts, State as AxumState};
-use axum::http::header::SET_COOKIE;
-use axum::http::request::Parts;
-use axum::http::{HeaderMap, HeaderValue, StatusCode};
-use axum::response::IntoResponse;
+use axum::{
+  Json,
+  extract::{ConnectInfo, FromRef, FromRequestParts, State as AxumState},
+  http::{HeaderMap, HeaderValue, StatusCode, header::SET_COOKIE, request::Parts},
+  response::IntoResponse,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::net::SocketAddr;
+
+use crate::{
+  context::Context, dashboard::AppError, database::sessions::generate_token,
+  password::verify_password,
+};
 
 pub struct AuthGuard;
 

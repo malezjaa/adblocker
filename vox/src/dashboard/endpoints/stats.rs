@@ -1,13 +1,18 @@
-use crate::context::Context;
-use crate::dashboard::AppError;
-use crate::dashboard::auth::AuthGuard;
-use crate::database::devices::Device;
-use crate::database::stats::{Stats, TopDomain};
-use axum::Json;
-use axum::extract::Query;
-use axum::extract::State as AxumState;
+use axum::{
+  Json,
+  extract::{Query, State as AxumState},
+};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
+
+use crate::{
+  context::Context,
+  dashboard::{AppError, auth::AuthGuard},
+  database::{
+    devices::Device,
+    stats::{Stats, TopDomain},
+  },
+};
 
 #[derive(Deserialize)]
 pub struct Limit {

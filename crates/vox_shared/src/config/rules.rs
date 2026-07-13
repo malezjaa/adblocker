@@ -1,8 +1,8 @@
-use crate::config::Config;
-use rayon::iter::IntoParallelRefIterator;
-use rayon::iter::ParallelIterator;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use tracing::error;
+
+use crate::config::Config;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct Rule {
@@ -34,8 +34,8 @@ impl Config {
         if rule.domain.starts_with("@@") {
           match rule.action {
             RuleAction::Block => error!(
-              "block rule '{}' begins with @@ which inverts the condition; \
-                     use Allow action instead and remove the @@ prefix",
+              "block rule '{}' begins with @@ which inverts the condition; use Allow \
+               action instead and remove the @@ prefix",
               rule.domain
             ),
             RuleAction::Allow => {

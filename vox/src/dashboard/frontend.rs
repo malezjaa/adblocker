@@ -1,11 +1,14 @@
-use crate::dashboard::AppError;
-use axum::body::Body;
-use axum::extract::Path;
-use axum::http::{Response, header};
-use axum::response::IntoResponse;
+use axum::{
+  body::Body,
+  extract::Path,
+  http::{Response, header},
+  response::IntoResponse,
+};
 use include_dir::{Dir, include_dir};
 use mime_guess2::from_path;
 use reqwest::StatusCode;
+
+use crate::dashboard::AppError;
 
 pub const DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/../dashboard/dist");
 
@@ -40,9 +43,10 @@ pub async fn serve_file(Path(path): Path<String>) -> Result<impl IntoResponse, A
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use axum::body::to_bytes;
   use include_dir::File;
+
+  use super::*;
 
   fn first_font_file(dir: &'static Dir) -> Option<&'static File<'static>> {
     dir

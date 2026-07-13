@@ -1,9 +1,10 @@
-use crate::application::app::App;
-use crate::context::Context;
 use std::io::ErrorKind;
+
 use tokio::net::UdpSocket;
 use tracing::info;
 use vox_dns::block_origin::BlockOrigin;
+
+use crate::{application::app::App, context::Context};
 
 impl App {
   pub async fn start_dns(ctx: Context) -> anyhow::Result<()> {

@@ -1,9 +1,9 @@
-use crate::database::DB;
-use anyhow::Result;
-use anyhow::{anyhow, bail};
+use anyhow::{Result, anyhow, bail};
 use clap::ValueEnum;
 use rand::{RngExt, distr::Alphanumeric};
 use serde::{Deserialize, Serialize};
+
+use crate::database::DB;
 
 pub fn generate_device_id() -> String {
   rand::rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect()

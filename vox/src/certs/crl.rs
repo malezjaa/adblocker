@@ -1,9 +1,6 @@
-use axum::Router;
-use axum::body::Bytes;
-use axum::extract::State;
-use axum::response::IntoResponse;
-use axum::routing::get;
 use std::net::SocketAddr;
+
+use axum::{Router, body::Bytes, extract::State, response::IntoResponse, routing::get};
 use tokio::net::TcpListener;
 use tracing::info;
 use vox_shared::home_dir;

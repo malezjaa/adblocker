@@ -1,10 +1,14 @@
-use crate::Protocol;
-use crate::pwstr_buf::PwstrBuffer;
 use anyhow::{Result, bail};
-use windows::Win32::Foundation::HANDLE;
-use windows::Win32::NetworkManagement::WindowsFilteringPlatform::*;
-use windows::Win32::Networking::WinSock::{IPPROTO_TCP, IPPROTO_UDP};
-use windows::core::GUID;
+use windows::{
+  Win32::{
+    Foundation::HANDLE,
+    NetworkManagement::WindowsFilteringPlatform::*,
+    Networking::WinSock::{IPPROTO_TCP, IPPROTO_UDP},
+  },
+  core::GUID,
+};
+
+use crate::{Protocol, pwstr_buf::PwstrBuffer};
 
 pub fn condition_remote_addr_v4(ip: u32) -> FWPM_FILTER_CONDITION0 {
   FWPM_FILTER_CONDITION0 {

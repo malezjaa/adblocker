@@ -14,8 +14,9 @@ pub enum Protocol {
 
 #[cfg(windows)]
 pub mod wfp_session {
-  use windows::Win32::Foundation::HANDLE;
-  use windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0;
+  use windows::Win32::{
+    Foundation::HANDLE, NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0,
+  };
 
   pub struct WfpSession {
     pub(crate) engine: HANDLE,

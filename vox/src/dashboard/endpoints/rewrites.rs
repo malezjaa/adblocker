@@ -1,13 +1,16 @@
-use crate::app_error;
-use crate::context::Context;
-use crate::dashboard::AppError;
-use crate::dashboard::auth::AuthGuard;
 use anyhow::Result;
-use axum::Json;
-use axum::extract::{Path, State};
+use axum::{
+  Json,
+  extract::{Path, State},
+};
 use serde::Serialize;
-use vox_shared::config::Config;
-use vox_shared::config::rewrite::Rewrite;
+use vox_shared::config::{Config, rewrite::Rewrite};
+
+use crate::{
+  app_error,
+  context::Context,
+  dashboard::{AppError, auth::AuthGuard},
+};
 
 #[derive(Serialize)]
 pub struct RewriteEntry {

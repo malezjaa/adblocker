@@ -1,6 +1,5 @@
-use crate::certs::renewal::certs_need_renewal;
-use crate::certs::{Certs, load_certs};
-use crate::dns::resolver::HickoryResolver;
+use std::{collections::HashMap, io};
+
 use anyhow::{Result, bail};
 use fs_err::{create_dir_all, remove_file, rename, write};
 use hickory_proto::rr::{RData, RecordType};
@@ -8,14 +7,17 @@ use instant_acme::{
   Account, AccountCredentials, AuthorizationStatus, ChallengeType, Identifier,
   NewAccount, NewOrder, OrderStatus, RetryPolicy,
 };
-use std::collections::HashMap;
-use std::io;
-use tracing::debug;
-use tracing::log::error;
-use vox_shared::config::Config;
-use vox_shared::config::certs::AcmeChallenge;
-use vox_shared::home_dir;
-use vox_shared::pretty::{print_field, print_message, print_separator};
+use tracing::{debug, log::error};
+use vox_shared::{
+  config::{Config, certs::AcmeChallenge},
+  home_dir,
+  pretty::{print_field, print_message, print_separator},
+};
+
+use crate::{
+  certs::{Certs, load_certs, renewal::certs_need_renewal},
+  dns::resolver::HickoryResolver,
+};
 
 impl Certs {
   async fn acme_account(config: &Config) -> Result<Account> {
@@ -147,7 +149,8 @@ impl Certs {
             }
 
             error!(
-              "the DNS TXT record has still not been added. wait a few minutes before retrying"
+              "the DNS TXT record has still not been added. wait a few minutes before \
+               retrying"
             );
             print_message("Press Return to check again.");
           }

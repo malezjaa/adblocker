@@ -3,12 +3,12 @@ pub struct EngineActor {
   pub ctx: Context,
 }
 
-use crate::context::Context;
-pub(crate) use crate::engine::message::BlockLookup;
-use crate::lists::downloader::load_blocklists;
 use adblock::Engine;
 use anyhow::Result;
 use tokio::sync::mpsc;
+
+pub(crate) use crate::engine::message::BlockLookup;
+use crate::{context::Context, lists::downloader::load_blocklists};
 
 pub mod lookup;
 pub mod message;

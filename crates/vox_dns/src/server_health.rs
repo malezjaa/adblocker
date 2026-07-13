@@ -1,9 +1,7 @@
+use std::{io::ErrorKind, net::SocketAddr, time::Duration};
+
 use anyhow::bail;
-use std::io::ErrorKind;
-use std::net::SocketAddr;
-use std::time::Duration;
-use tokio::net::UdpSocket;
-use tokio::time::timeout;
+use tokio::{net::UdpSocket, time::timeout};
 
 pub async fn check_server_health(addr: &SocketAddr) -> anyhow::Result<()> {
   let socket = UdpSocket::bind("0.0.0.0:0").await?;

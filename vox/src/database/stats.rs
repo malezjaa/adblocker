@@ -1,7 +1,8 @@
-use crate::database::DB;
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::AssertSqlSafe;
+
+use crate::database::DB;
 
 #[derive(sqlx::FromRow, Serialize, Deserialize)]
 pub struct HourStat {

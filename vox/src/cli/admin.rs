@@ -1,15 +1,17 @@
-use crate::CliContext;
 use anyhow::{Result, bail};
 use chrono::Utc;
 use cliclack::{confirm, log, password};
 use vox::password::hash_password;
 use vox_shared::pretty::{print_error, print_warning};
 
+use crate::CliContext;
+
 impl CliContext {
   pub async fn create_admin(&self) -> Result<()> {
     if self.db.admin_exists().await? {
       print_warning(
-        "An admin account is already setup. If you wish to change password use change-password command",
+        "An admin account is already setup. If you wish to change password use \
+         change-password command",
       );
       return Ok(());
     }

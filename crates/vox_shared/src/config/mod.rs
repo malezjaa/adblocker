@@ -1,11 +1,13 @@
-use crate::config::certs::CertsConfig;
-use crate::config::rewrite::Rewrite;
-use crate::config::rules::Rule;
+use std::{
+  net::{IpAddr, Ipv4Addr},
+  path::Path,
+};
+
 use fs_err::{create_dir_all, read, write};
 use serde::{Deserialize, Serialize};
-use std::net::{IpAddr, Ipv4Addr};
-use std::path::Path;
 use tracing::{debug, warn};
+
+use crate::config::{certs::CertsConfig, rewrite::Rewrite, rules::Rule};
 
 pub mod certs;
 pub mod rewrite;

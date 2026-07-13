@@ -2,10 +2,8 @@ use anyhow::Result;
 use clap::Parser;
 use rustls::crypto::ring;
 use tokio::sync::mpsc::channel;
-use vox::application::app::App;
-use vox::context::Context;
-use vox_shared::SharedCli;
-use vox_shared::logger::setup_logger;
+use vox::{application::app::App, context::Context};
+use vox_shared::{SharedCli, logger::setup_logger};
 
 #[tokio::main]
 async fn main() -> Result<()> {

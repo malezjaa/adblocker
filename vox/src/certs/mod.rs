@@ -2,21 +2,21 @@ pub mod acme;
 pub mod crl;
 pub mod renewal;
 
-use crate::dns::resolver::HickoryResolver;
+use std::{io::Cursor, path::Path, process::Command};
+
 use anyhow::{Context, Result, anyhow, bail};
-use base64::Engine;
-use base64::engine::general_purpose;
+use base64::{Engine, engine::general_purpose};
 use fs_err::create_dir_all;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls_pemfile::{certs, private_key};
-use std::io::Cursor;
-use std::path::Path;
-use std::process::Command;
-use vox_shared::config::Config;
-use vox_shared::config::certs::CertificateStrategy;
-use vox_shared::home_dir;
-use vox_shared::path::canonicalize_with_strip;
+use vox_shared::{
+  config::{Config, certs::CertificateStrategy},
+  home_dir,
+  path::canonicalize_with_strip,
+};
 use vox_windows::primary_adapter::primary_adapter;
+
+use crate::dns::resolver::HickoryResolver;
 
 #[derive(Debug)]
 pub struct Certs {
@@ -68,7 +68,8 @@ impl Certs {
       (&config.certs.manual.cert_path, &config.certs.manual.key_path)
     else {
       bail!(
-        "with certificate strategy set to manual you must provide both certificate and key path"
+        "with certificate strategy set to manual you must provide both certificate and \
+         key path"
       )
     };
     let cert_path = canonicalize_with_strip(cert_path)?;

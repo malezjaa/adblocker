@@ -1,9 +1,11 @@
+use std::{sync::Arc, time::Duration};
+
 use anyhow::Result;
-use hickory_resolver::config::{NameServerConfig, ResolverConfig};
-use hickory_resolver::net::runtime::TokioRuntimeProvider;
-use hickory_resolver::{Resolver, TokioResolver};
-use std::sync::Arc;
-use std::time::Duration;
+use hickory_resolver::{
+  Resolver, TokioResolver,
+  config::{NameServerConfig, ResolverConfig},
+  net::runtime::TokioRuntimeProvider,
+};
 use tracing::{trace, warn};
 use vox_shared::config::Config;
 

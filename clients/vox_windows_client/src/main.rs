@@ -1,18 +1,15 @@
-use crate::config::WinClientConfig;
 use anyhow::Result;
 use clap::Parser;
+use hickory_client::{
+  client::Client,
+  proto::{runtime::TokioRuntimeProvider, udp::UdpClientStream},
+};
+use tokio::{signal::ctrl_c, spawn};
 use tracing::{error, warn};
-use vox_shared::logger::setup_logger;
-use vox_shared::{SharedCli, win_client_home};
-
-use crate::win_divert::WinDivert;
-use hickory_client::client::Client;
-use hickory_client::proto::runtime::TokioRuntimeProvider;
-use hickory_client::proto::udp::UdpClientStream;
-use tokio::signal::ctrl_c;
-use tokio::spawn;
 use vox_dns::server_health::check_server_health;
-use vox_shared::task::named_task;
+use vox_shared::{SharedCli, logger::setup_logger, task::named_task, win_client_home};
+
+use crate::{config::WinClientConfig, win_divert::WinDivert};
 
 pub mod config;
 pub mod win_divert;

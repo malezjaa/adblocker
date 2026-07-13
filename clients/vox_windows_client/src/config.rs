@@ -1,8 +1,8 @@
+use std::{net::SocketAddr, path::Path};
+
 use anyhow::bail;
 use fs_err::{create_dir_all, read, write};
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
-use std::path::Path;
 use tracing::debug;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

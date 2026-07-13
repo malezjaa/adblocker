@@ -1,7 +1,11 @@
 use anyhow::{Result, bail};
-use hickory_proto::op::Query;
-use hickory_proto::rr::rdata::{A, AAAA, CNAME, HTTPS, MX, PTR, SRV, SVCB, TXT};
-use hickory_proto::rr::{Name, RData, Record, RecordType};
+use hickory_proto::{
+  op::Query,
+  rr::{
+    Name, RData, Record, RecordType,
+    rdata::{A, AAAA, CNAME, HTTPS, MX, PTR, SRV, SVCB, TXT},
+  },
+};
 use vox_shared::config::rewrite::{RewriteRecord, RewriteRecordType, RewriteRecordValue};
 
 pub const DEFAULT_REWRITE_TTL: u32 = 300;
@@ -114,11 +118,17 @@ fn build_svcb(priority: u16, target: &str, params: &[String]) -> Result<SVCB> {
 
 #[cfg(test)]
 mod tests {
+  use std::{
+    net::{Ipv4Addr, Ipv6Addr},
+    str::FromStr,
+  };
+
+  use hickory_proto::{
+    op::Query,
+    rr::rdata::{A, AAAA},
+  };
+
   use super::*;
-  use hickory_proto::op::Query;
-  use hickory_proto::rr::rdata::{A, AAAA};
-  use std::net::{Ipv4Addr, Ipv6Addr};
-  use std::str::FromStr;
 
   fn query(record_type: RecordType) -> Query {
     Query::query(Name::from_str("service.test.").unwrap(), record_type)

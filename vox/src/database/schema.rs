@@ -1,7 +1,11 @@
-use crate::database::DB;
-use sqlx::SqlitePool;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::path::Path;
+
+use sqlx::{
+  SqlitePool,
+  sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+};
+
+use crate::database::DB;
 
 impl DB {
   pub async fn init_db(path: &Path) -> anyhow::Result<SqlitePool> {

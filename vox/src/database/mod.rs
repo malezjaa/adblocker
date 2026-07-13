@@ -5,20 +5,24 @@ pub mod schema;
 pub mod sessions;
 pub mod stats;
 
-use crate::context::{Context, ContextImpl};
-use crate::database::query_logs::QueryEvent;
+use std::{
+  path::Path,
+  sync::{Arc, Weak, atomic::AtomicUsize},
+  time::Duration,
+};
+
 use anyhow::{Result, anyhow};
-use chrono::Duration as ChronoDuration;
-use chrono::Utc;
+use chrono::{Duration as ChronoDuration, Utc};
 use dashmap::DashSet;
 use parking_lot::RwLock;
 use sqlx::SqlitePool;
-use std::path::Path;
-use std::sync::atomic::AtomicUsize;
-use std::sync::{Arc, Weak};
-use std::time::Duration;
 use tokio::sync::mpsc::{Sender, channel};
 use tracing::warn;
+
+use crate::{
+  context::{Context, ContextImpl},
+  database::query_logs::QueryEvent,
+};
 
 #[derive(Debug, Clone)]
 pub struct DB {

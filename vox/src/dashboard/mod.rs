@@ -4,34 +4,43 @@ pub mod endpoints;
 pub mod frontend;
 pub mod ws;
 
-pub use self::endpoints::stats::QueryLog;
-use crate::application::app::App;
-use crate::context::Context;
-pub use crate::dashboard::app_error::AppError;
-use crate::dashboard::auth::{auth_login, auth_logout, auth_status};
-use crate::dashboard::endpoints::devices::{
-  create_device_handler, delete_device_handler, get_device_handler, get_devices_handler,
-};
-use crate::dashboard::endpoints::lists::{get_lists_handler, toggle_list};
-use crate::dashboard::endpoints::rewrites::{
-  create_rewrite, delete_rewrite, get_rewrites, update_rewrite,
-};
-use crate::dashboard::endpoints::stats::{
-  chart_data, query_logs_handler, stats, top_handler,
-};
-use crate::dashboard::frontend::serve_file;
-use crate::dashboard::ws::ws_handler;
-use anyhow::Result;
-use axum::Router;
-use axum::extract::Path;
-use axum::response::IntoResponse;
-use axum::routing::{any, get, patch, post};
-use endpoints::rules::{create_rule, delete_rule, rule_handler, update_rule};
-use endpoints::settings::{settings_handler, update_settings};
 use std::net::SocketAddr;
+
+use anyhow::Result;
+use axum::{
+  Router,
+  extract::Path,
+  response::IntoResponse,
+  routing::{any, get, patch, post},
+};
+use endpoints::{
+  rules::{create_rule, delete_rule, rule_handler, update_rule},
+  settings::{settings_handler, update_settings},
+};
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
 use tracing::info;
+
+pub use self::endpoints::stats::QueryLog;
+pub use crate::dashboard::app_error::AppError;
+use crate::{
+  application::app::App,
+  context::Context,
+  dashboard::{
+    auth::{auth_login, auth_logout, auth_status},
+    endpoints::{
+      devices::{
+        create_device_handler, delete_device_handler, get_device_handler,
+        get_devices_handler,
+      },
+      lists::{get_lists_handler, toggle_list},
+      rewrites::{create_rewrite, delete_rewrite, get_rewrites, update_rewrite},
+      stats::{chart_data, query_logs_handler, stats, top_handler},
+    },
+    frontend::serve_file,
+    ws::ws_handler,
+  },
+};
 
 pub async fn server_root() -> Result<impl IntoResponse, AppError> {
   serve_file(Path("index.html".to_string())).await

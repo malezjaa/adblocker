@@ -1,5 +1,4 @@
-use std::io;
-use std::process::Command;
+use std::{io, process::Command};
 
 fn main() -> io::Result<()> {
   Command::new("pnpm").arg("vite build").current_dir("../dashboard").status()?;

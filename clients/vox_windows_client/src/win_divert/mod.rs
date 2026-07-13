@@ -1,22 +1,23 @@
 pub mod packet;
 
+use std::{borrow::Cow, time::Instant};
+
+use anyhow::Result;
+use hickory_client::{client::Client, proto::op::Message};
+use tracing::{debug, warn};
+use vox_dns::{
+  block_origin::{BlockOrigin, ClientOrigin, TransportOrigin},
+  dns_query::DnsQuery,
+  edns::EDNSCode,
+};
+use windivert::{
+  WinDivert as Divert, address::WinDivertAddress, layer::NetworkLayer,
+  packet::WinDivertPacket, prelude::WinDivertFlags,
+};
+use windivert_sys::ChecksumFlags;
+
 use self::packet::{IpHeader, Packet, TransportHeader};
 use crate::config::WinClientConfig;
-use anyhow::Result;
-use hickory_client::client::Client;
-use hickory_client::proto::op::Message;
-use std::borrow::Cow;
-use std::time::Instant;
-use tracing::{debug, warn};
-use vox_dns::block_origin::{BlockOrigin, ClientOrigin, TransportOrigin};
-use vox_dns::dns_query::DnsQuery;
-use vox_dns::edns::EDNSCode;
-use windivert::WinDivert as Divert;
-use windivert::address::WinDivertAddress;
-use windivert::layer::NetworkLayer;
-use windivert::packet::WinDivertPacket;
-use windivert::prelude::WinDivertFlags;
-use windivert_sys::ChecksumFlags;
 
 #[derive(Debug)]
 pub struct WinDivert {
@@ -27,7 +28,8 @@ pub struct WinDivert {
 impl WinDivert {
   pub fn new(config: WinClientConfig) -> Result<Self> {
     let filter = format!(
-      "outbound and (udp.DstPort == 53) and not loopback and ip.DstAddr != 127.0.0.1 and ip.DstAddr != {}",
+      "outbound and (udp.DstPort == 53) and not loopback and ip.DstAddr != 127.0.0.1 \
+       and ip.DstAddr != {}",
       config.dns_server.ip()
     );
     let divert = Divert::network(&filter, 0, WinDivertFlags::new())?;

@@ -1,9 +1,14 @@
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
-use std::ptr;
-use windivert_sys::WinDivertHelperParsePacket;
-use windivert_sys::header::{
-  PWINDIVERT_ICMPHDR, PWINDIVERT_ICMPV6HDR, PWINDIVERT_IPHDR, PWINDIVERT_IPV6HDR,
-  PWINDIVERT_TCPHDR, PWINDIVERT_UDPHDR,
+use std::{
+  net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
+  ptr,
+};
+
+use windivert_sys::{
+  WinDivertHelperParsePacket,
+  header::{
+    PWINDIVERT_ICMPHDR, PWINDIVERT_ICMPV6HDR, PWINDIVERT_IPHDR, PWINDIVERT_IPV6HDR,
+    PWINDIVERT_TCPHDR, PWINDIVERT_UDPHDR,
+  },
 };
 
 #[derive(Debug, Clone, Copy)]

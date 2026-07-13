@@ -1,14 +1,20 @@
-use crate::context::Context;
+use std::time::{Duration, Instant};
+
 use anyhow::{anyhow, bail};
 use dashmap::Entry;
 use hickory_proto::op::{Message, ResponseCode};
-use hickory_resolver::lookup::Lookup;
-use hickory_resolver::net::{DnsError, NetError};
-use std::time::{Duration, Instant};
+use hickory_resolver::{
+  lookup::Lookup,
+  net::{DnsError, NetError},
+};
 use tokio::sync::broadcast;
 use tracing::{trace, warn};
-use vox_dns::cache::{CacheKey, CacheLookup, InFlightGuard};
-use vox_dns::ttl::negative_ttl;
+use vox_dns::{
+  cache::{CacheKey, CacheLookup, InFlightGuard},
+  ttl::negative_ttl,
+};
+
+use crate::context::Context;
 
 impl Context {
   pub async fn resolve_msg(&self, msg: &Message) -> anyhow::Result<Message> {

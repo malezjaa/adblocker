@@ -1,17 +1,24 @@
-use crate::context::Context;
-use crate::dashboard::auth::AuthGuard;
-use crate::database::stats::{HourStat, Stats, TopDomain};
-use axum::body::Bytes;
-use axum::extract::ConnectInfo;
-use axum::extract::State as AxumState;
-use axum::extract::ws::close_code::NORMAL;
-use axum::extract::ws::{CloseFrame, Message, Utf8Bytes, WebSocket, WebSocketUpgrade};
-use axum::response::IntoResponse;
+use std::{net::SocketAddr, ops::ControlFlow};
+
+use axum::{
+  body::Bytes,
+  extract::{
+    ConnectInfo, State as AxumState,
+    ws::{
+      CloseFrame, Message, Utf8Bytes, WebSocket, WebSocketUpgrade, close_code::NORMAL,
+    },
+  },
+  response::IntoResponse,
+};
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
-use std::ops::ControlFlow;
 use tracing::{debug, error, info, warn};
+
+use crate::{
+  context::Context,
+  dashboard::auth::AuthGuard,
+  database::stats::{HourStat, Stats, TopDomain},
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum WsEvent {

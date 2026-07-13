@@ -1,12 +1,16 @@
-use crate::context::Context;
-use crate::dashboard::AppError;
-use crate::dashboard::auth::AuthGuard;
-use crate::database::devices::Device;
 use anyhow::Result;
-use axum::Json;
-use axum::extract::{Path, State as AxumState};
+use axum::{
+  Json,
+  extract::{Path, State as AxumState},
+};
 use serde::Deserialize;
 use serde_json::{Value, json};
+
+use crate::{
+  context::Context,
+  dashboard::{AppError, auth::AuthGuard},
+  database::devices::Device,
+};
 
 pub async fn get_devices_handler(
   _guard: AuthGuard,

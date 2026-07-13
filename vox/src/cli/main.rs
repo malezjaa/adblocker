@@ -3,16 +3,17 @@ mod cli;
 pub mod devices;
 pub mod set_dns;
 
-use crate::cli::{AdminCommand, Cli, Commands, DeviceCommand, DnsCommand};
-use crate::set_dns::set_dns;
 use anyhow::{Result, bail};
 use clap::Parser;
 use cliclack::log;
 use vox::database::DB;
-use vox_shared::config::Config;
-use vox_shared::home_dir;
-use vox_shared::logger::setup_logger;
+use vox_shared::{config::Config, home_dir, logger::setup_logger};
 use yansi::Paint;
+
+use crate::{
+  cli::{AdminCommand, Cli, Commands, DeviceCommand, DnsCommand},
+  set_dns::set_dns,
+};
 
 #[derive(Debug)]
 pub struct CliContext {

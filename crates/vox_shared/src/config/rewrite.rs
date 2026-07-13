@@ -57,7 +57,8 @@ pub struct RewriteConditions {
   /// Limit this rule to specific DNS transports. Empty means every transport.
   #[serde(default)]
   pub transports: Vec<RewriteTransportCondition>,
-  /// Limit this rule to specific client operating systems. Empty means every client OS.
+  /// Limit this rule to specific client operating systems. Empty means every
+  /// client OS.
   #[serde(default)]
   pub client_origins: Vec<RewriteClientCondition>,
 }
@@ -90,7 +91,8 @@ pub enum RewriteBehavior {
   Respond { records: Vec<RewriteRecord>, ttl: Option<u32> },
   /// Return an alias record for the queried name.
   Alias { target: String, ttl: Option<u32> },
-  /// Resolve a different DNS name while preserving the original query name in the response.
+  /// Resolve a different DNS name while preserving the original query name in
+  /// the response.
   Forward { target: String },
   /// Respond with NXDOMAIN.
   NxDomain,

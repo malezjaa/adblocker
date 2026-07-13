@@ -1,11 +1,16 @@
-use crate::edns::EDNSCode;
 use anyhow::{Result, anyhow};
 use futures::StreamExt;
-use hickory_client::client::Client;
-use hickory_client::proto::DnsHandle;
-use hickory_client::proto::op::{Edns, Message, MessageType, OpCode, Query};
-use hickory_client::proto::rr::rdata::opt::EdnsOption;
-use hickory_client::proto::xfer::{DnsRequest, DnsRequestOptions, DnsResponse};
+use hickory_client::{
+  client::Client,
+  proto::{
+    DnsHandle,
+    op::{Edns, Message, MessageType, OpCode, Query},
+    rr::rdata::opt::EdnsOption,
+    xfer::{DnsRequest, DnsRequestOptions, DnsResponse},
+  },
+};
+
+use crate::edns::EDNSCode;
 #[derive(Debug)]
 pub struct DnsQuery {
   msg: Message,

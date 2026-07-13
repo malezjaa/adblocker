@@ -1,11 +1,11 @@
 pub use vox_lists::{cache, list};
 
 pub mod downloader {
+  use adblock::FilterSet;
+  use anyhow::Result;
   pub use vox_lists::downloader::download_blocklist;
 
   use crate::context::Context;
-  use adblock::FilterSet;
-  use anyhow::Result;
 
   pub async fn load_blocklists(ctx: &Context) -> Result<FilterSet> {
     let blocklists = ctx.blocklists();

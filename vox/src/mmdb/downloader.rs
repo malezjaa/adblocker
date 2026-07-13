@@ -1,7 +1,10 @@
+use std::{
+  path::{Path, PathBuf},
+  sync::atomic::{AtomicBool, Ordering},
+};
+
 use anyhow::Result;
 use fs_err::create_dir_all;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
 use time::Duration;
 use tokio::fs::{metadata, write};
 use tracing::{debug, error};

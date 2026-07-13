@@ -18,9 +18,10 @@ pub fn certs_need_renewal(certs: &[CertificateDer<'static>]) -> Result<bool> {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use ::time::{Duration, OffsetDateTime};
   use rcgen::{CertificateParams, KeyPair};
+
+  use super::*;
 
   fn cert_expiring_in(days: i64) -> CertificateDer<'static> {
     let now = OffsetDateTime::now_utc();

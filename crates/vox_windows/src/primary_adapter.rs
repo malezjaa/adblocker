@@ -1,14 +1,19 @@
-use anyhow::{Result, bail};
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
-use std::str::FromStr;
-use windows::Win32::Foundation::{ERROR_BUFFER_OVERFLOW, NO_ERROR};
-use windows::Win32::NetworkManagement::IpHelper::{
-  GAA_FLAG_INCLUDE_PREFIX, GetAdaptersAddresses, GetBestInterfaceEx,
-  IF_TYPE_SOFTWARE_LOOPBACK, IF_TYPE_TUNNEL, IP_ADAPTER_ADDRESSES_LH,
+use std::{
+  net::{IpAddr, Ipv4Addr, Ipv6Addr},
+  str::FromStr,
 };
-use windows::Win32::NetworkManagement::Ndis::IfOperStatusUp;
-use windows::Win32::Networking::WinSock::{
-  AF_INET, AF_INET6, SOCKADDR, SOCKADDR_IN, SOCKADDR_IN6,
+
+use anyhow::{Result, bail};
+use windows::Win32::{
+  Foundation::{ERROR_BUFFER_OVERFLOW, NO_ERROR},
+  NetworkManagement::{
+    IpHelper::{
+      GAA_FLAG_INCLUDE_PREFIX, GetAdaptersAddresses, GetBestInterfaceEx,
+      IF_TYPE_SOFTWARE_LOOPBACK, IF_TYPE_TUNNEL, IP_ADAPTER_ADDRESSES_LH,
+    },
+    Ndis::IfOperStatusUp,
+  },
+  Networking::WinSock::{AF_INET, AF_INET6, SOCKADDR, SOCKADDR_IN, SOCKADDR_IN6},
 };
 
 #[derive(Debug)]

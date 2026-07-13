@@ -1,14 +1,21 @@
-use crate::pwstr_buf::PwstrBuffer;
-use anyhow::{Result, bail};
 use std::net::SocketAddr;
-use windows::Win32::NetworkManagement::IpHelper::{
-  ConvertInterfaceLuidToGuid, DNS_DOH_SERVER_SETTINGS, DNS_DOH_SERVER_SETTINGS_ENABLE,
-  DNS_INTERFACE_SETTINGS, DNS_INTERFACE_SETTINGS_VERSION3, DNS_INTERFACE_SETTINGS3,
-  DNS_SERVER_PROPERTY, DNS_SERVER_PROPERTY_TYPE, DNS_SERVER_PROPERTY_TYPES,
-  DNS_SETTING_DOH, DNS_SETTING_NAMESERVER, SetInterfaceDnsSettings,
+
+use anyhow::{Result, bail};
+use windows::{
+  Win32::NetworkManagement::{
+    IpHelper::{
+      ConvertInterfaceLuidToGuid, DNS_DOH_SERVER_SETTINGS,
+      DNS_DOH_SERVER_SETTINGS_ENABLE, DNS_INTERFACE_SETTINGS,
+      DNS_INTERFACE_SETTINGS_VERSION3, DNS_INTERFACE_SETTINGS3, DNS_SERVER_PROPERTY,
+      DNS_SERVER_PROPERTY_TYPE, DNS_SERVER_PROPERTY_TYPES, DNS_SETTING_DOH,
+      DNS_SETTING_NAMESERVER, SetInterfaceDnsSettings,
+    },
+    Ndis::NET_LUID_LH,
+  },
+  core::GUID,
 };
-use windows::Win32::NetworkManagement::Ndis::NET_LUID_LH;
-use windows::core::GUID;
+
+use crate::pwstr_buf::PwstrBuffer;
 
 #[derive(Debug)]
 pub struct OverrideDns {
@@ -19,14 +26,19 @@ pub struct OverrideDns {
 
 #[allow(unused_assignments)]
 pub fn override_default_dns(settings: OverrideDns) -> Result<()> {
-  use crate::adapters::dns_servers_to_strings;
-  use windows::Win32::Foundation::{ERROR_BUFFER_OVERFLOW, NO_ERROR};
-  use windows::Win32::NetworkManagement::IpHelper::{
-    GAA_FLAG_INCLUDE_PREFIX, GetAdaptersAddresses, IF_TYPE_SOFTWARE_LOOPBACK,
-    IF_TYPE_TUNNEL, IP_ADAPTER_ADDRESSES_LH,
+  use windows::Win32::{
+    Foundation::{ERROR_BUFFER_OVERFLOW, NO_ERROR},
+    NetworkManagement::{
+      IpHelper::{
+        GAA_FLAG_INCLUDE_PREFIX, GetAdaptersAddresses, IF_TYPE_SOFTWARE_LOOPBACK,
+        IF_TYPE_TUNNEL, IP_ADAPTER_ADDRESSES_LH,
+      },
+      Ndis::IfOperStatusUp,
+    },
+    Networking::WinSock::AF_UNSPEC,
   };
-  use windows::Win32::NetworkManagement::Ndis::IfOperStatusUp;
-  use windows::Win32::Networking::WinSock::AF_UNSPEC;
+
+  use crate::adapters::dns_servers_to_strings;
   let adapters = unsafe {
     let mut buf_len: u32 = 0;
 

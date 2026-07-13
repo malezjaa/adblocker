@@ -1,8 +1,9 @@
-use crate::CliContext;
 use anyhow::{Result, anyhow};
 use vox::database::devices::DeviceType;
 use vox_shared::pretty::{print_field, print_separator, print_success};
 use yansi::Paint;
+
+use crate::CliContext;
 
 pub fn pretty_device_type(ty: DeviceType) -> String {
   match ty {

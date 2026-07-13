@@ -1,7 +1,8 @@
-use crate::database::DB;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use rand::RngExt;
+
+use crate::database::DB;
 
 pub fn generate_token() -> String {
   let bytes: [u8; 32] = rand::rng().random();

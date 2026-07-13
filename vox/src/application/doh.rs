@@ -1,22 +1,23 @@
-use crate::application::app::App;
-use crate::context::Context;
-use crate::dashboard::AppError;
-use anyhow::Result;
-use axum::Router;
-use axum::body::Bytes;
-use axum::extract::{ConnectInfo, Path, Query, State as AxumState};
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use axum::routing::get;
-use axum_server::tls_rustls::RustlsConfig;
-use base64::Engine;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use serde::Deserialize;
 use std::net::SocketAddr;
+
+use anyhow::Result;
+use axum::{
+  Router,
+  body::Bytes,
+  extract::{ConnectInfo, Path, Query, State as AxumState},
+  http::StatusCode,
+  response::IntoResponse,
+  routing::get,
+};
+use axum_server::tls_rustls::RustlsConfig;
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use serde::Deserialize;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use vox_dns::block_origin::BlockOrigin;
+
+use crate::{application::app::App, context::Context, dashboard::AppError};
 
 #[derive(Deserialize)]
 pub struct DohQuery {

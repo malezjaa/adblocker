@@ -1,20 +1,27 @@
-use crate::context::Context;
-use crate::dashboard::QueryLog;
-use crate::database::DB;
-use crate::database::devices::{Device, DeviceType};
-use crate::domain::registered_domain;
+use std::{net::SocketAddr, sync::atomic::Ordering};
+
 use anyhow::Result;
 use chrono::Utc;
 use clap::ValueEnum;
-use hickory_proto::op::Message;
-use hickory_proto::rr::{RData, Record};
+use hickory_proto::{
+  op::Message,
+  rr::{RData, Record},
+};
 use serde::{Deserialize, Serialize};
 use sqlx::AssertSqlSafe;
-use std::net::SocketAddr;
-use std::sync::atomic::Ordering;
 use tokio::sync::mpsc::Receiver;
 use tracing::{debug, warn};
 use vox_dns::block_origin::BlockOrigin;
+
+use crate::{
+  context::Context,
+  dashboard::QueryLog,
+  database::{
+    DB,
+    devices::{Device, DeviceType},
+  },
+  domain::registered_domain,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryEvent {

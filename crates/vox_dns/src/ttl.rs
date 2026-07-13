@@ -1,7 +1,9 @@
-use crate::cache::MAX_NEGATIVE_TTL;
+use std::time::Duration;
+
 use hickory_proto::rr::RData;
 use hickory_resolver::net::NoRecords;
-use std::time::Duration;
+
+use crate::cache::MAX_NEGATIVE_TTL;
 
 pub fn negative_ttl(no: &NoRecords) -> Duration {
   let secs = no

@@ -1,17 +1,22 @@
-use crate::cache::{CacheFile, load_cache_file};
-use crate::list::{LISTS, List};
-use adblock::FilterSet;
-use adblock::lists::ParseOptions;
+use std::{
+  collections::HashSet,
+  path::{Path, PathBuf},
+  time::Instant,
+};
+
+use adblock::{FilterSet, lists::ParseOptions};
 use anyhow::{Result, bail};
 use chrono::Duration;
 use fs_err::{read, write};
 use futures::future::join_all;
 use reqwest::{Client, StatusCode};
-use std::collections::HashSet;
-use std::path::{Path, PathBuf};
-use std::time::Instant;
 use tracing::{debug, error, info};
 use vox_shared::config::rules::Rule;
+
+use crate::{
+  cache::{CacheFile, load_cache_file},
+  list::{LISTS, List},
+};
 
 pub async fn download_blocklist(
   list: &List,

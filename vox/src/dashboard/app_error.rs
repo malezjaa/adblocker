@@ -1,6 +1,8 @@
-use axum::Json;
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
+use axum::{
+  Json,
+  http::StatusCode,
+  response::{IntoResponse, Response},
+};
 use serde_json::json;
 
 pub struct AppError(String, Option<StatusCode>);

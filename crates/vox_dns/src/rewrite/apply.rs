@@ -1,15 +1,21 @@
-use crate::block_origin::{BlockOrigin, ClientOrigin, TransportOrigin};
-use crate::rewrite::record::{
-  DEFAULT_REWRITE_TTL, construct_alias_record, construct_structured_rewrite_records,
-  rewrite_record_type_to_hickory,
-};
-use anyhow::{Result, bail};
-use hickory_proto::op::{Message, Query, ResponseCode};
-use hickory_proto::rr::{Name, RecordType};
 use std::str::FromStr;
+
+use anyhow::{Result, bail};
+use hickory_proto::{
+  op::{Message, Query, ResponseCode},
+  rr::{Name, RecordType},
+};
 use vox_shared::config::rewrite::{
   Rewrite, RewriteBehavior, RewriteClientCondition, RewriteConditions,
   RewriteMatchWhenType, RewriteTransportCondition,
+};
+
+use crate::{
+  block_origin::{BlockOrigin, ClientOrigin, TransportOrigin},
+  rewrite::record::{
+    DEFAULT_REWRITE_TTL, construct_alias_record, construct_structured_rewrite_records,
+    rewrite_record_type_to_hickory,
+  },
 };
 
 pub struct RewriteResult {
@@ -368,14 +374,15 @@ pub fn restore_original_queries(
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use hickory_proto::rr::rdata::A;
-  use hickory_proto::rr::{RData, Record, RecordType};
   use std::net::Ipv4Addr;
+
+  use hickory_proto::rr::{RData, Record, RecordType, rdata::A};
   use vox_shared::config::rewrite::{
     RewriteBehavior, RewriteClientCondition, RewriteMatchWhen, RewriteRecord,
     RewriteRecordType, RewriteRecordValue, RewriteTransportCondition,
   };
+
+  use super::*;
 
   fn query(name: &str, record_type: RecordType) -> Message {
     let mut msg = Message::query();

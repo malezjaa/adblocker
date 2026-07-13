@@ -1,16 +1,19 @@
-use crate::context::Context;
-use crate::dns::resolver::create_hickory_resolver;
-use crate::engine::EngineMessage;
+use std::{
+  path::{Path, PathBuf},
+  time::Duration,
+};
+
 use anyhow::Result;
 use futures::future::pending;
 use notify::{EventKind, RecursiveMode};
 use notify_debouncer_full::{DebounceEventResult, new_debouncer};
-use std::path::{Path, PathBuf};
-use std::time::Duration;
-use tokio::spawn;
-use tokio::sync::mpsc;
+use tokio::{spawn, sync::mpsc};
 use tracing::{debug, error, warn};
 use vox_shared::config::Config;
+
+use crate::{
+  context::Context, dns::resolver::create_hickory_resolver, engine::EngineMessage,
+};
 
 impl Context {
   pub fn spawn_config_watcher(&self) -> Result<()> {

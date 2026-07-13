@@ -1,4 +1,5 @@
 use std::fmt;
+
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{
   EnvFilter,

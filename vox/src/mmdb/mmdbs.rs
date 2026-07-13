@@ -1,12 +1,11 @@
-use crate::context::Context;
-use crate::mmdb::downloader::DOWNLOADED_MMDBS;
+use std::{net::IpAddr, sync::atomic::Ordering, time::Duration};
+
 use anyhow::Result;
 use maxminddb::{Reader, path};
-use std::net::IpAddr;
-use std::sync::atomic::Ordering;
-use std::time::Duration;
 use tokio::time::sleep;
 use tracing::error;
+
+use crate::{context::Context, mmdb::downloader::DOWNLOADED_MMDBS};
 
 #[derive(Debug)]
 pub struct MMDBS {

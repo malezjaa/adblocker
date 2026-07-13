@@ -1,21 +1,37 @@
-use crate::context::Context;
-use crate::dashboard::ws::WsEvent;
-use crate::engine::EngineMessage;
-use crate::engine::message::{BlockLookup, BlockResult};
+use std::{
+  cmp::min,
+  net::{Ipv4Addr, Ipv6Addr, SocketAddr},
+  time::Instant,
+};
+
 use anyhow::{Result, bail};
-use hickory_proto::op::{Message, ResponseCode, UpdateMessage};
-use hickory_proto::rr::rdata::opt::{EdnsCode, EdnsOption};
-use hickory_proto::rr::rdata::{A, AAAA};
-use hickory_proto::rr::{RData, Record, RecordType};
-use hickory_proto::serialize::binary::BinDecodable;
-use std::cmp::min;
-use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
-use std::time::Instant;
+use hickory_proto::{
+  op::{Message, ResponseCode, UpdateMessage},
+  rr::{
+    RData, Record, RecordType,
+    rdata::{
+      A, AAAA,
+      opt::{EdnsCode, EdnsOption},
+    },
+  },
+  serialize::binary::BinDecodable,
+};
 use tokio::sync::oneshot;
-use vox_dns::block_origin::BlockOrigin;
-use vox_dns::edns::EDNSCode;
-use vox_dns::rewrite::apply::{
-  RewriteContext, apply_rewrites_with_context, restore_original_queries,
+use vox_dns::{
+  block_origin::BlockOrigin,
+  edns::EDNSCode,
+  rewrite::apply::{
+    RewriteContext, apply_rewrites_with_context, restore_original_queries,
+  },
+};
+
+use crate::{
+  context::Context,
+  dashboard::ws::WsEvent,
+  engine::{
+    EngineMessage,
+    message::{BlockLookup, BlockResult},
+  },
 };
 
 pub fn handle_blocked_response(msg: &Message) -> anyhow::Result<Message> {
@@ -203,12 +219,18 @@ impl Context {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use hickory_proto::op::{Edns, Query};
-  use hickory_proto::rr::Name;
-  use std::net::{Ipv4Addr, Ipv6Addr};
-  use std::str::FromStr;
+  use std::{
+    net::{Ipv4Addr, Ipv6Addr},
+    str::FromStr,
+  };
+
+  use hickory_proto::{
+    op::{Edns, Query},
+    rr::Name,
+  };
   use vox_dns::block_origin::{ClientOrigin, TransportOrigin};
+
+  use super::*;
 
   fn query(record_type: RecordType) -> Message {
     let mut msg = Message::query();

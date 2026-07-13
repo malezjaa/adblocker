@@ -1,8 +1,11 @@
-use dashmap::DashMap;
-use hickory_proto::op::ResponseCode;
-use hickory_proto::rr::{Name, Record, RecordType};
-use moka::sync::Cache;
 use std::time::{Duration, Instant};
+
+use dashmap::DashMap;
+use hickory_proto::{
+  op::ResponseCode,
+  rr::{Name, Record, RecordType},
+};
+use moka::sync::Cache;
 use tokio::sync::broadcast::Sender;
 use tracing::trace;
 
@@ -146,11 +149,11 @@ impl DnsCache {
 
 #[cfg(test)]
 mod tests {
+  use std::{net::Ipv4Addr, str::FromStr};
+
+  use hickory_proto::rr::{RData, RecordType, rdata::A};
+
   use super::*;
-  use hickory_proto::rr::rdata::A;
-  use hickory_proto::rr::{RData, RecordType};
-  use std::net::Ipv4Addr;
-  use std::str::FromStr;
 
   fn key(name: &str) -> CacheKey {
     CacheKey { name: Name::from_str(name).unwrap(), record_type: RecordType::A }
