@@ -133,7 +133,7 @@ impl Context {
     self.update_config(new_config.clone());
 
     if filters_changed || rules_changed {
-      self.tx().send(EngineMessage::ReloadFilterSet).await?;
+      self.engine_channel().send(EngineMessage::ReloadFilterSet).await?;
     }
 
     Ok(())

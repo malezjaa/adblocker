@@ -16,3 +16,4 @@ sha2 = "0.11.0"
 toml = { workspace = true }
 tracing = { workspace = true }
 vox_shared = { workspace = true }
+dashmap = { workspace = true }

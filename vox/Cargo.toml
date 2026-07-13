@@ -47,6 +47,7 @@ which = { workspace = true }
 instant-acme = { workspace = true }
 x509-parser = "0.18.1"
 vox_windows = { workspace = true }
+arc-swap = "1.9.2"
 
 [build-dependencies]
 winres = "0.1"

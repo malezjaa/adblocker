@@ -3,7 +3,7 @@ use std::{
   path::{Path, PathBuf},
   sync::{
     Arc, Weak,
-    atomic::{AtomicU64, Ordering},
+    atomic::{AtomicBool, AtomicU64, Ordering},
   },
 };
 
@@ -38,7 +38,7 @@ pub struct Context {
 }
 
 pub struct ContextImpl {
-  pub tx: Sender<EngineMessage>,
+  pub engine_channel: Sender<EngineMessage>,
   pub ws_tx: broadcast::Sender<WsEvent>,
   pub config: RwLock<Config>,
   pub resolver: RwLock<TokioResolver>,
@@ -50,6 +50,7 @@ pub struct ContextImpl {
   pub paths: MMDBSPaths,
   pub dns_cache: DnsCache,
   pub rules_version: AtomicU64,
+  pub blocklist_refresh_started: AtomicBool,
 }
 
 impl Context {
@@ -82,7 +83,7 @@ impl Context {
 
     let ctx = Self {
       inner: Arc::new(ContextImpl {
-        tx,
+        engine_channel: tx,
         config: RwLock::new(config),
         db,
         resolver: RwLock::new(resolver),
@@ -94,6 +95,7 @@ impl Context {
         paths,
         dns_cache: DnsCache::new(),
         rules_version: AtomicU64::new(0),
+        blocklist_refresh_started: AtomicBool::new(false),
       }),
     };
 
@@ -110,8 +112,8 @@ impl Context {
     self.inner.cache_dir.as_ref()
   }
 
-  pub fn tx(&self) -> Sender<EngineMessage> {
-    self.inner.tx.clone()
+  pub fn engine_channel(&self) -> Sender<EngineMessage> {
+    self.inner.engine_channel.clone()
   }
 
   pub fn blocklists(&self) -> Vec<String> {
@@ -162,6 +164,14 @@ impl Context {
 
   pub fn rules_version(&self) -> u64 {
     self.inner.rules_version.load(Ordering::Relaxed)
+  }
+
+  pub fn start_blocklist_refresh(&self) -> bool {
+    self
+      .inner
+      .blocklist_refresh_started
+      .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+      .is_ok()
   }
 
   pub fn server_config(&self) -> Option<Arc<ServerConfig>> {

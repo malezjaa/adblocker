@@ -145,7 +145,7 @@ impl Context {
 
     let (tx, rx) = oneshot::channel();
     self
-      .tx()
+      .engine_channel()
       .send(EngineMessage::Lookup(BlockLookup::new(msg.clone(), tx).origin(origin)))
       .await?;
 
