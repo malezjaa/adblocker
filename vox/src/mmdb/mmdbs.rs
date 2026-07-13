@@ -22,16 +22,17 @@ pub struct MMDBLookupResult {
 
 impl Context {
   pub fn load_mmdbs(&self) -> Result<()> {
-    let inner = self.0.clone();
+    let ctx = self.clone();
+    let paths = self.mmdb_paths();
     tokio::spawn(async move {
       loop {
         if DOWNLOADED_MMDBS.load(Ordering::Relaxed) {
           match (
-            Reader::open_readfile(inner.paths.asn.1.clone()),
-            Reader::open_readfile(inner.paths.country.1.clone()),
+            Reader::open_readfile(paths.asn.1.clone()),
+            Reader::open_readfile(paths.country.1.clone()),
           ) {
             (Ok(asn), Ok(country)) => {
-              *inner.mmdbs.write() = Some(MMDBS { asn, country });
+              ctx.replace_mmdbs(MMDBS { asn, country });
               break;
             }
             (Err(e), _) | (_, Err(e)) => {
@@ -47,7 +48,7 @@ impl Context {
   }
 
   pub fn lookup_mmdb(&self, ip: impl Into<String>) -> Result<Option<MMDBLookupResult>> {
-    let mmdbs = self.0.mmdbs.read();
+    let mmdbs = self.mmdbs();
     let Some(mmdbs) = mmdbs.as_ref() else {
       return Ok(None);
     };

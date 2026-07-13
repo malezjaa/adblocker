@@ -12,8 +12,8 @@ use parking_lot::{RwLock, RwLockReadGuard};
 use rustls::ServerConfig;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Weak};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 use tracing::log::trace;
@@ -23,7 +23,9 @@ use vox_shared::config::certs::CertificateStrategy;
 use vox_shared::home_dir;
 
 #[derive(Clone)]
-pub struct Context(pub Arc<ContextImpl>);
+pub struct Context {
+  inner: Arc<ContextImpl>,
+}
 
 pub struct ContextImpl {
   pub tx: Sender<EngineMessage>,
@@ -68,20 +70,22 @@ impl Context {
 
     let paths = download_mmdbs_files();
 
-    let ctx = Self(Arc::new(ContextImpl {
-      tx,
-      config: RwLock::new(config),
-      db,
-      resolver: RwLock::new(resolver),
-      ws_tx: broadcast::channel(100).0,
-      cache_dir,
-      server_config,
-      config_path,
-      mmdbs: RwLock::new(None),
-      paths,
-      dns_cache: DnsCache::new(),
-      rules_version: AtomicU64::new(0),
-    }));
+    let ctx = Self {
+      inner: Arc::new(ContextImpl {
+        tx,
+        config: RwLock::new(config),
+        db,
+        resolver: RwLock::new(resolver),
+        ws_tx: broadcast::channel(100).0,
+        cache_dir,
+        server_config,
+        config_path,
+        mmdbs: RwLock::new(None),
+        paths,
+        dns_cache: DnsCache::new(),
+        rules_version: AtomicU64::new(0),
+      }),
+    };
 
     ctx.db().attach_context(&ctx);
 
@@ -89,19 +93,19 @@ impl Context {
   }
 
   pub fn db(&self) -> &DB {
-    &self.0.db
+    &self.inner.db
   }
 
   pub fn cache_dir(&self) -> &Path {
-    self.0.cache_dir.as_ref()
+    self.inner.cache_dir.as_ref()
   }
 
   pub fn tx(&self) -> Sender<EngineMessage> {
-    self.0.tx.clone()
+    self.inner.tx.clone()
   }
 
   pub fn blocklists(&self) -> Vec<String> {
-    self.0.config.read().blocklists.clone()
+    self.inner.config.read().blocklists.clone()
   }
 
   pub fn socket(&self) -> SocketAddr {
@@ -113,40 +117,64 @@ impl Context {
   }
 
   pub fn config(&self) -> RwLockReadGuard<'_, Config> {
-    self.0.config.read()
+    self.inner.config.read()
   }
 
   pub fn ws_tx(&self) -> broadcast::Sender<WsEvent> {
-    self.0.ws_tx.clone()
+    self.inner.ws_tx.clone()
   }
 
   pub fn config_path(&self) -> &Path {
-    self.0.config_path.as_ref()
+    self.inner.config_path.as_ref()
   }
 
   pub fn cache(&self) -> &DnsCache {
-    &self.0.dns_cache
+    &self.inner.dns_cache
   }
 
   pub fn resolver(&self) -> TokioResolver {
-    self.0.resolver.read().clone()
+    self.inner.resolver.read().clone()
   }
 
   pub fn update_resolver(&self, new_resolver: TokioResolver) {
-    *self.0.resolver.write() = new_resolver;
+    *self.inner.resolver.write() = new_resolver;
     trace!("updated hickory resolver");
   }
 
   pub fn update_config(&self, config: Config) {
-    *self.0.config.write() = config;
+    *self.inner.config.write() = config;
     trace!("updated in-memory config");
   }
 
   pub fn increment_rules_version(&self) {
-    self.0.rules_version.fetch_add(1, Ordering::Relaxed);
+    self.inner.rules_version.fetch_add(1, Ordering::Relaxed);
   }
 
   pub fn rules_version(&self) -> u64 {
-    self.0.rules_version.load(Ordering::Relaxed)
+    self.inner.rules_version.load(Ordering::Relaxed)
+  }
+
+  pub fn server_config(&self) -> Option<Arc<ServerConfig>> {
+    self.inner.server_config.clone()
+  }
+
+  pub(crate) fn mmdb_paths(&self) -> MMDBSPaths {
+    self.inner.paths.clone()
+  }
+
+  pub(crate) fn mmdbs(&self) -> RwLockReadGuard<'_, Option<MMDBS>> {
+    self.inner.mmdbs.read()
+  }
+
+  pub(crate) fn replace_mmdbs(&self, mmdbs: MMDBS) {
+    *self.inner.mmdbs.write() = Some(mmdbs);
+  }
+
+  pub(crate) fn downgrade(&self) -> Weak<ContextImpl> {
+    Arc::downgrade(&self.inner)
+  }
+
+  pub(crate) fn from_weak(context: &Weak<ContextImpl>) -> Option<Self> {
+    context.upgrade().map(|inner| Self { inner })
   }
 }

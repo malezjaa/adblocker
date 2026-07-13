@@ -41,7 +41,7 @@ impl App {
 
     info!("DoH server listening on {}", ctx.doh_socket());
 
-    if let Some(server_config) = ctx.0.server_config.clone() {
+    if let Some(server_config) = ctx.server_config() {
       let config = RustlsConfig::from_config(server_config);
       axum_server::bind_rustls(ctx.doh_socket(), config).serve(app).await?;
     } else {

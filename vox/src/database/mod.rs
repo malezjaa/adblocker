@@ -107,10 +107,10 @@ impl DB {
   }
 
   pub fn attach_context(&self, ctx: &Context) {
-    *self.ctx_ref.write() = Some(Arc::downgrade(&ctx.0));
+    *self.ctx_ref.write() = Some(ctx.downgrade());
   }
 
   pub fn context(&self) -> Option<Context> {
-    self.ctx_ref.read().as_ref()?.upgrade().map(Context)
+    Context::from_weak(self.ctx_ref.read().as_ref()?)
   }
 }

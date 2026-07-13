@@ -25,7 +25,7 @@ impl Context {
   }
 
   async fn run_watcher(&self) -> Result<()> {
-    let config_path = self.0.config_path.clone();
+    let config_path = self.config_path().to_path_buf();
 
     let (tx, mut rx) = mpsc::channel::<DebounceEventResult>(64);
 
