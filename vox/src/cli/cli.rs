@@ -86,7 +86,7 @@ pub enum ServiceTarget {
 pub enum DeviceCommand {
   List,
 
-  New {
+  Create {
     #[arg(long)]
     name: String,
     #[arg(long)]
