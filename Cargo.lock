@@ -3744,7 +3744,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vox"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "adblock",
  "addr",
@@ -3794,7 +3794,7 @@ dependencies = [
 
 [[package]]
 name = "vox_dns"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "dashmap",
@@ -3812,7 +3812,7 @@ dependencies = [
 
 [[package]]
 name = "vox_lists"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "adblock",
  "anyhow",
@@ -3831,7 +3831,7 @@ dependencies = [
 
 [[package]]
 name = "vox_shared"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -3846,7 +3846,7 @@ dependencies = [
 
 [[package]]
 name = "vox_windows"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "tracing",
@@ -3855,7 +3855,7 @@ dependencies = [
 
 [[package]]
 name = "vox_windows_client"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",

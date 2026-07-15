@@ -34,7 +34,6 @@ foreach ($file in @("daemon.exe", "cli.exe", "vox_windows_client.exe")) {
 Copy-Item -LiteralPath (Join-Path $driverRoot "WinDivert.dll") -Destination $stageRoot
 Copy-Item -LiteralPath (Join-Path $driverRoot "WinDivert64.sys") -Destination $stageRoot
 Copy-Item -LiteralPath (Join-Path $driverRoot "LICENSE.txt") -Destination (Join-Path $stageRoot "WIN_DIVERT_LICENSE.txt")
-Copy-Item -LiteralPath (Join-Path $projectRoot "docs\windows-release.md") -Destination (Join-Path $stageRoot "README-Windows.md")
 Copy-Item -LiteralPath (Join-Path $projectRoot "third_party\windivert\NOTICE.txt") -Destination (Join-Path $stageRoot "THIRD_PARTY_NOTICES.txt")
 
 $files = Get-ChildItem -LiteralPath $stageRoot -File | Sort-Object Name
