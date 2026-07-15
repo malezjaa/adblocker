@@ -35,7 +35,11 @@ impl Certs {
   }
 
   fn load_self_signed() -> Result<Certs> {
-    if which::which("openssl").is_err() {
+    let openssl_available = Command::new("openssl")
+      .arg("version")
+      .output()
+      .is_ok_and(|output| output.status.success());
+    if !openssl_available {
       bail!("couldn't find openssl installed in the path.")
     }
 

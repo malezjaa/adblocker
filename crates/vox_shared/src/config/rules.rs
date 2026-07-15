@@ -1,4 +1,3 @@
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
@@ -30,7 +29,7 @@ impl Rule {
 impl Config {
   pub fn validate_rules(&self) {
     if let Some(rules) = &self.rules {
-      rules.par_iter().for_each(|rule| {
+      rules.iter().for_each(|rule| {
         if rule.domain.starts_with("@@") {
           match rule.action {
             RuleAction::Block => error!(

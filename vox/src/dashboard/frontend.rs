@@ -5,12 +5,24 @@ use axum::{
   response::IntoResponse,
 };
 use include_dir::{Dir, include_dir};
-use mime_guess2::from_path;
 use reqwest::StatusCode;
 
 use crate::dashboard::AppError;
 
 pub const DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/../dashboard/dist");
+
+fn content_type(path: &str) -> Option<&'static str> {
+  let (_, extension) = path.rsplit_once('.')?;
+
+  match extension {
+    "css" => Some("text/css"),
+    "html" => Some("text/html; charset=utf-8"),
+    "js" => Some("application/javascript"),
+    "svg" => Some("image/svg+xml"),
+    "woff2" => Some("font/woff2"),
+    _ => None,
+  }
+}
 
 pub async fn serve_file(Path(path): Path<String>) -> Result<impl IntoResponse, AppError> {
   let file = if let Some(file) = DIST.get_file(&path) {
@@ -28,14 +40,11 @@ pub async fn serve_file(Path(path): Path<String>) -> Result<impl IntoResponse, A
 
   let mut response = Response::new(Body::from(file.contents().to_vec()));
 
-  let mime = if path.contains('.') {
-    from_path(&path).first()
-  } else {
-    from_path("index.html").first()
-  };
+  let content_type =
+    if path.contains('.') { content_type(&path) } else { content_type("index.html") };
 
-  if let Some(mime) = mime {
-    response.headers_mut().insert(header::CONTENT_TYPE, mime.to_string().parse()?);
+  if let Some(content_type) = content_type {
+    response.headers_mut().insert(header::CONTENT_TYPE, content_type.parse()?);
   }
 
   Ok(response)
@@ -47,6 +56,19 @@ mod tests {
   use include_dir::File;
 
   use super::*;
+
+  #[test]
+  fn recognizes_embedded_asset_content_types() {
+    for (path, expected) in [
+      ("index.html", "text/html; charset=utf-8"),
+      ("assets/app.css", "text/css"),
+      ("assets/app.js", "application/javascript"),
+      ("assets/logo.svg", "image/svg+xml"),
+      ("assets/font.woff2", "font/woff2"),
+    ] {
+      assert_eq!(content_type(path), Some(expected));
+    }
+  }
 
   fn first_font_file(dir: &'static Dir) -> Option<&'static File<'static>> {
     dir

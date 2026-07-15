@@ -29,7 +29,11 @@ pub fn runtime_root() -> PathBuf {
 
   #[cfg(not(windows))]
   {
-    dirs::home_dir().expect("a home directory is required").join("vox")
+    std::env::var_os("HOME")
+      .or_else(|| std::env::var_os("USERPROFILE"))
+      .map(PathBuf::from)
+      .expect("a home directory is required")
+      .join("vox")
   }
 }
 
