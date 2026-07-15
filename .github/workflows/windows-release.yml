@@ -24,7 +24,7 @@ jobs:
     outputs:
       tag: ${{ steps.release-tag.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
@@ -44,9 +44,9 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: 11.0.9
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 26.1.0
+          node-version: 26.5.0
           cache: pnpm
           cache-dependency-path: dashboard/pnpm-lock.yaml
       - name: Install pnpm dependencies
@@ -89,7 +89,7 @@ jobs:
       - uses: actions/attest@v4
         with:
           subject-path: release/*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-x64-release
           path: release
@@ -101,13 +101,14 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: windows-x64-release
           path: release
       - name: Create draft, upload assets, and publish
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.build.outputs.tag }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
