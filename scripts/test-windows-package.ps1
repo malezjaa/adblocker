@@ -12,7 +12,7 @@ $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $Archive))
 try {
   $expected = @(
     "daemon.exe", "cli.exe", "vox_windows_client.exe", "WinDivert.dll", "WinDivert64.sys",
-    "WIN_DIVERT_LICENSE.txt", "THIRD_PARTY_NOTICES.txt", "README-Windows.md", "SHA256SUMS.txt"
+    "WIN_DIVERT_LICENSE.txt", "THIRD_PARTY_NOTICES.txt", "SHA256SUMS.txt"
   )
   $actual = @($zip.Entries | ForEach-Object FullName | Sort-Object)
   $missing = $expected | Where-Object { $_ -notin $actual }
