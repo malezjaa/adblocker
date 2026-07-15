@@ -141,11 +141,15 @@ impl<'a> ListDownloader<'a> {
       );
     }
 
-    let futures = LISTS.iter().map(|list| {
-      let is_fresh = cache.is_fresh(list.id, Duration::hours(24));
-      let cached_etag = cache.get_by_id(list.id).and_then(|e| e.etag.clone());
-      async move { self.download_blocklist(list, cached_etag, is_fresh).await }
-    });
+    let configured_ids: HashSet<&str> =
+      self.enabled_ids.iter().map(|s| s.as_str()).collect();
+
+    let futures =
+      LISTS.iter().filter(|list| configured_ids.contains(list.id)).map(|list| {
+        let is_fresh = cache.is_fresh(list.id, Duration::hours(24));
+        let cached_etag = cache.get_by_id(list.id).and_then(|e| e.etag.clone());
+        async move { self.download_blocklist(list, cached_etag, is_fresh).await }
+      });
 
     let results: Vec<Result<_>> = join_all(futures).await;
 
@@ -154,9 +158,6 @@ impl<'a> ListDownloader<'a> {
     }
 
     write(self.cache_dir.join("cache.toml"), toml::to_string_pretty(&cache)?)?;
-
-    let configured_ids: HashSet<&str> =
-      self.enabled_ids.iter().map(|s| s.as_str()).collect();
 
     for result in results {
       match result {

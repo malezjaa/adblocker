@@ -2,3 +2,6 @@
 rustflags = [
     "-C", "target-feature=+crt-static",
 ]
+
+[env]
+WINDIVERT_PATH = { value = "third_party/windivert/x64", relative = true, force = true }

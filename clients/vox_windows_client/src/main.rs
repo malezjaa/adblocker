@@ -4,7 +4,7 @@ use hickory_client::{
   client::Client,
   proto::{runtime::TokioRuntimeProvider, udp::UdpClientStream},
 };
-use tokio::{signal::ctrl_c, spawn};
+use tokio::{runtime::Runtime, signal::ctrl_c, spawn};
 use tracing::{error, warn};
 use vox_dns::server_health::check_server_health;
 use vox_shared::{SharedCli, logger::setup_logger, task::named_task, win_client_home};
@@ -14,17 +14,25 @@ use crate::{config::WinClientConfig, win_divert::WinDivert};
 pub mod config;
 pub mod win_divert;
 
-#[tokio::main]
-async fn main() {
-  let cli = SharedCli::parse();
-  setup_logger(cli.verbose);
+#[cfg(windows)]
+mod service;
 
-  if let Err(err) = run().await {
-    error!("{err:?}")
+fn main() -> Result<()> {
+  let cli = SharedCli::parse();
+  if cli.service {
+    #[cfg(windows)]
+    return service::dispatch();
+    #[cfg(not(windows))]
+    anyhow::bail!("--service is only supported on Windows");
   }
+
+  setup_logger(cli.verbose);
+  Runtime::new()?.block_on(run(None))
 }
 
-async fn run() -> Result<()> {
+pub(crate) async fn run(
+  shutdown: Option<tokio::sync::oneshot::Receiver<()>>,
+) -> Result<()> {
   let config = WinClientConfig::from_file(win_client_home().join("config.toml"))?;
   check_server_health(&config.dns_server).await?;
 
@@ -41,8 +49,14 @@ async fn run() -> Result<()> {
   });
 
   let win_divert = WinDivert::new(config)?;
-  spawn(named_task("WinDivert", win_divert.start_redirects(client)));
+  let divert_task = spawn(named_task("WinDivert", win_divert.start_redirects(client)));
 
-  ctrl_c().await?;
+  match shutdown {
+    Some(rx) => {
+      let _ = rx.await;
+    }
+    None => ctrl_c().await?,
+  }
+  divert_task.abort();
   Ok(())
 }

@@ -45,7 +45,11 @@ impl App {
     Ok(Self { ctx })
   }
 
-  pub async fn start_all(&self, rx: Receiver<EngineMessage>) -> Result<()> {
+  pub async fn start_all(
+    &self,
+    rx: Receiver<EngineMessage>,
+    shutdown: Option<tokio::sync::oneshot::Receiver<()>>,
+  ) -> Result<()> {
     let local = LocalSet::new();
 
     local
@@ -82,7 +86,28 @@ impl App {
         // mutex guard would be held across await point below
         drop(config);
 
-        while let Some(result) = tasks.join_next().await {
+        let cancel = async move {
+          match shutdown {
+            Some(rx) => {
+              let _ = rx.await;
+            }
+            None => std::future::pending::<()>().await,
+          }
+        };
+        tokio::pin!(cancel);
+
+        loop {
+          let result = tokio::select! {
+            _ = &mut cancel => {
+              tasks.shutdown().await;
+              return Ok(());
+            }
+            result = tasks.join_next() => result,
+          };
+
+          let Some(result) = result else {
+            return Ok(());
+          };
           match result {
             Ok(Ok(())) => {
               warn!("a background task exited unexpectedly");
@@ -101,8 +126,6 @@ impl App {
             }
           }
         }
-
-        Ok(())
       })
       .await
   }

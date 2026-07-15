@@ -1,0 +1,4 @@
+WinDivert is a third-party packet interception library used by vox_windows_client.
+
+License: GNU Lesser General Public License v3.0 or GNU General Public License v2.0, at the distributor's option.
+Source and licensing information: https://reqrypt.org/windivert.html

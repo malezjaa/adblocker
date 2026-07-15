@@ -28,6 +28,7 @@ hickory-client = "0.25.2"
 dashmap = "7.0.0-rc2"
 moka = "0.12.15"
 clap = { version = "4.6.1", features = ["derive"] }
+windows-service = "0.8.0"
 which = "8.0.4"
 instant-acme = "0.8.5"
 adblock = "0.13.0"

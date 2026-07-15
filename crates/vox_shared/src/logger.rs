@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, fs::OpenOptions};
 
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{
@@ -7,6 +7,8 @@ use tracing_subscriber::{
   registry::LookupSpan,
 };
 use yansi::Paint;
+
+use crate::logs_dir;
 
 struct CustomFormatter;
 
@@ -40,6 +42,30 @@ pub fn setup_logger(verbose: bool) {
     .with_target(false)
     .without_time()
     .event_format(CustomFormatter)
+    .with_env_filter(EnvFilter::new(format!(
+      "vox={0},cli={0},daemon={0},vox_shared={0},vox_windows_client={0}",
+      if verbose { "debug" } else { "info" }
+    )))
+    .init();
+}
+
+pub fn setup_service_logger(verbose: bool, component: &str) {
+  let log_dir = logs_dir();
+  fs_err::create_dir_all(&log_dir).expect("creating the Vox log directory");
+  let log_path = log_dir.join(format!("{component}.log"));
+
+  tracing_subscriber::fmt()
+    .with_target(false)
+    .without_time()
+    .with_ansi(false)
+    .event_format(CustomFormatter)
+    .with_writer(move || {
+      OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+        .expect("opening the Vox service log")
+    })
     .with_env_filter(EnvFilter::new(format!(
       "vox={0},cli={0},daemon={0},vox_shared={0},vox_windows_client={0}",
       if verbose { "debug" } else { "info" }

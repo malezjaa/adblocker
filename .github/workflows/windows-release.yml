@@ -1,0 +1,119 @@
+name: Windows x64 release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing vX.Y.Z tag to rebuild and release
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    outputs:
+      tag: ${{ steps.release-tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - id: release-tag
+        shell: pwsh
+        run: |
+          $tag = if ('${{ inputs.tag }}') { '${{ inputs.tag }}' } else { '${{ github.ref_name }}' }
+          if ($tag -notmatch '^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw "Invalid release tag: $tag" }
+          git rev-parse --verify "refs/tags/$tag" | Out-Null
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-03-25
+          components: rustfmt, clippy
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.1.0
+          cache: pnpm
+          cache-dependency-path: dashboard/pnpm-lock.yaml
+      - name: Install pnpm dependencies
+        shell: pwsh
+        run: |
+          pnpm --dir dashboard install --frozen-lockfile
+      - name: Validate tag and package versions
+        shell: pwsh
+        run: |
+          $expected = '${{ steps.release-tag.outputs.tag }}'.Substring(1)
+          $manifests = Get-ChildItem -Recurse -Filter Cargo.toml | Where-Object { $_.FullName -notmatch '\\target\\' }
+          foreach ($manifest in $manifests) {
+            $content = Get-Content $manifest.FullName -Raw
+            if ($content -notmatch '(?ms)^\[package\].*?^version\s*=\s*"([^"]+)"') { continue }
+            if ($matches[1] -ne $expected) { throw "$($manifest.FullName) has version $($matches[1]), expected $expected" }
+          }
+      - name: Verify pinned WinDivert build inputs
+        shell: pwsh
+        run: ./scripts/verify-windivert.ps1
+      - name: Test
+        shell: pwsh
+        run: |
+          pnpm --dir dashboard lint
+          pnpm --dir dashboard typecheck
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets --all-features -- -D warnings
+          cargo test --workspace
+      - name: Build x64 release binaries
+        shell: pwsh
+        run: |
+          rustup target add x86_64-pc-windows-msvc
+          cargo build --locked --release --target x86_64-pc-windows-msvc -p vox --bin daemon --bin cli
+          cargo build --locked --release --target x86_64-pc-windows-msvc -p vox_windows_client --bin vox_windows_client
+      - name: Package and verify
+        shell: pwsh
+        run: |
+          $version = '${{ steps.release-tag.outputs.tag }}'.Substring(1)
+          ./scripts/package-windows.ps1 -Version $version -Target x86_64-pc-windows-msvc
+          ./scripts/test-windows-package.ps1 -Archive "release/vox-$version-x86_64-pc-windows-msvc.zip"
+      - uses: actions/attest@v4
+        with:
+          subject-path: release/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64-release
+          path: release
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-x64-release
+          path: release
+      - name: Create draft, upload assets, and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/* --clobber
+            gh release edit "$TAG" --draft=false
+          else
+            gh release create "$TAG" release/* --title "$TAG" --generate-notes --draft
+            gh release edit "$TAG" --draft=false
+          fi

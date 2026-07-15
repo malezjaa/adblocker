@@ -52,6 +52,9 @@ arc-swap = "1.9.2"
 [build-dependencies]
 winres = "0.1"
 
+[target.'cfg(windows)'.dependencies]
+windows-service = { workspace = true }
+
 [dev-dependencies]
 rcgen = { version = "0.14.8", default-features = false, features = ["aws_lc_rs"] }
 

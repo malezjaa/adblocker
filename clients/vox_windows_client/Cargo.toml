@@ -5,8 +5,8 @@ edition = "2024"
 
 [dependencies]
 vox_shared = { workspace = true }
-windivert = { version = "0.7.0-beta.4", features = ["vendored"] }
-windivert-sys = { version = "0.11.0-beta.2", features = ["vendored"] }
+windivert = "0.7.0-beta.4"
+windivert-sys = "0.11.0-beta.2"
 tracing = { workspace = true }
 anyhow = { workspace = true }
 fs-err = { workspace = true }
@@ -17,3 +17,6 @@ rand = { workspace = true, rand = "0.9.4" }
 hickory-client = { workspace = true }
 vox_dns = { workspace = true }
 clap = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows-service = { workspace = true }

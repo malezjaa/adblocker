@@ -1,4 +1,6 @@
-use clap::{Parser, Subcommand};
+use std::net::SocketAddr;
+
+use clap::{Parser, Subcommand, ValueEnum};
 use vox::database::devices::DeviceType;
 
 #[derive(Parser, Debug)]
@@ -14,6 +16,10 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+  Service {
+    #[command(subcommand)]
+    command: ServiceCommand,
+  },
   Devices {
     #[command(subcommand)]
     command: DeviceCommand,
@@ -29,6 +35,46 @@ pub enum Commands {
     #[command(subcommand)]
     command: AdminCommand,
   },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ServiceCommand {
+  Install {
+    #[arg(value_enum)]
+    target: ServiceTarget,
+    #[arg(long, required_if_eq("target", "client"))]
+    dns_server: Option<SocketAddr>,
+    #[arg(long)]
+    doh: Option<SocketAddr>,
+    /// Validate the bundle and print the actions without changing the machine.
+    #[arg(long)]
+    dry_run: bool,
+  },
+  Start {
+    #[arg(value_enum)]
+    target: ServiceTarget,
+  },
+  Stop {
+    #[arg(value_enum)]
+    target: ServiceTarget,
+  },
+  Status {
+    #[arg(value_enum)]
+    target: ServiceTarget,
+  },
+  Uninstall {
+    #[arg(value_enum)]
+    target: ServiceTarget,
+    /// Also remove all machine-wide configuration and data.
+    #[arg(long)]
+    purge_data: bool,
+  },
+}
+
+#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ServiceTarget {
+  Daemon,
+  Client,
 }
 
 #[derive(Subcommand, Debug)]
