@@ -4,6 +4,8 @@ param(
   [string]$Version,
   [Parameter(Mandatory = $true)]
   [string]$Target,
+  [ValidateSet("release", "max-perf")]
+  [string]$Profile = "max-perf",
   [string]$OutputDirectory = "release"
 )
 
@@ -24,7 +26,7 @@ function Assert-File([string]$Path) {
 Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $stageRoot
 New-Item -ItemType Directory -Force $stageRoot | Out-Null
 
-$binRoot = Join-Path $projectRoot "target\$Target\release"
+$binRoot = Join-Path $projectRoot "target\$Target\$Profile"
 foreach ($file in @("daemon.exe", "cli.exe", "vox_windows_client.exe")) {
   Assert-File (Join-Path $binRoot $file)
   Copy-Item -LiteralPath (Join-Path $binRoot $file) -Destination $stageRoot

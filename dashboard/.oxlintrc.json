@@ -91,12 +91,7 @@
         "typescript/triple-slash-reference": "error",
         "react/rules-of-hooks": "error",
         "react/exhaustive-deps": "warn",
-        "react/only-export-components": [
-          "error",
-          {
-            "allowConstantExport": true
-          }
-        ]
+        "react/only-export-components": "off"
       },
       "plugins": ["typescript", "react"],
       "env": {

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "oxlint .",
     "format": "oxfmt",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview"
@@ -49,6 +49,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "globals": "^16.5.0",
     "oxfmt": "^0.48.0",
+    "oxlint": "^1.74.0",
     "typescript": "~5.9.3",
     "vite": "8.0.0-beta.0"
   }

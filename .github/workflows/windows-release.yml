@@ -78,13 +78,13 @@ jobs:
         shell: pwsh
         run: |
           rustup target add x86_64-pc-windows-msvc
-          cargo build --locked --release --target x86_64-pc-windows-msvc -p vox --bin daemon --bin cli
-          cargo build --locked --release --target x86_64-pc-windows-msvc -p vox_windows_client --bin vox_windows_client
+          cargo build --locked --profile max-perf --target x86_64-pc-windows-msvc -p vox --bin daemon --bin cli
+          cargo build --locked --profile max-perf --target x86_64-pc-windows-msvc -p vox_windows_client --bin vox_windows_client
       - name: Package and verify
         shell: pwsh
         run: |
           $version = '${{ steps.release-tag.outputs.tag }}'.Substring(1)
-          ./scripts/package-windows.ps1 -Version $version -Target x86_64-pc-windows-msvc
+          ./scripts/package-windows.ps1 -Version $version -Target x86_64-pc-windows-msvc -Profile max-perf
           ./scripts/test-windows-package.ps1 -Archive "release/vox-$version-x86_64-pc-windows-msvc.zip"
       - uses: actions/attest@v4
         with:

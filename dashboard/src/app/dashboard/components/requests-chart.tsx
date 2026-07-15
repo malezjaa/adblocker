@@ -1,7 +1,14 @@
 "use client"
 
 import { type CSSProperties, useMemo } from "react"
-import { Bar, BarChart, Rectangle, ReferenceLine, XAxis } from "recharts"
+import {
+  Bar,
+  BarChart,
+  type BarShapeProps,
+  Rectangle,
+  ReferenceLine,
+  XAxis,
+} from "recharts"
 
 import {
   CardContent,
@@ -190,7 +197,7 @@ export function RequestsChart() {
                 strokeWidth={1}
                 radius={[0, 0, 4, 4]}
                 minPointSize={0}
-                shape={(props: any) => {
+                shape={(props: BarShapeProps) => {
                   if (props.value === 0) return <g />
                   return <Rectangle {...props} />
                 }}
