@@ -269,9 +269,13 @@ export function Lists() {
                         <p className={"font-heading text-base font-medium"}>
                           {list.name}
                         </p>
-                        <Badge>
-                          <NumberFlow value={list.domains || 0} />
-                        </Badge>
+                        {list?.domains && list.domains > 0 ? (
+                          <Badge>
+                            <NumberFlow value={list.domains || 0} />
+                          </Badge>
+                        ) : (
+                          <></>
+                        )}
                         <CompatibilityBadge value={list.compatibility} />
                         {list.recommended && (
                           <Badge
