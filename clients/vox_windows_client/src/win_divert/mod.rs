@@ -3,7 +3,7 @@ pub mod packet;
 use std::{borrow::Cow, time::Instant};
 
 use anyhow::Result;
-use hickory_client::{client::Client, proto::op::Message};
+use hickory_client::proto::op::Message;
 use tracing::{debug, warn};
 use vox_dns::{
   block_origin::{BlockOrigin, ClientOrigin, TransportOrigin},
@@ -17,7 +17,7 @@ use windivert::{
 use windivert_sys::ChecksumFlags;
 
 use self::packet::{IpHeader, Packet, TransportHeader};
-use crate::config::WinClientConfig;
+use crate::{config::WinClientConfig, upstream::UpstreamClient};
 
 #[derive(Debug)]
 pub struct WinDivert {
@@ -36,7 +36,7 @@ impl WinDivert {
     Ok(WinDivert { divert, config })
   }
 
-  pub async fn start_redirects(self, client: Client) -> Result<()> {
+  pub async fn start_redirects(self, upstream: UpstreamClient) -> Result<()> {
     let mut buf = vec![0u8; 65535];
     loop {
       let og_packet = self.divert.recv(&mut buf)?;
@@ -45,7 +45,7 @@ impl WinDivert {
       if packet.payload.is_empty() || packet.payload.len() < 12 {
         continue;
       }
-      if let Err(e) = self.handle_packet(&client, og_packet.address, packet).await {
+      if let Err(e) = self.handle_packet(&upstream, og_packet.address, packet).await {
         warn!("failed to process packet: {e:?}");
         continue;
       }
@@ -54,7 +54,7 @@ impl WinDivert {
 
   async fn handle_packet(
     &self,
-    client: &Client,
+    upstream: &UpstreamClient,
     win_divert_address: WinDivertAddress<NetworkLayer>,
     packet: Packet<'_>,
   ) -> Result<()> {
@@ -71,11 +71,13 @@ impl WinDivert {
       },
       client: ClientOrigin::Windows,
     };
-    let response_bytes = DnsQuery::from_message(msg)
-      .add_edns_option(EDNSCode::BlockOrigin, &[origin.to_u8()])
-      .send(client)
-      .await?
-      .to_vec()?;
+    let response_bytes = upstream
+      .send(
+        DnsQuery::from_message(msg)
+          .add_edns_option(EDNSCode::BlockOrigin, &[origin.to_u8()]),
+      )
+      .await?;
+
     debug!("dns request: {}ms src={query_domain}", start.elapsed().as_millis());
 
     let mut ip_header = match packet.ip_header.to_owned() {

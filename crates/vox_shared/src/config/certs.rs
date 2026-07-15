@@ -22,7 +22,7 @@ impl CertsConfig {
 impl Default for CertsConfig {
   fn default() -> Self {
     Self {
-      strategy: CertificateStrategy::Acme,
+      strategy: CertificateStrategy::SelfSigned,
       acme: AcmeConfig::default(),
       manual: ManualCertConfig::default(),
     }

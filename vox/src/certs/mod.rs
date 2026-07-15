@@ -16,8 +16,6 @@ use vox_shared::{
 };
 use vox_windows::primary_adapter::primary_adapter;
 
-use crate::dns::resolver::HickoryResolver;
-
 #[derive(Debug)]
 pub struct Certs {
   pub certs: Vec<CertificateDer<'static>>,
@@ -25,10 +23,10 @@ pub struct Certs {
 }
 
 impl Certs {
-  pub async fn load_certs(config: &Config, resolver: &HickoryResolver) -> Result<Certs> {
+  pub fn load_certs(config: &Config) -> Result<Certs> {
     match config.certs.strategy {
       CertificateStrategy::Manual => Self::load_manual(config),
-      CertificateStrategy::Acme => Self::load_certs_with_acme(config, resolver).await,
+      CertificateStrategy::Acme => Self::load_certs_with_acme(config),
       CertificateStrategy::SelfSigned => Self::load_self_signed(),
       CertificateStrategy::None => unreachable!(),
     }

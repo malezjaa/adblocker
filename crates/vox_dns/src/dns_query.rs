@@ -50,6 +50,10 @@ impl DnsQuery {
     self
   }
 
+  pub fn into_message(self) -> Message {
+    self.msg
+  }
+
   pub async fn send(self, client: &Client) -> Result<DnsResponse> {
     let mut options = DnsRequestOptions::default();
     options.use_edns = true;

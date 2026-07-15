@@ -1,6 +1,5 @@
 use std::{
   env,
-  net::SocketAddr,
   path::{Path, PathBuf},
   process::Command,
   thread::sleep,
@@ -9,7 +8,6 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 use fs_err::{copy, create_dir_all, remove_dir_all};
-use serde::Serialize;
 use vox_shared::{
   pretty::{print_field, print_message, print_separator, print_success},
   runtime_root, win_client_home,
@@ -26,12 +24,6 @@ use super::cli::{ServiceCommand, ServiceTarget};
 
 const INSTALL_DIRECTORY: &str = "Vox";
 
-#[derive(Serialize)]
-struct ClientConfig {
-  dns_server: SocketAddr,
-  doh: Option<SocketAddr>,
-}
-
 pub fn handle(command: ServiceCommand) -> Result<()> {
   #[cfg(not(windows))]
   {
@@ -41,9 +33,7 @@ pub fn handle(command: ServiceCommand) -> Result<()> {
 
   #[cfg(windows)]
   match command {
-    ServiceCommand::Install { target, dns_server, doh, dry_run } => {
-      install(target, dns_server, doh, dry_run)
-    }
+    ServiceCommand::Install { target, dry_run } => install(target, dry_run),
     ServiceCommand::Start { target } => start(target),
     ServiceCommand::Stop { target } => stop(target),
     ServiceCommand::Restart { target } => restart(target),
@@ -53,26 +43,19 @@ pub fn handle(command: ServiceCommand) -> Result<()> {
 }
 
 #[cfg(windows)]
-fn install(
-  target: ServiceTarget,
-  dns_server: Option<SocketAddr>,
-  doh: Option<SocketAddr>,
-  dry_run: bool,
-) -> Result<()> {
+fn install(target: ServiceTarget, dry_run: bool) -> Result<()> {
   let source = bundle_directory()?;
   validate_bundle(&source)?;
 
   if target == ServiceTarget::Client {
-    let dns_server =
-      dns_server.context("--dns-server is required when installing the client")?;
-    if dry_run {
-      println!("would write {}", win_client_home().join("config.toml").display());
-    } else {
-      create_dir_all(win_client_home())?;
-      fs_err::write(
-        win_client_home().join("config.toml"),
-        toml::to_string_pretty(&ClientConfig { dns_server, doh })?,
-      )?;
+    let win_config_path = win_client_home().join("config.toml");
+
+    if !win_config_path.exists() {
+      bail!(
+        "Please create `{}` with `dns_server` set to the Vox server address. Optionally \
+         you can set `doh`.",
+        win_config_path.display()
+      );
     }
   }
 
@@ -344,17 +327,5 @@ impl ServiceTarget {
       Self::Daemon => "daemon.exe",
       Self::Client => "vox_windows_client.exe",
     }
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn client_service_requires_a_server() {
-    let config = ClientConfig { dns_server: "127.0.0.1:53".parse().unwrap(), doh: None };
-    let toml = toml::to_string(&config).unwrap();
-    assert!(toml.contains("dns_server"));
   }
 }

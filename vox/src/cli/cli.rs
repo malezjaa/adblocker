@@ -1,5 +1,3 @@
-use std::net::SocketAddr;
-
 use clap::{Parser, Subcommand, ValueEnum};
 use vox::database::devices::DeviceType;
 
@@ -29,6 +27,10 @@ pub enum Commands {
     #[command(subcommand)]
     command: DnsCommand,
   },
+  Acme {
+    #[command(subcommand)]
+    command: AcmeCommand,
+  },
   #[command(name = "reset-db")]
   ResetDB,
 
@@ -43,10 +45,6 @@ pub enum ServiceCommand {
   Install {
     #[arg(value_enum)]
     target: ServiceTarget,
-    #[arg(long, required_if_eq("target", "client"))]
-    dns_server: Option<SocketAddr>,
-    #[arg(long)]
-    doh: Option<SocketAddr>,
     /// Validate the bundle and print the actions without changing the machine.
     #[arg(long)]
     dry_run: bool,
@@ -109,6 +107,12 @@ pub enum DnsCommand {
     #[arg(long = "no-doh", default_value = "false")]
     no_doh: bool,
   },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum AcmeCommand {
+  /// Complete the configured ACME DNS-01 challenge and fetch a certificate.
+  Challenge,
 }
 
 #[derive(Subcommand, Debug)]

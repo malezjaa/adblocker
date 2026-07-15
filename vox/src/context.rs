@@ -70,7 +70,7 @@ impl Context {
     let server_config = if matches!(config.certs.strategy, CertificateStrategy::None) {
       None
     } else {
-      let certs = Certs::load_certs(&config, &resolver).await?;
+      let certs = Certs::load_certs(&config)?;
       let mut server_config = ServerConfig::builder()
         .with_no_client_auth()
         .with_single_cert(certs.certs, certs.key)?;

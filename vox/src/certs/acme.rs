@@ -7,11 +7,14 @@ use instant_acme::{
   Account, AccountCredentials, AuthorizationStatus, ChallengeType, Identifier,
   NewAccount, NewOrder, OrderStatus, RetryPolicy,
 };
-use tracing::{debug, log::error};
+use tracing::{debug, log::error, warn};
 use vox_shared::{
-  config::{Config, certs::AcmeChallenge},
+  config::{
+    Config,
+    certs::{AcmeChallenge, CertificateStrategy},
+  },
   home_dir,
-  pretty::{print_field, print_message, print_separator},
+  pretty::{print_field, print_message, print_separator, print_success},
 };
 
 use crate::{
@@ -62,13 +65,43 @@ impl Certs {
     Ok(account)
   }
 
-  pub async fn load_certs_with_acme(
+  pub fn load_certs_with_acme(config: &Config) -> Result<Certs> {
+    let Some(domain) = &config.certs.acme.domain else {
+      bail!("no domain provided for ACME certificate");
+    };
+
+    let certs_path = home_dir().join("certs");
+    let cert_path = certs_path.join(format!("{domain}.pem"));
+    let key_path = certs_path.join(format!("{domain}.key"));
+
+    if !cert_path.exists() || !key_path.exists() {
+      bail!(
+        "no fetched ACME certificate found for {domain}; run `cli.exe acme challenge`"
+      );
+    }
+
+    let certs = load_certs(&cert_path)?;
+    if certs_need_renewal(&certs)? {
+      warn!(%domain, "ACME certificate needs renewal; run `cli.exe acme challenge`");
+    }
+
+    Self::load(&cert_path, &key_path)
+  }
+
+  pub async fn fetch_acme_certificate(
     config: &Config,
     resolver: &HickoryResolver,
-  ) -> Result<Certs> {
-    let account = Self::acme_account(config).await?;
+  ) -> Result<()> {
+    if !matches!(config.certs.strategy, CertificateStrategy::Acme) {
+      bail!("certificate strategy must be set to `acme` before running the challenge");
+    }
+
+    if !matches!(config.certs.acme.challenge, AcmeChallenge::Dns01) {
+      bail!("currently only the DNS-01 challenge is supported");
+    }
+
     let Some(domain) = &config.certs.acme.domain else {
-      bail!("No domain provided for ACME challenge");
+      bail!("no domain provided for ACME challenge");
     };
 
     let certs_path = home_dir().join("certs");
@@ -79,19 +112,14 @@ impl Certs {
 
     if cert_path.exists() && key_path.exists() {
       let certs = load_certs(&cert_path)?;
-      let needs_renewal = certs_need_renewal(&certs)?;
-
-      if !needs_renewal {
-        debug!(%domain, "certificate is still valid");
-        return Self::load(&cert_path, &key_path);
+      if !certs_need_renewal(&certs)? {
+        print_message("The ACME certificate is still valid; no renewal is needed.");
+        return Ok(());
       }
-
       debug!(%domain, "certificate needs renewal");
     }
 
-    if !matches!(config.certs.acme.challenge, AcmeChallenge::Dns01) {
-      bail!("Currently only DNS01 challenge is supported.")
-    }
+    let account = Self::acme_account(config).await?;
 
     let mut order =
       account.new_order(&NewOrder::new(&[Identifier::Dns(domain.into())])).await?;
@@ -195,6 +223,7 @@ impl Certs {
     rename(cert_tmp_path, &cert_path)?;
     rename(key_tmp_path, &key_path)?;
 
-    Self::load(&cert_path, &key_path)
+    print_success("ACME certificate fetched successfully");
+    Ok(())
   }
 }

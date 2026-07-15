@@ -7,12 +7,12 @@ pub mod set_dns;
 use anyhow::Result;
 use clap::Parser;
 use cliclack::log;
-use vox::database::DB;
+use vox::{certs::Certs, database::DB, dns::resolver::create_hickory_resolver};
 use vox_shared::{config::Config, home_dir, logger::setup_logger};
 use yansi::Paint;
 
 use crate::{
-  cli::{AdminCommand, Cli, Commands, DeviceCommand, DnsCommand},
+  cli::{AcmeCommand, AdminCommand, Cli, Commands, DeviceCommand, DnsCommand},
   set_dns::set_dns,
 };
 
@@ -57,6 +57,12 @@ async fn main() -> Result<()> {
     },
     Commands::Dns { command } => match command {
       DnsCommand::Set { device, no_doh } => set_dns(&ctx, device, no_doh).await,
+    },
+    Commands::Acme { command } => match command {
+      AcmeCommand::Challenge => {
+        let resolver = create_hickory_resolver(&ctx.config)?;
+        Certs::fetch_acme_certificate(&ctx.config, &resolver).await
+      }
     },
     Commands::ResetDB => {
       ctx.db.reset_stats().await?;

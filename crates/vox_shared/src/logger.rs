@@ -1,10 +1,12 @@
-use std::{fmt, fs::OpenOptions};
+use std::{fmt, fs::OpenOptions, path::PathBuf};
 
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{
   EnvFilter,
   fmt::{FmtContext, FormatEvent, FormatFields},
+  layer::SubscriberExt,
   registry::LookupSpan,
+  util::SubscriberInitExt,
 };
 use yansi::Paint;
 
@@ -49,26 +51,40 @@ pub fn setup_logger(verbose: bool) {
     .init();
 }
 
-pub fn setup_service_logger(verbose: bool, component: &str) {
+pub fn setup_service_logger(verbose: bool, component: &str) -> anyhow::Result<PathBuf> {
   let log_dir = logs_dir();
-  fs_err::create_dir_all(&log_dir).expect("creating the Vox log directory");
-  let log_path = log_dir.join(format!("{component}.log"));
+  fs_err::create_dir_all(&log_dir)?;
 
-  tracing_subscriber::fmt()
-    .with_target(false)
-    .without_time()
-    .with_ansi(false)
-    .event_format(CustomFormatter)
-    .with_writer(move || {
-      OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-        .expect("opening the Vox service log")
-    })
-    .with_env_filter(EnvFilter::new(format!(
+  let log_path = log_dir.join(format!("{component}.log"));
+  let writer_path = log_path.clone();
+
+  let default_level = if verbose { "debug" } else { "info" };
+
+  tracing_subscriber::registry()
+    .with(
+      tracing_subscriber::fmt::layer()
+        .with_target(true)
+        .with_ansi(false)
+        .event_format(CustomFormatter)
+        .with_writer(move || {
+          OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&writer_path)
+            .expect("opening the Vox service log")
+        }),
+    )
+    .with(EnvFilter::new(format!(
       "vox={0},cli={0},daemon={0},vox_shared={0},vox_windows_client={0}",
       if verbose { "debug" } else { "info" }
     )))
-    .init();
+    .try_init()
+    .map_err(|error| anyhow::anyhow!("failed to initialize logger: {error}"))?;
+
+  tracing::info!(
+    log_path = %log_path.display(),
+    "service logger initialized"
+  );
+
+  Ok(log_path)
 }
