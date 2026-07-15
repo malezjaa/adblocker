@@ -58,6 +58,10 @@ pub enum ServiceCommand {
     #[arg(value_enum)]
     target: ServiceTarget,
   },
+  Restart {
+    #[arg(value_enum)]
+    target: ServiceTarget,
+  },
   Status {
     #[arg(value_enum)]
     target: ServiceTarget,

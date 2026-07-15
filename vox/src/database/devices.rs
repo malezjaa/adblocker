@@ -251,7 +251,7 @@ mod tests {
 
   async fn cleanup(db: DB, path: PathBuf) {
     db.pool.close().await;
-    let _ = std::fs::remove_file(path);
+    let _ = fs_err::remove_file(path);
   }
 
   #[tokio::test]

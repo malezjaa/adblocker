@@ -1,14 +1,26 @@
 use std::{
   env,
-  fs::{copy, create_dir_all, remove_dir_all},
   net::SocketAddr,
   path::{Path, PathBuf},
   process::Command,
+  thread::sleep,
+  time::Duration,
 };
 
 use anyhow::{Context, Result, bail};
+use fs_err::{copy, create_dir_all, remove_dir_all};
 use serde::Serialize;
-use vox_shared::{runtime_root, win_client_home};
+use vox_shared::{
+  pretty::{print_field, print_message, print_separator, print_success},
+  runtime_root, win_client_home,
+};
+#[cfg(windows)]
+use windows_service::{
+  Error as WindowsServiceError,
+  service::{ServiceAccess, ServiceState},
+  service_manager::{ServiceManager, ServiceManagerAccess},
+};
+use yansi::Paint;
 
 use super::cli::{ServiceCommand, ServiceTarget};
 
@@ -16,8 +28,8 @@ const INSTALL_DIRECTORY: &str = "Vox";
 
 #[derive(Serialize)]
 struct ClientConfig {
-  dns_server: std::net::SocketAddr,
-  doh: Option<std::net::SocketAddr>,
+  dns_server: SocketAddr,
+  doh: Option<SocketAddr>,
 }
 
 pub fn handle(command: ServiceCommand) -> Result<()> {
@@ -32,9 +44,10 @@ pub fn handle(command: ServiceCommand) -> Result<()> {
     ServiceCommand::Install { target, dns_server, doh, dry_run } => {
       install(target, dns_server, doh, dry_run)
     }
-    ServiceCommand::Start { target } => sc(target, "start"),
-    ServiceCommand::Stop { target } => sc(target, "stop"),
-    ServiceCommand::Status { target } => sc(target, "query"),
+    ServiceCommand::Start { target } => start(target),
+    ServiceCommand::Stop { target } => stop(target),
+    ServiceCommand::Restart { target } => restart(target),
+    ServiceCommand::Status { target } => status(target),
     ServiceCommand::Uninstall { target, purge_data } => uninstall(target, purge_data),
   }
 }
@@ -71,24 +84,32 @@ fn install(
   }
 
   create_dir_all(&install_dir)?;
+  let services_to_restart = if bundle_needs_update(&source, &install_dir)? {
+    stop_bundle_services()?
+  } else {
+    Vec::new()
+  };
+
   for file in required_bundle_files() {
-    copy(source.join(file), install_dir.join(file))
-      .with_context(|| format!("copying {file} into {}", install_dir.display()))?;
+    let source_file = source.join(file);
+    let destination_file = install_dir.join(file);
+    if !files_match(&source_file, &destination_file)? {
+      copy(&source_file, &destination_file)
+        .with_context(|| format!("copying {file} into {}", install_dir.display()))?;
+    }
   }
 
   let binary = install_dir.join(target.binary_name());
   let bin_path = format!("\"{}\" --service", binary.display());
-  run_sc(&[
-    "create".into(),
-    target.service_name().into(),
-    "binPath=".into(),
-    bin_path,
-    "start=".into(),
-    "delayed-auto".into(),
-    "obj=".into(),
-    "LocalSystem".into(),
-  ])?;
-  run_sc(&["start".into(), target.service_name().into()])
+  configure_service(target, bin_path)?;
+  for service in services_to_restart {
+    if service != target {
+      start_service(service)?;
+    }
+  }
+  start_service(target)?;
+  print_success(&format!("{} service installed", target.display_name()));
+  Ok(())
 }
 
 #[cfg(windows)]
@@ -101,7 +122,57 @@ fn uninstall(target: ServiceTarget, purge_data: bool) -> Result<()> {
       remove_dir_all(&root).with_context(|| format!("removing {}", root.display()))?;
     }
   }
+  print_success(&format!("{} service uninstalled", target.display_name()));
   Ok(())
+}
+
+#[cfg(windows)]
+fn start(target: ServiceTarget) -> Result<()> {
+  sc(target, "start")?;
+  print_success(&format!("{} service started", target.display_name()));
+  Ok(())
+}
+
+#[cfg(windows)]
+fn stop(target: ServiceTarget) -> Result<()> {
+  sc(target, "stop")?;
+  print_success(&format!("{} service stopped", target.display_name()));
+  Ok(())
+}
+
+#[cfg(windows)]
+fn restart(target: ServiceTarget) -> Result<()> {
+  stop_service(target)?;
+  start_service(target)?;
+  print_success(&format!("{} service restarted", target.display_name()));
+  Ok(())
+}
+
+#[cfg(windows)]
+fn status(target: ServiceTarget) -> Result<()> {
+  let state = service_state(target)?
+    .with_context(|| format!("{} service is not installed", target.display_name()))?;
+
+  println!();
+  print_message(&format!("{} service", target.display_name()));
+  print_separator(30);
+  print_field("Name:  ", target.service_name());
+  print_field("Status:", pretty_service_state(state));
+  print_separator(30);
+  Ok(())
+}
+
+#[cfg(windows)]
+fn pretty_service_state(state: ServiceState) -> String {
+  match state {
+    ServiceState::Running => "Running".green().bold().to_string(),
+    ServiceState::Stopped => "Stopped".dim().to_string(),
+    ServiceState::StartPending => "Starting".bright_yellow().to_string(),
+    ServiceState::StopPending => "Stopping".bright_yellow().to_string(),
+    ServiceState::ContinuePending => "Resuming".bright_yellow().to_string(),
+    ServiceState::PausePending => "Pausing".bright_yellow().to_string(),
+    ServiceState::Paused => "Paused".bright_yellow().to_string(),
+  }
 }
 
 #[cfg(windows)]
@@ -111,12 +182,114 @@ fn sc(target: ServiceTarget, action: &str) -> Result<()> {
 
 #[cfg(windows)]
 fn run_sc(args: &[String]) -> Result<()> {
-  let status = Command::new("sc.exe").args(args).status().context("running sc.exe")?;
-  if !status.success() {
+  let output = Command::new("sc.exe").args(args).output().context("running sc.exe")?;
+  if !output.status.success() {
     let action = args.first().map(String::as_str).unwrap_or("command");
-    bail!("sc.exe {action} failed with {status}");
+    let message = format!(
+      "{}{}",
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+    bail!("service {action} failed: {}", message.trim());
   }
   Ok(())
+}
+
+#[cfg(windows)]
+fn configure_service(target: ServiceTarget, bin_path: String) -> Result<()> {
+  let args = vec![
+    if service_state(target)?.is_some() { "config" } else { "create" }.into(),
+    target.service_name().into(),
+    "binPath=".into(),
+    bin_path,
+    "start=".into(),
+    "delayed-auto".into(),
+    "obj=".into(),
+    "LocalSystem".into(),
+  ];
+  run_sc(&args)
+}
+
+#[cfg(windows)]
+fn bundle_needs_update(source: &Path, destination: &Path) -> Result<bool> {
+  for file in required_bundle_files() {
+    if !files_match(&source.join(file), &destination.join(file))? {
+      return Ok(true);
+    }
+  }
+  Ok(false)
+}
+
+#[cfg(windows)]
+fn files_match(source: &Path, destination: &Path) -> Result<bool> {
+  if !destination.is_file() {
+    return Ok(false);
+  }
+  if fs_err::metadata(source)?.len() != fs_err::metadata(destination)?.len() {
+    return Ok(false);
+  }
+  Ok(fs_err::read(source)? == fs_err::read(destination)?)
+}
+
+#[cfg(windows)]
+fn stop_bundle_services() -> Result<Vec<ServiceTarget>> {
+  let mut services_to_restart = Vec::new();
+  for target in [ServiceTarget::Daemon, ServiceTarget::Client] {
+    if matches!(service_state(target)?, Some(state) if state != ServiceState::Stopped) {
+      stop_service(target)?;
+      services_to_restart.push(target);
+    }
+  }
+  Ok(services_to_restart)
+}
+
+#[cfg(windows)]
+fn stop_service(target: ServiceTarget) -> Result<()> {
+  for _ in 0..300 {
+    match service_state(target)? {
+      None | Some(ServiceState::Stopped) => return Ok(()),
+      Some(ServiceState::StartPending | ServiceState::StopPending) => {
+        sleep(Duration::from_millis(100));
+      }
+      Some(_) => {
+        run_sc(&["stop".into(), target.service_name().into()])?;
+        sleep(Duration::from_millis(100));
+      }
+    }
+  }
+  bail!("timed out stopping {}", target.service_name())
+}
+
+#[cfg(windows)]
+fn start_service(target: ServiceTarget) -> Result<()> {
+  for _ in 0..300 {
+    match service_state(target)? {
+      Some(ServiceState::Running) => return Ok(()),
+      Some(ServiceState::StartPending | ServiceState::StopPending) => {
+        sleep(Duration::from_millis(100));
+      }
+      None => bail!("{} does not exist", target.service_name()),
+      Some(_) => {
+        run_sc(&["start".into(), target.service_name().into()])?;
+        sleep(Duration::from_millis(100));
+      }
+    }
+  }
+  bail!("timed out starting {}", target.service_name())
+}
+
+#[cfg(windows)]
+fn service_state(target: ServiceTarget) -> Result<Option<ServiceState>> {
+  let manager =
+    ServiceManager::local_computer(None::<&str>, ServiceManagerAccess::CONNECT)
+      .context("connecting to the Windows service manager")?;
+  match manager.open_service(target.service_name(), ServiceAccess::QUERY_STATUS) {
+    Ok(service) => Ok(Some(service.query_status()?.current_state)),
+    Err(WindowsServiceError::Winapi(error)) if error.raw_os_error() == Some(1060) => {
+      Ok(None)
+    }
+    Err(error) => Err(error).context("opening Windows service"),
+  }
 }
 
 #[cfg(windows)]
@@ -149,6 +322,14 @@ fn required_bundle_files() -> [&'static str; 5] {
 }
 
 impl ServiceTarget {
+  #[cfg(windows)]
+  fn display_name(self) -> &'static str {
+    match self {
+      Self::Daemon => "Daemon",
+      Self::Client => "Client",
+    }
+  }
+
   #[cfg(windows)]
   fn service_name(self) -> &'static str {
     match self {

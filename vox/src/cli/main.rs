@@ -42,7 +42,6 @@ async fn main() -> Result<()> {
   setup_logger(cli.verbose);
 
   let command = match cli.command {
-    Commands::Service { command } => return service::handle(command),
     command => command,
   };
 
@@ -68,9 +67,7 @@ async fn main() -> Result<()> {
       AdminCommand::Delete => ctx.delete_admin().await,
       AdminCommand::ChangePassword => ctx.change_password().await,
     },
-    Commands::Service { .. } => {
-      unreachable!("service commands return before creating a CLI context")
-    }
+    Commands::Service { command } => service::handle(command),
   };
 
   if let Err(err) = result {
