@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
+pub mod cli;
 pub mod config;
 pub mod logger;
 pub mod path;
@@ -52,6 +53,7 @@ mod tests {
 }
 
 #[derive(Parser, Debug)]
+#[command(styles = crate::cli::styles())]
 pub struct SharedCli {
   #[arg(short, long)]
   pub verbose: bool,

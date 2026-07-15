@@ -6,6 +6,7 @@ use vox::database::devices::DeviceType;
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 #[command(color = clap::ColorChoice::Always)]
+#[command(styles = vox_shared::cli::styles())]
 pub struct Cli {
   #[arg(short, long)]
   pub verbose: bool,

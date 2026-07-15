@@ -5,6 +5,7 @@ use hickory_client::{
   proto::{runtime::TokioRuntimeProvider, udp::UdpClientStream},
 };
 use tokio::{runtime::Runtime, signal::ctrl_c, spawn};
+use tokio::sync::oneshot::Receiver;
 use tracing::{error, warn};
 use vox_dns::server_health::check_server_health;
 use vox_shared::{SharedCli, logger::setup_logger, task::named_task, win_client_home};
@@ -31,7 +32,7 @@ fn main() -> Result<()> {
 }
 
 pub(crate) async fn run(
-  shutdown: Option<tokio::sync::oneshot::Receiver<()>>,
+  shutdown: Option<Receiver<()>>,
 ) -> Result<()> {
   let config = WinClientConfig::from_file(win_client_home().join("config.toml"))?;
   check_server_health(&config.dns_server).await?;
