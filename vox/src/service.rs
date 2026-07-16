@@ -29,7 +29,7 @@ fn service_main(_arguments: Vec<OsString>) {
 }
 
 fn service_main_inner() -> Result<()> {
-  setup_service_logger(false, "daemon")?;
+  setup_service_logger(false, "daemon");
   let (shutdown_tx, shutdown_rx) = oneshot::channel();
   let mut shutdown_tx = Some(shutdown_tx);
   let status_handle =
