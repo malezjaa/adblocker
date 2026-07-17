@@ -4,6 +4,7 @@ use axum::{
 };
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
+use vox_dns::block_origin::BlockOrigin;
 
 use crate::{
   context::Context,
@@ -69,7 +70,7 @@ pub struct QueryLog {
   pub record_type: String,
   pub client_ip: String,
   pub blocked: bool,
-  pub block_origin: Option<u8>,
+  pub block_origin: Option<BlockOrigin>,
   pub response_code: String,
   pub timestamp: i64,
   pub response_time: i64,

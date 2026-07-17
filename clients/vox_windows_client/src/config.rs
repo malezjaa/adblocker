@@ -8,7 +8,25 @@ use tracing::debug;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WinClientConfig {
   pub dns_server: SocketAddr,
-  pub doh: Option<SocketAddr>,
+  pub doh: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+  use super::WinClientConfig;
+
+  #[test]
+  fn accepts_a_doh_hostname() {
+    let config: WinClientConfig = toml::from_str(
+      r#"
+        dns_server = "192.0.2.10:53"
+        doh = "doh.example.com"
+      "#,
+    )
+    .unwrap();
+
+    assert_eq!(config.doh.as_deref(), Some("doh.example.com"));
+  }
 }
 
 impl WinClientConfig {

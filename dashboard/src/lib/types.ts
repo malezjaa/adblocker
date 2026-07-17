@@ -1,9 +1,17 @@
+export type TransportOrigin = "Plain" | "DoH" | "DoT" | "DoQ"
+
+export type ClientOrigin = "Windows" | "Linux" | "Mac"
+
+export type BlockOrigin =
+  | { Transport: TransportOrigin }
+  | { Client: { client: ClientOrigin; transport: TransportOrigin } }
+
 export interface QueryLog {
   id: number
   domain: string
   client_ip: string
   blocked: boolean
-  block_origin: string
+  block_origin: BlockOrigin | null
   timestamp: number
   response_time: number
   device_id: string | null

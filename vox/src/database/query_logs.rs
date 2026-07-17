@@ -87,13 +87,8 @@ impl DB {
 
     let ctx = self.context();
 
-    let mut resolved_ip = event.resolved_ip.clone();
-    if resolved_ip.is_none() && event.blocked {
-      resolved_ip = resolve_domain_ip(ctx.as_ref(), &event.domain).await;
-    }
-
     let (country_code, company_name) =
-      lookup_geo_company(ctx.as_ref(), resolved_ip.as_deref());
+      lookup_geo_company(ctx.as_ref(), metadata_ip_for_query(&event));
 
     let device = if let Some(device_identifier) = &event.device {
       if let Some(device) = self.resolve_known_device(device_identifier) {
@@ -296,7 +291,9 @@ impl DB {
         record_type: row.record_type,
         client_ip: row.client_ip,
         blocked: row.blocked,
-        block_origin: row.block_origin,
+        block_origin: row
+          .block_origin
+          .map(|origin| BlockOrigin::from_u8(origin).unwrap_or(BlockOrigin::plain())),
         response_code: row.response_code,
         timestamp: row.timestamp,
         response_time: row.response_time,
@@ -328,6 +325,10 @@ fn first_answer_ip(response: &Message) -> Option<String> {
   response.answers.iter().find_map(answer_ip)
 }
 
+fn metadata_ip_for_query(event: &QueryEvent) -> Option<&str> {
+  (!event.blocked).then_some(event.resolved_ip.as_deref()).flatten()
+}
+
 fn lookup_geo_company(
   ctx: Option<&Context>,
   ip: Option<&str>,
@@ -342,8 +343,35 @@ fn lookup_geo_company(
   }
 }
 
-async fn resolve_domain_ip(ctx: Option<&Context>, domain: &str) -> Option<String> {
-  let ctx = ctx?;
-  let lookup = ctx.resolver().lookup_ip(domain.trim_end_matches('.')).await.ok()?;
-  lookup.iter().next().map(|ip| ip.to_string())
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn event(blocked: bool, resolved_ip: Option<&str>) -> QueryEvent {
+    QueryEvent::new(
+      "blocked.test".into(),
+      "A".into(),
+      "192.0.2.1".into(),
+      resolved_ip.map(str::to_owned),
+      blocked,
+      BlockOrigin::plain(),
+      "NOERROR".into(),
+      1,
+      None,
+    )
+  }
+
+  #[test]
+  fn blocked_queries_never_use_an_ip_for_metadata() {
+    let event = event(true, Some("203.0.113.10"));
+
+    assert_eq!(metadata_ip_for_query(&event), None);
+  }
+
+  #[test]
+  fn allowed_queries_use_the_response_ip_for_metadata() {
+    let event = event(false, Some("203.0.113.10"));
+
+    assert_eq!(metadata_ip_for_query(&event), Some("203.0.113.10"));
+  }
 }

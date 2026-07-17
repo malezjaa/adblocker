@@ -36,6 +36,24 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group.tsx"
 import { DataPagination } from "@/components/data-pagination.tsx"
+import type { BlockOrigin, TransportOrigin } from "@/lib/types.ts"
+
+function getBlockOriginDetails(origin: BlockOrigin | null) {
+  const client = origin && "Client" in origin ? origin.Client.client : null
+  const transport: TransportOrigin =
+    origin && "Client" in origin
+      ? origin.Client.transport
+      : origin && "Transport" in origin
+        ? origin.Transport
+        : "Plain"
+  const encrypted = transport !== "Plain"
+  const clientDescription = client ? ` from ${client}` : ""
+
+  return {
+    encrypted,
+    description: `Query made over ${transport}${clientDescription} (${encrypted ? "encrypted" : "unencrypted"})`,
+  }
+}
 
 export function QueryLogs() {
   useStatsWs()
@@ -113,60 +131,66 @@ export function QueryLogs() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.items.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="font-mono">
-                          <div className="flex items-center gap-1.5">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  {log.block_origin === "doh" ? (
-                                    <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                  ) : (
-                                    <LockOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                  )}
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {log.block_origin === "doh"
-                                    ? "Query made over DNS-over-HTTPS (encrypted)"
-                                    : "Query made over plain DNS (unencrypted)"}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            {log.domain}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={"secondary"}>{log.record_type}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={log.blocked ? "destructive" : "secondary"}
-                          >
-                            {log.blocked ? "Blocked" : "Allowed"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {log.device ? (
-                            <DeviceBadge device={log.device} />
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {log.country_code
-                            ? `${countryFlag(log.country_code)} ${log.country_code}`
-                            : "-"}
-                        </TableCell>
-                        <TableCell>{log.response_time} ms</TableCell>
-                        <TableCell>
-                          {format(
-                            new Date(log.timestamp * 1000),
-                            "MMM d, yyyy HH:mm:ss"
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {data.items.map((log) => {
+                      const origin = getBlockOriginDetails(log.block_origin)
+
+                      return (
+                        <TableRow key={log.id}>
+                          <TableCell className="font-mono">
+                            <div className="flex items-center gap-1.5">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    {origin.encrypted ? (
+                                      <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                    ) : (
+                                      <LockOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                    )}
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {origin.description}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              {log.domain}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={"secondary"}>
+                              {log.record_type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                log.blocked ? "destructive" : "secondary"
+                              }
+                            >
+                              {log.blocked ? "Blocked" : "Allowed"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {log.device ? (
+                              <DeviceBadge device={log.device} />
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {log.country_code
+                              ? `${countryFlag(log.country_code)} ${log.country_code}`
+                              : "-"}
+                          </TableCell>
+                          <TableCell>{log.response_time} ms</TableCell>
+                          <TableCell>
+                            {format(
+                              new Date(log.timestamp * 1000),
+                              "MMM d, yyyy HH:mm:ss"
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </div>
