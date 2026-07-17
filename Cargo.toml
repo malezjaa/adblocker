@@ -35,6 +35,7 @@ windows-service = "0.8.0"
 instant-acme = "0.8.5"
 adblock = "0.13.0"
 reqwest = { version = "0.13.4", features = ["zstd", "brotli", "gzip"] }
+time = "0.3.53"
 
 vox_shared = { path = "crates/vox_shared", version = "0.1.0" }
 vox_dns = { path = "crates/vox_dns", version = "0.1.0" }
