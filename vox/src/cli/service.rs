@@ -111,7 +111,7 @@ fn uninstall(target: ServiceTarget, purge_data: bool) -> Result<()> {
 
 #[cfg(windows)]
 fn start(target: ServiceTarget) -> Result<()> {
-  sc(target, "start")?;
+  start_service(target)?;
   print_success(&format!("{} service started", target.display_name()));
   Ok(())
 }
@@ -245,16 +245,31 @@ fn stop_service(target: ServiceTarget) -> Result<()> {
 
 #[cfg(windows)]
 fn start_service(target: ServiceTarget) -> Result<()> {
+  match service_state(target)? {
+    Some(ServiceState::Running) => return Ok(()),
+    Some(ServiceState::Stopped) => {
+      run_sc(&["start".into(), target.service_name().into()])?;
+    }
+    None => bail!("{} does not exist", target.service_name()),
+    Some(_) => {}
+  }
+
   for _ in 0..300 {
     match service_state(target)? {
       Some(ServiceState::Running) => return Ok(()),
-      Some(ServiceState::StartPending | ServiceState::StopPending) => {
+      Some(ServiceState::StartPending) => {
         sleep(Duration::from_millis(100));
       }
+      Some(ServiceState::StopPending) => {
+        bail!("{} stopped while starting", target.service_name())
+      }
       None => bail!("{} does not exist", target.service_name()),
+      Some(ServiceState::Stopped) => bail!(
+        "{} stopped during startup; see the daemon log for the error",
+        target.service_name()
+      ),
       Some(_) => {
-        run_sc(&["start".into(), target.service_name().into()])?;
-        sleep(Duration::from_millis(100));
+        bail!("{} entered an unexpected state while starting", target.service_name())
       }
     }
   }

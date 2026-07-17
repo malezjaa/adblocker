@@ -65,6 +65,8 @@ to use ACME, a manually supplied certificate, or TLS termination by a reverse pr
 Vox is a Rust workspace with a React/Vite dashboard. You will need Rust, [Node.js](https://nodejs.org/),
 and [pnpm](https://pnpm.io/).
 
+Vox also uses `openssl` crate with `vendored` feature which requires `perl` and `make` to be installed.
+
 ```powershell
 git clone https://github.com/malezjaa/adblocker.git
 cd adblocker
@@ -74,14 +76,6 @@ cd dashboard
 pnpm install --frozen-lockfile
 pnpm lint
 pnpm typecheck
-```
-
-Useful workspace commands:
-
-```powershell
-just format        # Format both Rust and TypeScript code
-just check-format  # Check formatting
-just fix           # Run the full lint, format, and check workflow
 ```
 
 ## Contributing

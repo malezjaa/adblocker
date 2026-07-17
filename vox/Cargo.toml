@@ -42,6 +42,7 @@ cliclack = "0.5.4"
 hex = "0.4.3"
 instant-acme = { workspace = true }
 x509-parser = "0.18.1"
+openssl = { version = "0.10.81", features = ["vendored"] }
 
 vox_shared = { workspace = true }
 vox_dns = { workspace = true }

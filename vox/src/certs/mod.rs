@@ -1,5 +1,5 @@
 pub mod acme;
-pub mod crl;
+pub mod openssl;
 pub mod renewal;
 
 use std::{io::Cursor, path::Path, process::Command};
@@ -9,12 +9,14 @@ use base64::{Engine, engine::general_purpose};
 use fs_err::create_dir_all;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls_pemfile::{certs, private_key};
+use tracing::info;
 use vox_shared::{
   config::{Config, certs::CertificateStrategy},
   home_dir,
   path::canonicalize_with_strip,
 };
-use vox_windows::primary_adapter::primary_adapter;
+
+use crate::certs::openssl::OpenSSL;
 
 #[derive(Debug)]
 pub struct Certs {
@@ -33,34 +35,26 @@ impl Certs {
   }
 
   fn load_self_signed() -> Result<Certs> {
-    let openssl_available = Command::new("openssl")
-      .arg("version")
-      .output()
-      .is_ok_and(|output| output.status.success());
-    if !openssl_available {
-      bail!("couldn't find openssl installed in the path.")
-    }
-
     let certs_path = home_dir().join("certs").join("self_signed");
     create_dir_all(&certs_path)?;
 
-    Self::create_open_ssl_config(&certs_path)?;
-
+    let ca_key_path = certs_path.join("ca.key");
     let ca_cert_path = certs_path.join("ca.pem");
     let cert_path = certs_path.join("server.pem");
     let key_path = certs_path.join("server.key");
-    let crl_path = certs_path.join("crl.pem");
 
     if ca_cert_path.exists()
       && cert_path.exists()
       && key_path.exists()
-      && crl_path.exists()
+      && ca_key_path.exists()
     {
       return Self::load(&cert_path, &key_path);
     }
 
-    create_dir_all(&certs_path)?;
-    Self::generate_certs(&certs_path)?;
+    let openssl = OpenSSL::new(&ca_key_path, &ca_cert_path, &key_path, &cert_path)?;
+    openssl.generate()?;
+    info!("generated self-signed certs with openssl");
+
     Self::install_in_cert_store(&ca_cert_path)?;
     Self::load(&cert_path, &key_path)
   }
@@ -78,45 +72,6 @@ impl Certs {
     let key_path = canonicalize_with_strip(key_path)?;
 
     Self::load(&cert_path, &key_path)
-  }
-
-  fn create_open_ssl_config(certs_path: &Path) -> Result<()> {
-    let cfg = certs_path.join("openssl.cnf");
-
-    if !cfg.exists() {
-      if let Some(adapter) = primary_adapter()? {
-        let contents = include_str!("openssl.cnf")
-          .replace("{HOST_IP}", &adapter.pick_ipv4()?.to_string());
-
-        fs_err::create_dir_all(cfg.parent().unwrap())?;
-        fs_err::write(cfg, contents)?;
-      } else {
-        bail!("Couldn't find a primary adapter")
-      }
-    }
-    Ok(())
-  }
-
-  #[cfg(windows)]
-  fn generate_certs(certs_path: &Path) -> Result<()> {
-    let utf16: Vec<u8> = include_str!("gen-certs.ps1")
-      .encode_utf16()
-      .flat_map(|u| u.to_le_bytes())
-      .collect();
-
-    let encoded = general_purpose::STANDARD.encode(utf16);
-
-    let status = Command::new("powershell")
-      .arg("-ExecutionPolicy")
-      .arg("Bypass")
-      .arg("-EncodedCommand")
-      .arg(encoded)
-      .current_dir(certs_path)
-      .status()?;
-    if !status.success() {
-      bail!("Certificate generation script exited with a non-zero status");
-    }
-    Ok(())
   }
 
   #[cfg(windows)]

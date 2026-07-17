@@ -2,11 +2,10 @@ use std::{fmt, fs::OpenOptions};
 
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{
-  fmt::{FmtContext, FormatEvent, FormatFields},
-  registry::LookupSpan
-  ,
-  util::SubscriberInitExt,
   EnvFilter,
+  fmt::{FmtContext, FormatEvent, FormatFields},
+  registry::LookupSpan,
+  util::SubscriberInitExt,
 };
 use yansi::Paint;
 

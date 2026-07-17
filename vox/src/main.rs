@@ -25,6 +25,14 @@ fn main() -> Result<()> {
 }
 
 pub(crate) async fn run(shutdown: Option<Receiver<()>>) -> Result<()> {
+  let (app, rx) = initialize().await?;
+  app.start_all(rx, shutdown).await?;
+
+  Ok(())
+}
+
+pub(crate) async fn initialize()
+-> Result<(App, tokio::sync::mpsc::Receiver<vox::engine::EngineMessage>)> {
   ring::default_provider()
     .install_default()
     .expect("failed to install rustls crypto provider");
@@ -34,8 +42,5 @@ pub(crate) async fn run(shutdown: Option<Receiver<()>>) -> Result<()> {
   ctx.load_mmdbs()?;
 
   let app = App::init(ctx).await?;
-
-  app.start_all(rx, shutdown).await?;
-
-  Ok(())
+  Ok((app, rx))
 }

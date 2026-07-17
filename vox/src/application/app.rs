@@ -12,7 +12,6 @@ use vox_windows::WfpSession;
 use vox_windows::open_port::{OpenPortsConfig, open_ports};
 
 use crate::{
-  certs::crl::serve_crl_pem,
   context::Context,
   database::DB,
   engine::{EngineActor, EngineMessage},
@@ -71,10 +70,6 @@ impl App {
 
         if config.dns.enabled {
           tasks.spawn(named_task("DNS", Self::start_dns(self.ctx.clone())));
-        }
-
-        if matches!(config.certs.strategy, CertificateStrategy::SelfSigned) {
-          tasks.spawn(named_task("CRL server", serve_crl_pem()));
         }
 
         if config.doh.enabled {

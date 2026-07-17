@@ -2,6 +2,7 @@ use std::{ffi::OsString, time::Duration};
 
 use anyhow::Result;
 use tokio::sync::oneshot;
+use tracing::error;
 use vox_shared::logger::setup_service_logger;
 use windows_service::{
   define_windows_service,
@@ -24,7 +25,7 @@ pub fn dispatch() -> Result<()> {
 
 fn service_main(_arguments: Vec<OsString>) {
   if let Err(error) = service_main_inner() {
-    eprintln!("{SERVICE_NAME} failed: {error:?}");
+    error!(error = ?error, "{SERVICE_NAME} failed to start");
   }
 }
 
@@ -43,8 +44,12 @@ fn service_main_inner() -> Result<()> {
       _ => ServiceControlHandlerResult::NotImplemented,
     })?;
 
-  status_handle.set_service_status(status(ServiceState::Running))?;
-  let result = tokio::runtime::Runtime::new()?.block_on(crate::run(Some(shutdown_rx)));
+  status_handle.set_service_status(status(ServiceState::StartPending))?;
+  let result = tokio::runtime::Runtime::new()?.block_on(async {
+    let (app, rx) = crate::initialize().await?;
+    status_handle.set_service_status(status(ServiceState::Running))?;
+    app.start_all(rx, Some(shutdown_rx)).await
+  });
   status_handle.set_service_status(status(ServiceState::Stopped))?;
   result
 }

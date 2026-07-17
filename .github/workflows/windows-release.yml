@@ -2,7 +2,7 @@ name: Windows x64 release
 
 on:
   push:
-    tags: ["v*"]
+    tags: [ "v*" ]
   workflow_dispatch:
     inputs:
       tag:
@@ -36,6 +36,24 @@ jobs:
           if ($tag -notmatch '^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw "Invalid release tag: $tag" }
           git rev-parse --verify "refs/tags/$tag" | Out-Null
           "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Install OpenSSL build dependencies
+        shell: pwsh
+        run: |
+          choco install strawberryperl nasm -y --no-progress
+
+          # Chocolatey installations do not always update PATH in the
+          # currently running PowerShell process.
+          $perlBin = "C:\Strawberry\perl\bin"
+          $env:PATH = "$perlBin;$env:PATH"
+          $perlBin >> $env:GITHUB_PATH
+
+          perl --version
+          nasm -v
+
+          # openssl-src uses nmake for the MSVC target.
+          $nmake = Get-Command nmake.exe -ErrorAction Stop
+          Write-Host "nmake: $($nmake.Source)"
 
       - uses: dtolnay/rust-toolchain@master
         with:
