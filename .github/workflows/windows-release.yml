@@ -37,6 +37,12 @@ jobs:
           git rev-parse --verify "refs/tags/$tag" | Out-Null
           "tag=$tag" >> $env:GITHUB_OUTPUT
 
+      # windows-latest includes the MSVC build tools, but does not load their
+      # developer environment by default. OpenSSL's MSVC build uses nmake.
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Install OpenSSL build dependencies
         shell: pwsh
         run: |
